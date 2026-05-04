@@ -1,5 +1,5 @@
 /**
- * Netlify Serverless Function — Neon Postgres CRUD
+ * Vercel Serverless Function — Neon Postgres CRUD
  *
  * Routes (via /api/db?resource=X):
  *   GET  /api/db?resource=tasks              → جلب تعريفات المهام
@@ -12,27 +12,23 @@
 
 import { neon } from "@neondatabase/serverless";
 
-// ── CORS: تقييد الوصول لنطاق Netlify الخاص بالتطبيق فقط ─────────────────
+// ── CORS: تقييد الوصول ──────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
-  process.env.URL,           // رابط Netlify التلقائي (مثل https://your-app.netlify.app)
-  process.env.DEPLOY_URL,    // رابط النشر المحدد
-  "http://localhost:5173",   // بيئة التطوير المحلية Vite
-  "http://localhost:4173",   // بيئة المعاينة Vite Preview
-];
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.FRONTEND_URL,
+  "http://localhost:5173",
+  "http://localhost:4173",
+  "http://localhost:3000",
+].filter(Boolean);
 
-function getCorsHeaders(requestOrigin) {
-  // تحقق من أن الطلب قادم من نطاق مسموح به
-  const origin = ALLOWED_ORIGINS.includes(requestOrigin)
-    ? requestOrigin
-    : ALLOWED_ORIGINS.find(Boolean) ?? "*"; // fallback آمن في حالة غياب ENV vars
-
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Vary": "Origin", // مهم: يخبر المتصفح أن الاستجابة تعتمد على الـ Origin
-    "Content-Type": "application/json",
-  };
+function setCorsHeaders(req, res) {
+  const origin = req.headers.origin;
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || "*";
+  
+  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Vary", "Origin");
 }
 
 // ── Regex للتحقق من صيغة التاريخ YYYY-MM-DD ──────────────────────────────
@@ -64,36 +60,28 @@ async function ensureSchema(sql) {
   `;
 }
 
-/** استجابة JSON موحّدة */
-const respond = (statusCode, body, corsHeaders) => ({
-  statusCode,
-  headers: corsHeaders,
-  body: JSON.stringify(body),
-});
-
-export const handler = async (event) => {
-  const requestOrigin = event.headers?.origin ?? "";
-  const CORS = getCorsHeaders(requestOrigin);
+export default async function handler(req, res) {
+  setCorsHeaders(req, res);
 
   /* ── Preflight CORS ── */
-  if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS, body: "" };
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
   }
 
   /* ── التحقق من DATABASE_URL ── */
   if (!process.env.DATABASE_URL) {
-    return respond(503, {
-      error: "DATABASE_URL غير مضبوط. فعّل Neon من Netlify Dashboard.",
-    }, CORS);
+    return res.status(503).json({
+      error: "DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.",
+    });
   }
 
   const sql = neon(process.env.DATABASE_URL);
-  const resource = event.queryStringParameters?.resource;
-  const method   = event.httpMethod;
+  const resource = req.query.resource;
+  const method = req.method;
 
   // ── رفض الطلبات غير المدعومة مبكراً ────────────────────────────────────
   if (method !== "GET" && method !== "POST") {
-    return respond(405, { error: `الطريقة ${method} غير مدعومة` }, CORS);
+    return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
   }
 
   try {
@@ -103,28 +91,23 @@ export const handler = async (event) => {
     if (resource === "tasks") {
       if (method === "GET") {
         const rows = await sql`SELECT data, updated_at FROM tasks_definition WHERE id = 1`;
-        return respond(200, {
+        return res.status(200).json({
           tasks:     rows[0]?.data ?? null,
           updatedAt: rows[0]?.updated_at ?? null,
-        }, CORS);
+        });
       }
 
       if (method === "POST") {
-        let body;
-        try {
-          body = JSON.parse(event.body ?? "{}");
-        } catch {
-          return respond(400, { error: "Body غير صالح (invalid JSON)" }, CORS);
-        }
-
+        // Vercel parses JSON bodies automatically if Content-Type is application/json
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
         const { tasks } = body;
+
         if (!Array.isArray(tasks)) {
-          return respond(400, { error: "tasks يجب أن يكون مصفوفة" }, CORS);
+          return res.status(400).json({ error: "tasks يجب أن يكون مصفوفة" });
         }
 
-        // حماية ضد المصفوفات الضخمة جداً
         if (tasks.length > 500) {
-          return respond(400, { error: "عدد المهام تجاوز الحد المسموح (500)" }, CORS);
+          return res.status(400).json({ error: "عدد المهام تجاوز الحد المسموح (500)" });
         }
 
         await sql`
@@ -133,45 +116,39 @@ export const handler = async (event) => {
           ON CONFLICT (id) DO UPDATE
             SET data = EXCLUDED.data, updated_at = NOW()
         `;
-        return respond(200, { ok: true }, CORS);
+        return res.status(200).json({ ok: true });
       }
     }
 
     /* ─── Daily State ─── */
     if (resource === "daily") {
       if (method === "GET") {
-        const date = event.queryStringParameters?.date;
-        if (!date) return respond(400, { error: "date مطلوب" }, CORS);
-        if (!isValidDate(date)) return respond(400, { error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" }, CORS);
+        const date = req.query.date;
+        if (!date) return res.status(400).json({ error: "date مطلوب" });
+        if (!isValidDate(date)) return res.status(400).json({ error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" });
 
         const rows = await sql`
           SELECT checked, sub_checked, updated_at FROM daily_state WHERE date = ${date}
         `;
-        return respond(200, {
+        return res.status(200).json({
           checked:    rows[0]?.checked    ?? {},
           subChecked: rows[0]?.sub_checked ?? {},
           updatedAt:  rows[0]?.updated_at  ?? null,
-        }, CORS);
+        });
       }
 
       if (method === "POST") {
-        let body;
-        try {
-          body = JSON.parse(event.body ?? "{}");
-        } catch {
-          return respond(400, { error: "Body غير صالح (invalid JSON)" }, CORS);
-        }
-
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
         const { date, checked, subChecked } = body;
-        if (!date) return respond(400, { error: "date مطلوب" }, CORS);
-        if (!isValidDate(date)) return respond(400, { error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" }, CORS);
+        
+        if (!date) return res.status(400).json({ error: "date مطلوب" });
+        if (!isValidDate(date)) return res.status(400).json({ error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" });
 
-        // التحقق من أن البيانات objects وليست أنواعاً خطأ
         if (checked !== undefined && (typeof checked !== "object" || Array.isArray(checked))) {
-          return respond(400, { error: "checked يجب أن يكون object" }, CORS);
+          return res.status(400).json({ error: "checked يجب أن يكون object" });
         }
         if (subChecked !== undefined && (typeof subChecked !== "object" || Array.isArray(subChecked))) {
-          return respond(400, { error: "subChecked يجب أن يكون object" }, CORS);
+          return res.status(400).json({ error: "subChecked يجب أن يكون object" });
         }
 
         await sql`
@@ -187,19 +164,18 @@ export const handler = async (event) => {
                 sub_checked = EXCLUDED.sub_checked,
                 updated_at  = NOW()
         `;
-        return respond(200, { ok: true }, CORS);
+        return res.status(200).json({ ok: true });
       }
     }
 
-    return respond(400, { error: `resource غير معروف: ${resource}` }, CORS);
+    return res.status(400).json({ error: `resource غير معروف: ${resource}` });
 
   } catch (err) {
-    // لا تكشف تفاصيل الخطأ الداخلية في بيئة الإنتاج
-    const isDev = process.env.CONTEXT === "dev" || process.env.NETLIFY_DEV === "true";
+    const isDev = process.env.NODE_ENV === "development";
     console.error("[db function error]", err);
-    return respond(500, {
+    return res.status(500).json({
       error: "خطأ داخلي في الخادم",
       ...(isDev && { detail: err.message }),
-    }, CORS);
+    });
   }
-};
+}
