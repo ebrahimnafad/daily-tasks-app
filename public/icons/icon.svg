@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- خلفية دائرية داكنة -->
+  <rect width="512" height="512" rx="100" fill="#1a1209"/>
+
+  <!-- هلال ذهبي -->
+  <path d="M320 140 C280 140 245 165 232 200 C260 195 290 200 315 218 C340 237 355 265 355 296 C355 327 340 355 315 374 C290 392 260 397 232 392 C245 427 280 452 320 452 C385 452 438 399 438 334 V318 C438 218 385 140 320 140Z" fill="#c8a96e" opacity="0.9"/>
+
+  <!-- خطوط المهام -->
+  <rect x="90" y="200" width="180" height="22" rx="11" fill="#c8a96e" opacity="0.85"/>
+  <rect x="90" y="252" width="150" height="22" rx="11" fill="#c8a96e" opacity="0.65"/>
+  <rect x="90" y="304" width="165" height="22" rx="11" fill="#c8a96e" opacity="0.5"/>
+
+  <!-- علامة صح (check) ذهبية -->
+  <circle cx="70" cy="211" r="18" fill="none" stroke="#c8a96e" stroke-width="3" opacity="0.85"/>
+  <path d="M60 211 L67 219 L82 203" stroke="#c8a96e" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" fill="none" opacity="0.85"/>
+
+  <circle cx="70" cy="263" r="18" fill="none" stroke="#c8a96e" stroke-width="3" opacity="0.65"/>
+  <circle cx="70" cy="315" r="18" fill="none" stroke="#c8a96e" stroke-width="3" opacity="0.5"/>
+</svg>

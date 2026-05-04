@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- SEO -->
+    <meta name="description" content="تطبيق إدارة المهام اليومية مع دعم حفظ البيانات والمزامنة السحابية. نظّم يومك، مهام عملك، والصلوات بفعالية." />
+    <meta name="keywords" content="مهام يومية, إنجاز, صلوات, تنظيم, جدول يومي" />
+    <meta name="author" content="مهام اليوم" />
+
+    <!-- PWA / Mobile -->
+    <meta name="theme-color" content="#1a1209" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="مهام اليوم" />
+
+    <!-- أيقونة Apple (تظهر عند الإضافة للشاشة الرئيسية في iOS) -->
+    <link rel="apple-touch-icon" href="/icons/icon.svg" />
+    <!-- أيقونة ملثّمة للمتصفحات التي تدعمها (Safari Pinned Tab) -->
+    <link rel="mask-icon" href="/icons/icon.svg" color="#c8a96e" />
+
+    <!-- Open Graph (للمشاركة على السوشيال ميديا) -->
+    <meta property="og:title" content="مهام اليوم — إنجاز ومتابعة" />
+    <meta property="og:description" content="تطبيق إدارة المهام اليومية مع المزامنة السحابية ودعم الصلوات." />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="ar_SA" />
+
+    <!-- Preconnect لتسريع تحميل الخط -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <title>مهام اليوم — إنجاز ومتابعة</title>
+
+    <!-- لون الخلفية قبل تحميل CSS (يمنع الوميض الأبيض) -->
+    <style>
+      html { background: #1a1209; }
+      body { margin: 0; padding: 0; background: #1a1209; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.jsx"></script>
+  </body>
+</html>
