@@ -5,6 +5,8 @@ import useSync, { todayISO } from "./hooks/useSync.js";
 import useNotifications from "./hooks/useNotifications.js";
 import TaskCard from "./components/TaskCard.jsx";
 import TaskModal, { CATEGORIES } from "./components/TaskModal.jsx";
+import TabBar from "./components/TabBar.jsx";
+import FinancePage from "./components/FinancePage.jsx";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const INITIAL_TASKS = [
@@ -37,6 +39,7 @@ function SyncBadge({ status }) {
 
 // ── App ──────────────────────────────────────────────────────────────────────
 export default function App() {
+  const [activeTab, setActiveTab] = useState("tasks");
   const [quotaError, setQuotaError] = useState(false);
   const [newDayToast, setNewDayToast] = useState(false);
 
@@ -188,6 +191,7 @@ export default function App() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div dir="rtl" data-shift={shift} style={{ minHeight:"100vh", background:"var(--bg-gradient)", fontFamily:"'Amiri',serif", transition:"background 0.6s ease" }}>
+      <TabBar activeTab={activeTab} onTabChange={setActiveTab} financeBadge={0} />
       <SyncBadge status={syncStatus} />
 
       {/* تنبيه يوم جديد */}
@@ -219,7 +223,8 @@ export default function App() {
 
       <div style={{ position:"fixed", inset:0, pointerEvents:"none", backgroundImage:`radial-gradient(circle at 20% 20%,rgba(var(--gold-rgb),.06) 0%,transparent 50%),radial-gradient(circle at 80% 80%,rgba(var(--gold-rgb),.04) 0%,transparent 50%)` }} aria-hidden="true" />
 
-      <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 16px 52px" }}>
+      {activeTab === "tasks" && (
+      <div style={{ maxWidth:480, margin:"0 auto", padding:"24px 16px 100px" }}>
 
         {/* Header */}
         <header style={{ textAlign:"center", marginBottom:28 }}>
@@ -316,6 +321,11 @@ export default function App() {
           ﴿ وَاسْتَعِينُوا بِالصَّبْرِ وَالصَّلَاةِ ﴾
         </footer>
       </div>
+      )}
+
+      {activeTab === "finance" && (
+        <FinancePage onQuota={() => setQuotaError(true)} />
+      )}
 
       {/* Add/Edit Modal */}
       <TaskModal modal={modal} form={form} onFormField={setFormField} onSave={saveTask} onClose={() => setModal(null)} />

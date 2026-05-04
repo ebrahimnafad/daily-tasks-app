@@ -2,10 +2,12 @@
  * Vercel Serverless Function — Neon Postgres CRUD
  *
  * Routes (via /api/db?resource=X):
- *   GET  /api/db?resource=tasks              → جلب تعريفات المهام
- *   POST /api/db?resource=tasks              → حفظ تعريفات المهام
- *   GET  /api/db?resource=daily&date=YYYY-MM-DD → جلب الحالة اليومية
- *   POST /api/db?resource=daily              → حفظ الحالة اليومية
+ *   GET|POST  /api/db?resource=tasks         → تعريفات المهام
+ *   GET|POST  /api/db?resource=daily         → الحالة اليومية
+ *   GET|POST  /api/db?resource=income        → مصادر الدخل
+ *   GET|POST  /api/db?resource=obligations   → الالتزامات المالية
+ *   GET|POST  /api/db?resource=payments      → سجلات الدفع
+ *   GET|POST  /api/db?resource=goals         → أهداف الادخار
  *
  * يتطلب Environment Variable: DATABASE_URL
  */
@@ -58,7 +60,48 @@ async function ensureSchema(sql) {
       updated_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+  // ── Finance tables ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS finance_income (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_income CHECK (id = 1)
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS finance_obligations (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_obligations CHECK (id = 1)
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS finance_payments (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_payments CHECK (id = 1)
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS finance_goals (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_goals CHECK (id = 1)
+    )
+  `;
 }
+
+// ── Generic JSONB single-row handler (DRY) ──
+const FINANCE_TABLES = {
+  income:      { table: "finance_income",      field: "income" },
+  obligations: { table: "finance_obligations", field: "obligations" },
+  payments:    { table: "finance_payments",    field: "payments" },
+  goals:       { table: "finance_goals",       field: "goals" },
+};
 
 export default async function handler(req, res) {
   setCorsHeaders(req, res);
@@ -164,6 +207,35 @@ export default async function handler(req, res) {
                 sub_checked = EXCLUDED.sub_checked,
                 updated_at  = NOW()
         `;
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    /* ─── Finance Resources (generic JSONB handler) ─── */
+    const finRes = FINANCE_TABLES[resource];
+    if (finRes) {
+      if (method === "GET") {
+        const rows = await sql(`SELECT data, updated_at FROM ${finRes.table} WHERE id = 1`);
+        return res.status(200).json({
+          [finRes.field]: rows[0]?.data ?? [],
+          updatedAt: rows[0]?.updated_at ?? null,
+        });
+      }
+      if (method === "POST") {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+        const data = body[finRes.field];
+        if (!Array.isArray(data)) {
+          return res.status(400).json({ error: `${finRes.field} يجب أن يكون مصفوفة` });
+        }
+        if (data.length > 1000) {
+          return res.status(400).json({ error: "تجاوز الحد المسموح (1000 عنصر)" });
+        }
+        await sql(`
+          INSERT INTO ${finRes.table} (id, data, updated_at)
+          VALUES (1, $1::jsonb, NOW())
+          ON CONFLICT (id) DO UPDATE
+            SET data = EXCLUDED.data, updated_at = NOW()
+        `, [JSON.stringify(data)]);
         return res.status(200).json({ ok: true });
       }
     }
