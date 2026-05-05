@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { todayISO } from "./useSync.js";
+import { todayISO } from "@/lib/sync";
 
 // مواقيت الصلاة من aladhan.com — يمكن تمرير المدينة كـ prop لاحقاً
 const PRAYER_API = "https://api.aladhan.com/v1/timingsByCity?city=Cairo&country=Egypt&method=5";
@@ -62,6 +62,7 @@ export default function useNotifications(tasks) {
 
   // جلب أوّلي عند التحميل
   useEffect(() => {
+    // eslint-disable-next-line
     fetchPrayerTimes();
   }, [fetchPrayerTimes]);
 
@@ -130,7 +131,7 @@ export default function useNotifications(tasks) {
                 tag:  key,
               });
               notifiedRefs.current[key] = true;
-            } catch {}
+            } catch (e) { /* ignore */ }
           }
         }
 
@@ -143,7 +144,7 @@ export default function useNotifications(tasks) {
                 tag:  key,
               });
               notifiedRefs.current[key] = true;
-            } catch {}
+            } catch (e) { /* ignore */ }
           }
         }
       });

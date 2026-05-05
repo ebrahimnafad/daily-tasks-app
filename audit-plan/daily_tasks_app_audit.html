@@ -1,0 +1,120 @@
+
+<style>
+  .audit-wrap { padding: 1rem 0; font-family: var(--font-sans); }
+  .score-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .score-card { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: .75rem 1rem; text-align: center; }
+  .score-card .num { font-size: 26px; font-weight: 500; }
+  .score-card .lbl { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .fail .num  { color: #A32D2D; }
+  .warn .num  { color: #854F0B; }
+  .pass .num  { color: #3B6D11; }
+  .section-title { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: .06em; margin: 1.25rem 0 .5rem; }
+  .item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border-radius: var(--border-radius-md); margin-bottom: 4px; font-size: 14px; line-height: 1.5; }
+  .item:hover { background: var(--color-background-secondary); }
+  .badge { flex-shrink: 0; font-size: 11px; font-weight: 500; padding: 2px 7px; border-radius: 20px; margin-top: 2px; }
+  .b-fail { background: #FCEBEB; color: #A32D2D; }
+  .b-warn { background: #FAEEDA; color: #854F0B; }
+  .b-pass { background: #EAF3DE; color: #3B6D11; }
+  .item-text { color: var(--color-text-primary); }
+  .item-detail { font-size: 13px; color: var(--color-text-secondary); margin-top: 2px; }
+  .cat { border-top: 0.5px solid var(--color-border-tertiary); padding-top: 4px; }
+</style>
+<div class="audit-wrap">
+  <div class="score-row">
+    <div class="score-card fail"><div class="num">11</div><div class="lbl">Failed</div></div>
+    <div class="score-card warn"><div class="num">3</div><div class="lbl">Partial</div></div>
+    <div class="score-card pass"><div class="num">1</div><div class="lbl">Passed</div></div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">Architecture & structure</div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Feature-based folder structure</div><div class="item-detail">Files grouped by type (components, hooks, api, data) — not by feature/domain.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Barrel exports</div><div class="item-detail">No index.js/ts files in any directory to consolidate imports.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Absolute imports</div><div class="item-detail">All imports use fragile relative paths (e.g. ../hooks/useAccessibleClick.js).</div></div>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">Component design</div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Single responsibility principle</div><div class="item-detail">app.jsx (280+ lines) handles routing, global state, side effects, and layout simultaneously.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Container / presentational split</div><div class="item-detail">app.jsx mixes data-fetching (useSync) directly with UI rendering.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Compound components</div><div class="item-detail">TaskCard receives isExpanded, isBriefOpen, isSubtaskOpen via prop-drilling booleans instead of compound patterns.</div></div>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">State management</div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Colocate state</div><div class="item-detail">Expanded/collapsed state of individual cards is hoisted to app.jsx instead of living in TaskCard.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Server vs client state</div><div class="item-detail">No TanStack Query; server sync handled manually with useState + useEffect in useSync.js.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Avoid prop drilling</div><div class="item-detail">app.jsx passes 10+ props and handlers down to TaskCard with no Context or composition layer.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-warn">Partial</span>
+      <div><div class="item-text">Custom hooks</div><div class="item-detail">useSync, useTaskManager, useNotifications exist — but app.jsx still retains complex derived state and side-effect logic inline.</div></div>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">Styling</div>
+    <div class="item">
+      <span class="badge b-pass">Pass</span>
+      <div><div class="item-text">Consistent styling strategy</div><div class="item-detail">Pure global app.css + inline styles — no mixed paradigms.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-warn">Partial</span>
+      <div><div class="item-text">Design tokens</div><div class="item-detail">CSS variables used for colors (var(--gold)) but magic numbers still used for spacing/typography in inline styles.</div></div>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">Performance</div>
+    <div class="item">
+      <span class="badge b-warn">Partial</span>
+      <div><div class="item-text">Memoization</div><div class="item-detail">React.memo/useMemo/useCallback used, but inline objects (e.g. taskSubChecked) inside .map() break React.memo on TaskCard.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Code splitting</div><div class="item-detail">No React.lazy or Suspense. Everything statically imported.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">Avoid re-render traps</div><div class="item-detail">Object literals like taskSubChecked constructed inside .map() on every render.</div></div>
+    </div>
+  </div>
+
+  <div class="cat">
+    <div class="section-title">Code quality</div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">TypeScript</div><div class="item-detail">Project is plain .js/.jsx with no strict typing.</div></div>
+    </div>
+    <div class="item">
+      <span class="badge b-fail">Fail</span>
+      <div><div class="item-text">ESLint + Prettier</div><div class="item-detail">Neither configured nor listed in package.json dependencies.</div></div>
+    </div>
+  </div>
+</div>

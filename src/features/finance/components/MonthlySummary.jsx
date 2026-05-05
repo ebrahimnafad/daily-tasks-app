@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import FinanceChart from "./FinanceChart.jsx";
+import { FinanceChart } from "@/features/finance";
 
 /**
  * MonthlySummary — ملخص الشهر المالي مع رسم بياني

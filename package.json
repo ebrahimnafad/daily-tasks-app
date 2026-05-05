@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "lint": "eslint .",
     "prepare": "husky"
   },
   "dependencies": {
@@ -14,6 +15,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@neondatabase/serverless": "^0.10.4",
+    "@tanstack/react-query": "^5.100.9",
     "@vitejs/plugin-react": "^6.0.1",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

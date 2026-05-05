@@ -1,3 +1,4 @@
+/* eslint-env node */
 /**
  * Vercel Serverless Function — Neon Postgres CRUD
  *

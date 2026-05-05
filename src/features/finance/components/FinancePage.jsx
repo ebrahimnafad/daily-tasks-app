@@ -1,11 +1,11 @@
 import { useState, useCallback, useMemo } from "react";
-import useFinanceSync from "../hooks/useFinanceSync.js";
-import MonthlySummary from "./MonthlySummary.jsx";
-import IncomeSection from "./IncomeSection.jsx";
-import FinanceCard from "./FinanceCard.jsx";
-import FinanceModal from "./FinanceModal.jsx";
-import PaymentDrawer from "./PaymentDrawer.jsx";
-import GoalsSection from "./GoalsSection.jsx";
+import { useFinanceSync } from "@/features/finance";
+import { MonthlySummary } from "@/features/finance";
+import { IncomeSection } from "@/features/finance";
+import { FinanceCard } from "@/features/finance";
+import { FinanceModal } from "@/features/finance";
+import { PaymentDrawer } from "@/features/finance";
+import { GoalsSection } from "@/features/finance";
 
 /**
  * FinancePage — الصفحة الرئيسية للمالية

@@ -1,0 +1,143 @@
+import { useTaskCardContext } from './TaskCardContext';
+import { PrayerRing, SubRing, AccessibleCheckbox } from "@/shared/components";
+
+export default function Header() {
+  const { 
+    task, isChecked, setChecked, hasSubs, subsDone, done,
+    isExpanded, onToggleExpanded,
+    isBriefOpen, onToggleBrief,
+    isSubtaskOpen, onToggleSubtask,
+    tm, prayersDone, prayerTotal
+  } = useTaskCardContext();
+
+  return (
+    <div style={{ padding: "15px 16px", display: "flex", alignItems: "center", gap: 11 }}>
+      {/* مؤشر التقدّم / مربع الاختيار */}
+      {task.isPrayerTask ? (
+        <PrayerRing done={prayersDone} total={prayerTotal} />
+      ) : hasSubs ? (
+        <SubRing done={subsDone} total={task.subtasks.length} color={task.color} />
+      ) : (
+        <AccessibleCheckbox
+          checked={isChecked}
+          color={task.color}
+          onToggle={() => setChecked(p => ({ ...p, [task.id]: !p[task.id] }))}
+          label={`تأشير مهمة: ${task.title}`}
+        />
+      )}
+
+      <span style={{ fontSize: 19 }} aria-hidden="true">{task.icon}</span>
+
+      {/* عنوان المهمة ومعلوماتها */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            color: done ? "rgba(var(--gold-rgb),.38)" : "var(--text-gold)",
+            fontSize: 16, fontWeight: 700,
+            textDecoration: done ? "line-through" : "none",
+            transition: "all .3s",
+          }}
+        >
+          {task.title}
+        </div>
+        <div
+          style={{
+            fontSize: 12, color: "rgba(var(--gold-rgb),.48)",
+            marginTop: 1, display: "flex", alignItems: "center", gap: 6,
+            flexWrap: "wrap",
+          }}
+        >
+          <span>{task.time}</span>
+          <span
+            style={{
+              fontSize: 10, background: "rgba(255,255,255,0.05)",
+              padding: "1px 5px", borderRadius: 4,
+            }}
+          >
+            {task.recurrence || "يومي"}
+          </span>
+          {task.alertTime && (
+            <span
+              style={{
+                fontSize: 10, color: "#d97e6a",
+                background: "rgba(217,126,106,.08)",
+                padding: "1px 5px", borderRadius: 4,
+              }}
+            >
+              🔔 {task.alertTime}
+            </span>
+          )}
+          {hasSubs && (
+            <span className="sub-progress">{subsDone}/{task.subtasks.length}</span>
+          )}
+        </div>
+      </div>
+
+      {/* أزرار الجانب */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+        <span
+          className="badge"
+          style={{
+            background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
+            color: task.color,
+            border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
+          }}
+        >
+          {task.category}
+        </span>
+        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+          {/* زر القائمة الفرعية */}
+          {!task.isPrayerTask && (
+            <button
+              className={`lbtn ${isSubtaskOpen ? "on" : ""}`}
+              aria-expanded={isSubtaskOpen}
+              aria-label={isSubtaskOpen ? "إخفاء القائمة الفرعية" : "عرض القائمة الفرعية"}
+              onClick={(e) => { e.stopPropagation(); onToggleSubtask(); }}
+            >
+              <span style={{ fontSize: 10 }} aria-hidden="true">{isSubtaskOpen ? "▲" : "▼"}</span>
+              قائمة
+            </button>
+          )}
+          {/* زر الصلوات */}
+          {task.isPrayerTask && (
+            <button
+              className={`bbtn ${isExpanded ? "on" : ""}`}
+              aria-expanded={isExpanded}
+              aria-label={isExpanded ? "إخفاء الصلوات" : "عرض الصلوات"}
+              onClick={(e) => { e.stopPropagation(); onToggleExpanded(); }}
+            >
+              <span style={{ fontSize: 10 }} aria-hidden="true">{isExpanded ? "▲" : "▼"}</span>
+              صلوات
+            </button>
+          )}
+          {/* زر البريف */}
+          <button
+            className={`bbtn ${isBriefOpen ? "on" : ""}`}
+            aria-expanded={isBriefOpen}
+            aria-label={isBriefOpen ? "إخفاء البريف" : "عرض البريف"}
+            onClick={(e) => { e.stopPropagation(); onToggleBrief(); }}
+          >
+            <span style={{ fontSize: 10 }} aria-hidden="true">{isBriefOpen ? "▲" : "▼"}</span>
+            بريف
+          </button>
+          {/* زر التعديل */}
+          <button
+            className="ibtn ebtn"
+            aria-label={`تعديل مهمة: ${task.title}`}
+            onClick={(e) => tm.openEdit(task, e)}
+          >
+            ✏️
+          </button>
+          {/* زر الحذف */}
+          <button
+            className="ibtn dbtn"
+            aria-label={`حذف مهمة: ${task.title}`}
+            onClick={(e) => { e.stopPropagation(); tm.setDeleteConfirm(task.id); }}
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
