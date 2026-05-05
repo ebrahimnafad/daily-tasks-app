@@ -1,8 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { fileURLToPath, URL } from 'url';
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
   plugins: [
     react(),
     VitePWA({
@@ -80,7 +86,7 @@ export default defineConfig({
               cacheName: 'prayer-times-cache',
               networkTimeoutSeconds: 8,
               expiration: {
-                maxEntries: 7,          // أسبوع من المواقيت
+                maxEntries: 7, // أسبوع من المواقيت
                 maxAgeSeconds: 60 * 60 * 24, // يوم واحد
               },
               cacheableResponse: { statuses: [0, 200] },
@@ -107,7 +113,7 @@ export default defineConfig({
 
       // ── خيارات التطوير ────────────────────────────────────────────────────
       devOptions: {
-        enabled: false,  // لا نُفعّل SW في dev (لتجنب تعقيد الـ HMR)
+        enabled: false, // لا نُفعّل SW في dev (لتجنب تعقيد الـ HMR)
       },
     }),
   ],
