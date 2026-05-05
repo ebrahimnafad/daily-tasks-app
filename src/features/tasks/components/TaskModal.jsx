@@ -8,28 +8,59 @@
  *  ④ autoFocus على حقل الاسم عند الفتح
  */
 
-import { useEffect, useRef, memo } from "react";
+import { useEffect, useRef, memo } from 'react';
 
 const CATEGORIES = [
-  { label: "عبادة", color: "var(--gold)" },
-  { label: "عمل",   color: "#6e9fcf" },
-  { label: "أسرة",  color: "#9bc87a" },
-  { label: "صحة",   color: "#9bc87a" },
-  { label: "تنبيه", color: "#d97e6a" },
-  { label: "شخصي",  color: "#b07ecf" },
-  { label: "أخرى",  color: "#aaaaaa" },
+  { label: 'عبادة', color: 'var(--gold)' },
+  { label: 'عمل', color: '#6e9fcf' },
+  { label: 'أسرة', color: '#9bc87a' },
+  { label: 'صحة', color: '#9bc87a' },
+  { label: 'تنبيه', color: '#d97e6a' },
+  { label: 'شخصي', color: '#b07ecf' },
+  { label: 'أخرى', color: '#aaaaaa' },
 ];
-const ICONS = ["📋","📧","📖","🕌","🚶","🚫","💊","🏃","🛒","📞","✏️","🍽️","💧","📚","🎯","🧹","💼","🌙","⭐","🔔"];
+const ICONS = [
+  '📋',
+  '📧',
+  '📖',
+  '🕌',
+  '🚶',
+  '🚫',
+  '💊',
+  '🏃',
+  '🛒',
+  '📞',
+  '✏️',
+  '🍽️',
+  '💧',
+  '📚',
+  '🎯',
+  '🧹',
+  '💼',
+  '🌙',
+  '⭐',
+  '🔔',
+];
 const TIMES = [
-  "الصباح الباكر","الصباح","الضحى","قبل الظهر","الظهر",
-  "بعد الظهر","العصر","بعد العصر","المغرب",
-  "بين المغرب والعشاء","العشاء","الليل","طوال اليوم",
+  'الصباح الباكر',
+  'الصباح',
+  'الضحى',
+  'قبل الظهر',
+  'الظهر',
+  'بعد الظهر',
+  'العصر',
+  'بعد العصر',
+  'المغرب',
+  'بين المغرب والعشاء',
+  'العشاء',
+  'الليل',
+  'طوال اليوم',
 ];
-const RECURRENCE_OPTIONS = ["يومي","أيام العمل","أسبوعي","مرة واحدة"];
+const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'مرة واحدة'];
 
 function TaskModal({ modal, form, onFormField, onSave, onClose }) {
-  const titleId    = "modal-title";
-  const modalRef   = useRef(null);
+  const titleId = 'modal-title';
+  const modalRef = useRef(null);
   const titleInput = useRef(null);
 
   // ── autoFocus على حقل الاسم عند الفتح ──────────────────────────────────
@@ -42,10 +73,10 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
   // ── Escape Key لإغلاق الـ Modal ─────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     };
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
   // ── Focus Trap: يحبس التنقل بالـ Tab داخل الـ Modal ────────────────────
@@ -57,44 +88,45 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
       'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
     const handleTab = (e) => {
-      if (e.key !== "Tab") return;
+      if (e.key !== 'Tab') return;
       const focusable = Array.from(el.querySelectorAll(focusableSelectors));
       if (focusable.length === 0) return;
       const first = focusable[0];
-      const last  = focusable[focusable.length - 1];
+      const last = focusable[focusable.length - 1];
       if (e.shiftKey) {
-        if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
       } else {
-        if (document.activeElement === last)  { e.preventDefault(); first.focus(); }
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
       }
     };
 
-    el.addEventListener("keydown", handleTab);
-    return () => el.removeEventListener("keydown", handleTab);
+    el.addEventListener('keydown', handleTab);
+    return () => el.removeEventListener('keydown', handleTab);
   }, []);
 
   // ── معالج تعديل بلوكرز / هيلبرز ─────────────────────────────────────────
   const handleBlockerChange = (i, val) => {
     const arr = [...form.blockers];
     arr[i] = val;
-    onFormField("blockers", arr);
+    onFormField('blockers', arr);
   };
   const handleHelperChange = (i, val) => {
     const arr = [...form.helpers];
     arr[i] = val;
-    onFormField("helpers", arr);
+    onFormField('helpers', arr);
   };
 
   if (!modal) return null;
 
   return (
     /* Overlay */
-    <div
-      className="ov"
-      onClick={onClose}
-      role="presentation"
-      aria-hidden="false"
-    >
+    <div className="ov" onClick={onClose} role="presentation" aria-hidden="false">
       {/* Modal Box */}
       <div
         ref={modalRef}
@@ -107,31 +139,37 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
         <h2
           id={titleId}
           style={{
-            margin: "0 0 20px",
-            color: "var(--text-gold)",
-            fontSize: 20, fontWeight: 700,
-            borderBottom: "1px solid rgba(var(--gold-rgb),.15)",
-            paddingBottom: 14,
+            margin: '0 0 var(--space-xl)',
+            color: 'var(--text-gold)',
+            fontSize: 'var(--font-xl)',
+            fontWeight: 700,
+            borderBottom: '1px solid rgba(var(--gold-rgb),.15)',
+            paddingBottom: 'var(--space-lg)',
           }}
         >
-          {modal.mode === "add" ? "➕ مهمة جديدة" : "✏️ تعديل المهمة"}
+          {modal.mode === 'add' ? '➕ مهمة جديدة' : '✏️ تعديل المهمة'}
         </h2>
 
         {/* الأيقونة */}
         <div className="sg">
-          <label className="ml" id="icon-label">الأيقونة</label>
+          <label className="ml" id="icon-label">
+            الأيقونة
+          </label>
           <div className="ig" role="radiogroup" aria-labelledby="icon-label">
             {ICONS.map((ic) => (
               <div
                 key={ic}
-                className={`io ${form.icon === ic ? "sel" : ""}`}
+                className={`io ${form.icon === ic ? 'sel' : ''}`}
                 role="radio"
                 aria-checked={form.icon === ic}
                 aria-label={ic}
                 tabIndex={form.icon === ic ? 0 : -1}
-                onClick={() => onFormField("icon", ic)}
+                onClick={() => onFormField('icon', ic)}
                 onKeyDown={(e) => {
-                  if (e.key === " " || e.key === "Enter") { e.preventDefault(); onFormField("icon", ic); }
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    onFormField('icon', ic);
+                  }
                 }}
               >
                 {ic}
@@ -142,70 +180,86 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
 
         {/* اسم المهمة */}
         <div className="sg">
-          <label className="ml" htmlFor="task-title">اسم المهمة *</label>
+          <label className="ml" htmlFor="task-title">
+            اسم المهمة *
+          </label>
           <input
             id="task-title"
             ref={titleInput}
             className="mi"
             placeholder="اكتب المهمة هنا..."
             value={form.title}
-            onChange={(e) => onFormField("title", e.target.value)}
+            onChange={(e) => onFormField('title', e.target.value)}
           />
         </div>
 
         {/* التصنيف + الوقت */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
           <div style={{ flex: 1 }}>
-            <label className="ml" htmlFor="task-category">التصنيف</label>
+            <label className="ml" htmlFor="task-category">
+              التصنيف
+            </label>
             <select
               id="task-category"
               className="ms"
               value={form.category}
-              onChange={(e) => onFormField("category", e.target.value)}
+              onChange={(e) => onFormField('category', e.target.value)}
             >
               {CATEGORIES.map((c) => (
-                <option key={c.label} value={c.label}>{c.label}</option>
+                <option key={c.label} value={c.label}>
+                  {c.label}
+                </option>
               ))}
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label className="ml" htmlFor="task-time">الوقت</label>
+            <label className="ml" htmlFor="task-time">
+              الوقت
+            </label>
             <select
               id="task-time"
               className="ms"
               value={form.time}
-              onChange={(e) => onFormField("time", e.target.value)}
+              onChange={(e) => onFormField('time', e.target.value)}
             >
               {TIMES.map((t) => (
-                <option key={t} value={t}>{t}</option>
+                <option key={t} value={t}>
+                  {t}
+                </option>
               ))}
             </select>
           </div>
         </div>
 
         {/* التكرار + وقت التنبيه */}
-        <div style={{ display: "flex", gap: 12, marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 'var(--space-md)', marginBottom: 'var(--space-xl)' }}>
           <div style={{ flex: 1 }}>
-            <label className="ml" htmlFor="task-recurrence">التكرار</label>
+            <label className="ml" htmlFor="task-recurrence">
+              التكرار
+            </label>
             <select
               id="task-recurrence"
               className="ms"
               value={form.recurrence}
-              onChange={(e) => onFormField("recurrence", e.target.value)}
+              onChange={(e) => onFormField('recurrence', e.target.value)}
             >
               {RECURRENCE_OPTIONS.map((r) => (
-                <option key={r} value={r}>{r}</option>
+                <option key={r} value={r}>
+                  {r}
+                </option>
               ))}
             </select>
           </div>
           <div style={{ flex: 1 }}>
-            <label className="ml" htmlFor="task-alert">وقت التنبيه (اختياري)</label>
+            <label className="ml" htmlFor="task-alert">
+              وقت التنبيه (اختياري)
+            </label>
             <input
               id="task-alert"
               type="time"
               className="ms"
-              value={form.alertTime || ""}
-              onChange={(e) => onFormField("alertTime", e.target.value)}
+              value={form.alertTime || ''}
+              onChange={(e) => onFormField('alertTime', e.target.value)}
             />
           </div>
         </div>
@@ -213,7 +267,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
         {/* تبديل التنبيه الأحمر */}
         <div
           className="sg"
-          style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
           <label className="ml" style={{ margin: 0 }} id="warning-label">
             🚫 تنبيه مهم (تأشير أحمر)
@@ -223,11 +277,11 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
             aria-checked={form.isWarning}
             aria-labelledby="warning-label"
             className="tg"
-            style={{ border: "none", background: "none", padding: 0, cursor: "pointer" }}
-            onClick={() => onFormField("isWarning", !form.isWarning)}
+            style={{ border: 'none', background: 'none', padding: 0, cursor: 'pointer' }}
+            onClick={() => onFormField('isWarning', !form.isWarning)}
           >
-            <div className={`tgtr ${form.isWarning ? "on" : ""}`} aria-hidden="true" />
-            <div className={`tgth ${form.isWarning ? "on" : ""}`} aria-hidden="true" />
+            <div className={`tgtr ${form.isWarning ? 'on' : ''}`} aria-hidden="true" />
+            <div className={`tgth ${form.isWarning ? 'on' : ''}`} aria-hidden="true" />
           </button>
         </div>
 
@@ -238,7 +292,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
             <input
               key={i}
               className="mi"
-              style={{ marginBottom: 7 }}
+              style={{ marginBottom: 'var(--space-sm)' }}
               placeholder={`عائق ${i + 1}...`}
               value={b}
               aria-label={`عائق ${i + 1}`}
@@ -254,7 +308,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
             <input
               key={i}
               className="mi"
-              style={{ marginBottom: 7 }}
+              style={{ marginBottom: 'var(--space-sm)' }}
               placeholder={`مساعدة ${i + 1}...`}
               value={h}
               aria-label={`مساعدة ${i + 1}`}
@@ -264,12 +318,8 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }) {
         </div>
 
         {/* أزرار الحفظ والإلغاء */}
-        <button
-          className="svbtn"
-          disabled={!form.title.trim()}
-          onClick={onSave}
-        >
-          {modal.mode === "add" ? "إضافة المهمة" : "حفظ التعديلات"}
+        <button className="svbtn" disabled={!form.title.trim()} onClick={onSave}>
+          {modal.mode === 'add' ? 'إضافة المهمة' : 'حفظ التعديلات'}
         </button>
         <button className="cxbtn" onClick={onClose}>
           إلغاء

@@ -1,17 +1,34 @@
 import { useTaskCardContext } from './TaskCardContext';
-import { PrayerRing, SubRing, AccessibleCheckbox } from "@/shared/components";
+import { PrayerRing, SubRing, AccessibleCheckbox } from '@/shared/components';
 
 export default function Header() {
-  const { 
-    task, isChecked, setChecked, hasSubs, subsDone, done,
-    isExpanded, onToggleExpanded,
-    isBriefOpen, onToggleBrief,
-    isSubtaskOpen, onToggleSubtask,
-    tm, prayersDone, prayerTotal
+  const {
+    task,
+    isChecked,
+    setChecked,
+    hasSubs,
+    subsDone,
+    done,
+    isExpanded,
+    onToggleExpanded,
+    isBriefOpen,
+    onToggleBrief,
+    isSubtaskOpen,
+    onToggleSubtask,
+    tm,
+    prayersDone,
+    prayerTotal,
   } = useTaskCardContext();
 
   return (
-    <div style={{ padding: "15px 16px", display: "flex", alignItems: "center", gap: 11 }}>
+    <div
+      style={{
+        padding: 'var(--space-lg) var(--space-lg)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--space-md)',
+      }}
+    >
       {/* مؤشر التقدّم / مربع الاختيار */}
       {task.isPrayerTask ? (
         <PrayerRing done={prayersDone} total={prayerTotal} />
@@ -21,60 +38,81 @@ export default function Header() {
         <AccessibleCheckbox
           checked={isChecked}
           color={task.color}
-          onToggle={() => setChecked(p => ({ ...p, [task.id]: !p[task.id] }))}
+          onToggle={() => setChecked((p) => ({ ...p, [task.id]: !p[task.id] }))}
           label={`تأشير مهمة: ${task.title}`}
         />
       )}
 
-      <span style={{ fontSize: 19 }} aria-hidden="true">{task.icon}</span>
+      <span style={{ fontSize: 'var(--font-lg)' }} aria-hidden="true">
+        {task.icon}
+      </span>
 
       {/* عنوان المهمة ومعلوماتها */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div
           style={{
-            color: done ? "rgba(var(--gold-rgb),.38)" : "var(--text-gold)",
-            fontSize: 16, fontWeight: 700,
-            textDecoration: done ? "line-through" : "none",
-            transition: "all .3s",
+            color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
+            fontSize: 'var(--font-md)',
+            fontWeight: 700,
+            textDecoration: done ? 'line-through' : 'none',
+            transition: 'all .3s',
           }}
         >
           {task.title}
         </div>
         <div
           style={{
-            fontSize: 12, color: "rgba(var(--gold-rgb),.48)",
-            marginTop: 1, display: "flex", alignItems: "center", gap: 6,
-            flexWrap: "wrap",
+            fontSize: 'var(--font-sm)',
+            color: 'rgba(var(--gold-rgb),.48)',
+            marginTop: 'var(--space-xs)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-sm)',
+            flexWrap: 'wrap',
           }}
         >
           <span>{task.time}</span>
           <span
             style={{
-              fontSize: 10, background: "rgba(255,255,255,0.05)",
-              padding: "1px 5px", borderRadius: 4,
+              fontSize: 'var(--font-sm)',
+              background: 'rgba(255,255,255,0.05)',
+              padding: 'var(--space-xs) var(--space-sm)',
+              borderRadius: 'var(--radius-sm)',
             }}
           >
-            {task.recurrence || "يومي"}
+            {task.recurrence || 'يومي'}
           </span>
           {task.alertTime && (
             <span
               style={{
-                fontSize: 10, color: "#d97e6a",
-                background: "rgba(217,126,106,.08)",
-                padding: "1px 5px", borderRadius: 4,
+                fontSize: 'var(--font-sm)',
+                color: '#d97e6a',
+                background: 'rgba(217,126,106,.08)',
+                padding: 'var(--space-xs) var(--space-sm)',
+                borderRadius: 'var(--radius-sm)',
               }}
             >
               🔔 {task.alertTime}
             </span>
           )}
           {hasSubs && (
-            <span className="sub-progress">{subsDone}/{task.subtasks.length}</span>
+            <span className="sub-progress">
+              {subsDone}/{task.subtasks.length}
+            </span>
           )}
         </div>
       </div>
 
       {/* أزرار الجانب */}
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6, flexShrink: 0 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: 'var(--space-sm)',
+          flexShrink: 0,
+        }}
+      >
         <span
           className="badge"
           style={{
@@ -85,39 +123,54 @@ export default function Header() {
         >
           {task.category}
         </span>
-        <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
+        <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
           {/* زر القائمة الفرعية */}
           {!task.isPrayerTask && (
             <button
-              className={`lbtn ${isSubtaskOpen ? "on" : ""}`}
+              className={`lbtn ${isSubtaskOpen ? 'on' : ''}`}
               aria-expanded={isSubtaskOpen}
-              aria-label={isSubtaskOpen ? "إخفاء القائمة الفرعية" : "عرض القائمة الفرعية"}
-              onClick={(e) => { e.stopPropagation(); onToggleSubtask(); }}
+              aria-label={isSubtaskOpen ? 'إخفاء القائمة الفرعية' : 'عرض القائمة الفرعية'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleSubtask();
+              }}
             >
-              <span style={{ fontSize: 10 }} aria-hidden="true">{isSubtaskOpen ? "▲" : "▼"}</span>
+              <span style={{ fontSize: 'var(--font-sm)' }} aria-hidden="true">
+                {isSubtaskOpen ? '▲' : '▼'}
+              </span>
               قائمة
             </button>
           )}
           {/* زر الصلوات */}
           {task.isPrayerTask && (
             <button
-              className={`bbtn ${isExpanded ? "on" : ""}`}
+              className={`bbtn ${isExpanded ? 'on' : ''}`}
               aria-expanded={isExpanded}
-              aria-label={isExpanded ? "إخفاء الصلوات" : "عرض الصلوات"}
-              onClick={(e) => { e.stopPropagation(); onToggleExpanded(); }}
+              aria-label={isExpanded ? 'إخفاء الصلوات' : 'عرض الصلوات'}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleExpanded();
+              }}
             >
-              <span style={{ fontSize: 10 }} aria-hidden="true">{isExpanded ? "▲" : "▼"}</span>
+              <span style={{ fontSize: 'var(--font-sm)' }} aria-hidden="true">
+                {isExpanded ? '▲' : '▼'}
+              </span>
               صلوات
             </button>
           )}
           {/* زر البريف */}
           <button
-            className={`bbtn ${isBriefOpen ? "on" : ""}`}
+            className={`bbtn ${isBriefOpen ? 'on' : ''}`}
             aria-expanded={isBriefOpen}
-            aria-label={isBriefOpen ? "إخفاء البريف" : "عرض البريف"}
-            onClick={(e) => { e.stopPropagation(); onToggleBrief(); }}
+            aria-label={isBriefOpen ? 'إخفاء البريف' : 'عرض البريف'}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleBrief();
+            }}
           >
-            <span style={{ fontSize: 10 }} aria-hidden="true">{isBriefOpen ? "▲" : "▼"}</span>
+            <span style={{ fontSize: 'var(--font-sm)' }} aria-hidden="true">
+              {isBriefOpen ? '▲' : '▼'}
+            </span>
             بريف
           </button>
           {/* زر التعديل */}
@@ -132,7 +185,10 @@ export default function Header() {
           <button
             className="ibtn dbtn"
             aria-label={`حذف مهمة: ${task.title}`}
-            onClick={(e) => { e.stopPropagation(); tm.setDeleteConfirm(task.id); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              tm.setDeleteConfirm(task.id);
+            }}
           >
             🗑️
           </button>

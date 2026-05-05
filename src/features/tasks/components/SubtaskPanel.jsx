@@ -1,45 +1,63 @@
-import { useAccessibleClick } from "@/shared/hooks";
-import { Tick } from "@/shared/components";
+import { useAccessibleClick } from '@/shared/hooks';
+import { Tick } from '@/shared/components';
 
 export function SubtaskPanel({
-  task, taskSubChecked, newItemText,
-  editingSubId, editingSubText,
-  onToggleSub, onNewItemTextChange, onAddSubItem,
-  onDeleteSubItem, onStartEditSub, onSaveEditSub,
-  onCancelEditSub, onEditingSubTextChange,
+  task,
+  taskSubChecked,
+  newItemText,
+  editingSubId,
+  editingSubText,
+  onToggleSub,
+  onNewItemTextChange,
+  onAddSubItem,
+  onDeleteSubItem,
+  onStartEditSub,
+  onSaveEditSub,
+  onCancelEditSub,
+  onEditingSubTextChange,
   inputRef,
 }) {
   const handleKeyDown = useAccessibleClick();
-  const allSubsDone = task.subtasks.length > 0
-    && task.subtasks.every((s) => taskSubChecked[s.id]);
+  const allSubsDone = task.subtasks.length > 0 && task.subtasks.every((s) => taskSubChecked[s.id]);
 
   const handleAddKeyDown = (e) => {
-    if (e.key === "Enter") onAddSubItem();
+    if (e.key === 'Enter') onAddSubItem();
   };
 
   return (
     <div className="panel" role="list" aria-label={`قائمة مهام ${task.title} الفرعية`}>
       <div
         style={{
-          fontSize: 12, fontWeight: 700,
-          color: "rgba(var(--gold-rgb),.55)",
-          marginBottom: 8, display: "flex", alignItems: "center", gap: 6,
+          fontSize: 'var(--font-sm)',
+          fontWeight: 700,
+          color: 'rgba(var(--gold-rgb),.55)',
+          marginBottom: 'var(--space-sm)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-sm)',
         }}
       >
         📝 القائمة الفرعية
         {allSubsDone && task.subtasks.length > 0 && (
-          <span style={{ color: "#9bc87a", fontSize: 11 }}>✓ اكتملت</span>
+          <span style={{ color: '#9bc87a', fontSize: 'var(--font-sm)' }}>✓ اكتملت</span>
         )}
       </div>
 
       {task.subtasks.length === 0 && (
-        <div style={{ fontSize: 13, color: "rgba(var(--gold-rgb),.3)", marginBottom: 8, padding: "6px 0" }}>
+        <div
+          style={{
+            fontSize: 'var(--font-base)',
+            color: 'rgba(var(--gold-rgb),.3)',
+            marginBottom: 'var(--space-sm)',
+            padding: '6px 0',
+          }}
+        >
           لا توجد عناصر بعد — أضف من الأسفل
         </div>
       )}
 
       {task.subtasks.map((s) => {
-        const sdone     = !!taskSubChecked[s.id];
+        const sdone = !!taskSubChecked[s.id];
         const isEditing = editingSubId === s.id;
         return (
           <div key={s.id} className="sub-row" role="listitem">
@@ -48,7 +66,7 @@ export function SubtaskPanel({
               aria-checked={sdone}
               aria-label={s.text}
               tabIndex={0}
-              className={`schk ${sdone ? "on" : ""}`}
+              className={`schk ${sdone ? 'on' : ''}`}
               onClick={() => onToggleSub(s.id)}
               onKeyDown={(e) => handleKeyDown(e, () => onToggleSub(s.id))}
             >
@@ -64,13 +82,13 @@ export function SubtaskPanel({
                 onChange={(e) => onEditingSubTextChange(e.target.value)}
                 onBlur={onSaveEditSub}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter")  onSaveEditSub();
-                  if (e.key === "Escape") onCancelEditSub();
+                  if (e.key === 'Enter') onSaveEditSub();
+                  if (e.key === 'Escape') onCancelEditSub();
                 }}
               />
             ) : (
               <span
-                className={`sub-text ${sdone ? "done" : ""}`}
+                className={`sub-text ${sdone ? 'done' : ''}`}
                 onDoubleClick={() => onStartEditSub(s)}
                 title="اضغط مرتين لتعديل العنصر"
               >
@@ -81,14 +99,19 @@ export function SubtaskPanel({
             {!isEditing && (
               <div
                 className="sub-actions"
-                style={{ display: "flex", gap: 4, opacity: 0, transition: "opacity .15s" }}
+                style={{
+                  display: 'flex',
+                  gap: 'var(--space-xs)',
+                  opacity: 0,
+                  transition: 'opacity .15s',
+                }}
                 onMouseEnter={(e) => (e.currentTarget.style.opacity = 1)}
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = 0)}
               >
                 <button
                   className="ibtn ebtn"
                   aria-label={`تعديل ${s.text}`}
-                  style={{ padding: "2px 7px", fontSize: 11 }}
+                  style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
                   onClick={() => onStartEditSub(s)}
                 >
                   ✏️
@@ -96,7 +119,7 @@ export function SubtaskPanel({
                 <button
                   className="ibtn dbtn"
                   aria-label={`حذف ${s.text}`}
-                  style={{ padding: "2px 7px", fontSize: 11 }}
+                  style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
                   onClick={() => onDeleteSubItem(s.id)}
                 >
                   ✕
@@ -121,7 +144,13 @@ export function SubtaskPanel({
           + إضافة
         </button>
       </div>
-      <div style={{ fontSize: 11, color: "rgba(var(--gold-rgb),.3)", marginTop: 6 }}>
+      <div
+        style={{
+          fontSize: 'var(--font-sm)',
+          color: 'rgba(var(--gold-rgb),.3)',
+          marginTop: 'var(--space-sm)',
+        }}
+      >
         اضغط مرتين على أي عنصر لتعديله
       </div>
     </div>
