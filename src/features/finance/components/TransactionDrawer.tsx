@@ -171,6 +171,7 @@ export default function TransactionDrawer({
                           type="date"
                           value={editForm.date}
                           onChange={(e) => setEditForm((p) => ({ ...p, date: e.target.value }))}
+                          aria-label="تاريخ الفاتورة"
                           style={{ flex: 1 }}
                         />
                       </div>
