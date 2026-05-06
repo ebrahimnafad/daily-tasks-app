@@ -1,7 +1,6 @@
 import { useState, useCallback, useMemo } from 'react';
 import useFinanceSync from '../hooks/useFinanceSync';
 import FinanceDashboard from './FinanceDashboard';
-import BudgetHealthBars from './BudgetHealthBars';
 import IncomeSection from './IncomeSection';
 import CategorySection from './CategorySection';
 import GoalsSection from './GoalsSection';
@@ -267,8 +266,6 @@ export default function FinancePage() {
               transactions={transactions}
               goals={goals}
             />
-
-            <BudgetHealthBars breakdown={summary.categoryBreakdown} settings={settings} />
 
             <IncomeSection income={income} setIncome={setIncome} settings={settings} />
 

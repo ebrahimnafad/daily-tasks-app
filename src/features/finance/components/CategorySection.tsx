@@ -86,12 +86,23 @@ export default function CategorySection({
             )}
           </div>
           {budget > 0 && (
-            <div className="fin-cat__mini-bar">
-              <div
-                className="fin-cat__mini-fill"
-                style={{ width: `${Math.min(pct, 100)}%`, background: statusColor }}
-              />
-            </div>
+            <>
+              <div className="fin-cat__bar">
+                <div
+                  className="fin-cat__bar-fill"
+                  style={{ width: `${Math.min(pct, 100)}%`, background: statusColor }}
+                />
+                {pct > 100 && (
+                  <div
+                    className="fin-cat__bar-overflow"
+                    style={{ width: `${Math.min(pct - 100, 50)}%` }}
+                  />
+                )}
+              </div>
+              <span className="fin-cat__pct" style={{ color: statusColor }}>
+                {pct}٪
+              </span>
+            </>
           )}
         </div>
         <span className={`fin-cat__chevron ${expanded ? 'fin-cat__chevron--open' : ''}`}>▼</span>
