@@ -5,6 +5,7 @@ import IncomeSection from './IncomeSection';
 import CategorySection from './CategorySection';
 import GoalsSection from './GoalsSection';
 import AnnualView from './AnnualView';
+import QuarterlyView from './QuarterlyView';
 import FinanceInsights from './FinanceInsights';
 import ExpenseModal from './ExpenseModal';
 import CategoryModal from './CategoryModal';
@@ -20,7 +21,14 @@ import type {
   FinanceSettings,
 } from '../types';
 import { CURRENCY_SYMBOLS } from '../constants';
-import { calcMonthlySummary, getCurrentMonth, shiftMonth, formatMonthLabel } from '../utils';
+import {
+  calcMonthlySummary,
+  getCurrentMonth,
+  shiftMonth,
+  formatMonthLabel,
+  getCurrentQuarter,
+  shiftQuarter,
+} from '../utils';
 
 export default function FinancePage() {
   const {
@@ -41,6 +49,7 @@ export default function FinancePage() {
 
   const [view, setView] = useState<FinanceView>('monthly');
   const [viewMonth, setViewMonth] = useState(getCurrentMonth);
+  const [viewQuarter, setViewQuarter] = useState(getCurrentQuarter);
   const [expModal, setExpModal] = useState<ExpenseModalState | null>(null);
   const [catModal, setCatModal] = useState<CategoryModalState | null>(null);
   const [txDrawer, setTxDrawer] = useState<TransactionDrawerState | null>(null);
@@ -177,6 +186,12 @@ export default function FinancePage() {
               📅 شهري
             </button>
             <button
+              className={`fin-view-toggle__btn ${view === 'quarterly' ? 'fin-view-toggle__btn--active' : ''}`}
+              onClick={() => setView('quarterly')}
+            >
+              📆 ربعي
+            </button>
+            <button
               className={`fin-view-toggle__btn ${view === 'annual' ? 'fin-view-toggle__btn--active' : ''}`}
               onClick={() => setView('annual')}
             >
@@ -303,6 +318,25 @@ export default function FinancePage() {
 
             <GoalsSection goals={goals} setGoals={setGoals} settings={settings} />
           </>
+        )}
+
+        {/* ── Quarterly View ─────────────────────────────────────────────── */}
+        {view === 'quarterly' && (
+          <QuarterlyView
+            year={viewQuarter.year}
+            quarter={viewQuarter.quarter}
+            incomes={income}
+            categories={categories}
+            expenses={expenses}
+            transactions={transactions}
+            goals={goals}
+            settings={settings}
+            onPrevQuarter={() => setViewQuarter((q) => shiftQuarter(q.year, q.quarter, -1))}
+            onNextQuarter={() => setViewQuarter((q) => shiftQuarter(q.year, q.quarter, +1))}
+            onRegisterTx={(exp) =>
+              setTxDrawer({ mode: 'register', expense: exp, expenseType: exp.type })
+            }
+          />
         )}
 
         {/* ── Annual View ───────────────────────────────────────────────── */}

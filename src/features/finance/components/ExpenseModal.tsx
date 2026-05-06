@@ -14,6 +14,7 @@ const EMPTY = {
   type: 'fixed',
   frequency: 'monthly',
   dueDay: '1',
+  quarterMonth: '1',
   amount: '',
   totalAmount: '',
   totalInstallments: '',
@@ -33,6 +34,7 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
         type: d.type || 'fixed',
         frequency: d.frequency || 'monthly',
         dueDay: String(d.dueDay || 1),
+        quarterMonth: String(d.quarterMonth || 1),
         amount: String(d.amount || ''),
         totalAmount: String(d.totalAmount || ''),
         totalInstallments: String(d.totalInstallments || ''),
@@ -68,6 +70,9 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
     // يوم الاستحقاق فقط للثابت والأقساط
     if (form.type === 'fixed' || form.type === 'installment') {
       data.dueDay = Number(form.dueDay) || 1;
+    }
+    if (form.frequency === 'quarterly') {
+      data.quarterMonth = (Number(form.quarterMonth) || 1) as 1 | 2 | 3;
     }
     if (form.type === 'installment') {
       data.totalAmount = Number(form.totalAmount) || 0;
@@ -172,6 +177,42 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
               </label>
             )}
           </div>
+
+          {/* شهر الاستحقاق في الربع */}
+          {form.frequency === 'quarterly' && (
+            <div className="fin-label">
+              <span>شهر الاستحقاق في الربع</span>
+              <div className="fin-quarter-month-opts">
+                {[
+                  { val: '1', label: 'الأول', hint: 'يناير / أبريل / يوليو / أكتوبر' },
+                  { val: '2', label: 'الثاني', hint: 'فبراير / مايو / أغسطس / نوفمبر' },
+                  { val: '3', label: 'الثالث', hint: 'مارس / يونيو / سبتمبر / ديسمبر' },
+                ].map((opt) => (
+                  <button
+                    key={opt.val}
+                    type="button"
+                    className={`fin-quarter-month-btn ${
+                      form.quarterMonth === opt.val ? 'fin-quarter-month-btn--active' : ''
+                    }`}
+                    onClick={() => f('quarterMonth', opt.val)}
+                    title={opt.hint}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="fin-calc-hint">
+                💡 يُستحق في:{' '}
+                {
+                  [
+                    { val: '1', months: 'يناير، أبريل، يوليو، أكتوبر' },
+                    { val: '2', months: 'فبراير، مايو، أغسطس، نوفمبر' },
+                    { val: '3', months: 'مارس، يونيو، سبتمبر، ديسمبر' },
+                  ].find((o) => o.val === form.quarterMonth)?.months
+                }
+              </div>
+            </div>
+          )}
 
           {form.type === 'installment' && (
             <>

@@ -30,6 +30,7 @@ export interface Expense {
   type: ExpenseType;
   isActive: boolean;
   dueDay?: number;
+  quarterMonth?: 1 | 2 | 3; // أي شهر من الربع يُستحق فيه الدفع (1=أول، 2=ثاني، 3=ثالث)
   // حقول الأقساط
   totalAmount?: number;
   totalInstallments?: number;
@@ -84,7 +85,7 @@ export interface FinanceSettings {
 }
 
 // ── حالات الواجهة ────────────────────────────────────────────────────────────
-export type FinanceView = 'monthly' | 'annual';
+export type FinanceView = 'monthly' | 'quarterly' | 'annual';
 
 export interface ExpenseModalState {
   mode: 'add' | 'edit';
@@ -119,4 +120,29 @@ export interface MonthlyFinanceSummary {
   remaining: number;
   savingsRate: number;
   categoryBreakdown: CategoryBudgetInfo[];
+}
+
+// ── ملخص ربع سنوي ────────────────────────────────────────────────────────────
+export interface QuarterlyFinanceSummary {
+  totalIncome: number;
+  totalActual: number;
+  totalBudget: number;
+  totalGoalDeductions: number;
+  remaining: number;
+  savingsRate: number;
+  monthlyBreakdown: Array<{
+    month: string;
+    label: string;
+    shortLabel: string;
+    income: number;
+    expense: number;
+    remaining: number;
+  }>;
+  quarterlyObligations: Array<{
+    expense: Expense;
+    isPaid: boolean;
+    paidAmount: number;
+    paidCount: number; // عدد الأقساط المدفوعة إجمالاً حتى الآن
+    dueMonth: string; // YYYY-MM شهر الاستحقاق في هذا الربع
+  }>;
 }

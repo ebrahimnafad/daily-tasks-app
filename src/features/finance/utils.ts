@@ -6,6 +6,7 @@ import type {
   Goal,
   CategoryBudgetInfo,
   MonthlyFinanceSummary,
+  QuarterlyFinanceSummary,
   FinanceSettings,
 } from './types';
 import { CURRENCY_SYMBOLS } from './constants';
@@ -169,4 +170,139 @@ export function shiftMonth(month: string, delta: number): string {
 export function formatMonthLabel(month: string): string {
   const d = new Date(month + '-01');
   return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'long' });
+}
+
+// ── الربع السنوي الحالي ───────────────────────────────────────────────────────
+export function getCurrentQuarter(): { year: number; quarter: 1 | 2 | 3 | 4 } {
+  const now = new Date();
+  const month = now.getMonth() + 1; // 1-12
+  const quarter = Math.ceil(month / 3) as 1 | 2 | 3 | 4;
+  return { year: now.getFullYear(), quarter };
+}
+
+// ── أشهر ربع سنوي → ['YYYY-MM', 'YYYY-MM', 'YYYY-MM'] ────────────────────────
+export function getQuarterMonths(year: number, quarter: 1 | 2 | 3 | 4): string[] {
+  const startMonth = (quarter - 1) * 3 + 1; // 1, 4, 7, 10
+  return [0, 1, 2].map((offset) => {
+    const m = startMonth + offset;
+    return `${year}-${String(m).padStart(2, '0')}`;
+  });
+}
+
+// ── تسمية ربع سنوي بالعربي ───────────────────────────────────────────────────
+export function formatQuarterLabel(year: number, quarter: 1 | 2 | 3 | 4): string {
+  const names = ['الأول', 'الثاني', 'الثالث', 'الرابع'];
+  const months = getQuarterMonths(year, quarter);
+  const startLabel = new Date(months[0] + '-01').toLocaleDateString('ar-SA', { month: 'long' });
+  const endLabel = new Date(months[2] + '-01').toLocaleDateString('ar-SA', { month: 'long' });
+  return `الربع ${names[quarter - 1]} ${year} (${startLabel}–${endLabel})`;
+}
+
+// ── الانتقال بين الأرباع ─────────────────────────────────────────────────────
+export function shiftQuarter(
+  year: number,
+  quarter: 1 | 2 | 3 | 4,
+  delta: number
+): { year: number; quarter: 1 | 2 | 3 | 4 } {
+  let q = quarter - 1 + delta; // 0-indexed
+  let y = year;
+  while (q < 0) {
+    q += 4;
+    y -= 1;
+  }
+  while (q > 3) {
+    q -= 4;
+    y += 1;
+  }
+  return { year: y, quarter: (q + 1) as 1 | 2 | 3 | 4 };
+}
+
+// ── الشهر الفعلي للاستحقاق داخل الربع ────────────────────────────────────────
+export function getQuarterlyDueMonth(
+  expense: { quarterMonth?: 1 | 2 | 3 },
+  quarterMonths: string[]
+): string {
+  const idx = (expense.quarterMonth ?? 1) - 1; // 0-indexed
+  return quarterMonths[Math.min(idx, 2)];
+}
+
+// ── هل دُفع القسط الربعي في هذا الربع؟ ──────────────────────────────────────
+export function isQuarterlyExpensePaid(
+  expense: { id: string },
+  transactions: Transaction[],
+  quarterMonths: string[]
+): { isPaid: boolean; paidAmount: number } {
+  const paid = transactions.filter(
+    (t) =>
+      t.expenseId === expense.id &&
+      t.status === 'paid' &&
+      quarterMonths.some((m) => t.date.startsWith(m))
+  );
+  const paidAmount = paid.reduce((s, t) => s + t.amount, 0);
+  return { isPaid: paid.length > 0, paidAmount };
+}
+
+// ── ملخص ربع سنوي كامل ───────────────────────────────────────────────────────
+export function calcQuarterlySummary(
+  incomes: Income[],
+  categories: ExpenseCategory[],
+  expenses: Expense[],
+  transactions: Transaction[],
+  goals: Goal[],
+  year: number,
+  quarter: 1 | 2 | 3 | 4
+): QuarterlyFinanceSummary {
+  const quarterMonths = getQuarterMonths(year, quarter);
+
+  // ملخص كل شهر
+  const monthlyBreakdown = quarterMonths.map((month) => {
+    const s = calcMonthlySummary(incomes, categories, expenses, transactions, goals, month);
+    return {
+      month,
+      label: formatMonthLabel(month),
+      shortLabel: new Date(month + '-01').toLocaleDateString('ar-SA', { month: 'long' }),
+      income: s.totalIncome,
+      expense: s.totalActual,
+      remaining: s.remaining,
+    };
+  });
+
+  // إجماليات الربع
+  const totalActual = monthlyBreakdown.reduce((s, m) => s + m.expense, 0);
+  const totalBudget = monthlyBreakdown[0].income * 3; // الميزانية الربعية = الشهرية × 3 تقريباً
+  const totalGoalDeductions =
+    goals.filter((g) => g.isActive).reduce((s, g) => s + (g.monthlyTarget || 0), 0) * 3;
+
+  // حساب الإجمالي الدقيق للدخل الربعي
+  const totalIncomeQuarterly = monthlyBreakdown.reduce((s, m) => s + m.income, 0);
+  const remaining = totalIncomeQuarterly - totalActual - totalGoalDeductions;
+  const savingsRate =
+    totalIncomeQuarterly > 0
+      ? Math.round(
+          ((totalIncomeQuarterly - totalActual - totalGoalDeductions) / totalIncomeQuarterly) * 100
+        )
+      : 0;
+
+  // الالتزامات الربعية: كل مصروف تكراره quarterly
+  const quarterlyObligations = expenses
+    .filter((e) => e.isActive && e.frequency === 'quarterly')
+    .map((e) => {
+      const { isPaid, paidAmount } = isQuarterlyExpensePaid(e, transactions, quarterMonths);
+      const paidCount = transactions.filter(
+        (t) => t.expenseId === e.id && t.status === 'paid'
+      ).length;
+      const dueMonth = getQuarterlyDueMonth(e, quarterMonths);
+      return { expense: e, isPaid, paidAmount, paidCount, dueMonth };
+    });
+
+  return {
+    totalIncome: totalIncomeQuarterly,
+    totalActual,
+    totalBudget,
+    totalGoalDeductions,
+    remaining,
+    savingsRate,
+    monthlyBreakdown,
+    quarterlyObligations,
+  };
 }
