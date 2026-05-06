@@ -1,96 +1,148 @@
 import { useState, useCallback, useMemo } from 'react';
-import { useFinanceSync } from '@/features/finance';
-import { MonthlySummary } from '@/features/finance';
-import { IncomeSection } from '@/features/finance';
-import { FinanceCard } from '@/features/finance';
-import { FinanceModal } from '@/features/finance';
-import { PaymentDrawer } from '@/features/finance';
-import { GoalsSection } from '@/features/finance';
-import type { Obligation, Payment, FinanceModalState, PaymentDrawerState } from '../types';
+import useFinanceSync from '../hooks/useFinanceSync';
+import FinanceDashboard from './FinanceDashboard';
+import BudgetHealthBars from './BudgetHealthBars';
+import IncomeSection from './IncomeSection';
+import CategorySection from './CategorySection';
+import GoalsSection from './GoalsSection';
+import AnnualView from './AnnualView';
+import FinanceInsights from './FinanceInsights';
+import ExpenseModal from './ExpenseModal';
+import CategoryModal from './CategoryModal';
+import TransactionDrawer from './TransactionDrawer';
+import type {
+  Expense,
+  ExpenseCategory,
+  Transaction,
+  FinanceView,
+  ExpenseModalState,
+  CategoryModalState,
+  TransactionDrawerState,
+  FinanceSettings,
+} from '../types';
+import { CURRENCY_SYMBOLS } from '../constants';
+import { calcMonthlySummary, getCurrentMonth, shiftMonth, formatMonthLabel } from '../utils';
 
-interface FinancePageProps {
-  onQuota?: () => void;
-}
-
-export default function FinancePage({ onQuota }: FinancePageProps) {
+export default function FinancePage() {
   const {
     income,
     setIncome,
-    obligations,
-    setObligations,
-    payments,
-    setPayments,
+    categories,
+    setCategories,
+    expenses,
+    setExpenses,
+    transactions,
+    setTransactions,
     goals,
     setGoals,
+    settings,
+    setSettings,
     syncStatus,
-  } = useFinanceSync(onQuota);
+  } = useFinanceSync();
 
-  const [viewMonth, setViewMonth] = useState(() => new Date().toISOString().slice(0, 7));
-  const [oblModal, setOblModal] = useState<FinanceModalState | null>(null);
-  const [drawer, setDrawer] = useState<PaymentDrawerState | null>(null);
+  const [view, setView] = useState<FinanceView>('monthly');
+  const [viewMonth, setViewMonth] = useState(getCurrentMonth);
+  const [expModal, setExpModal] = useState<ExpenseModalState | null>(null);
+  const [catModal, setCatModal] = useState<CategoryModalState | null>(null);
+  const [txDrawer, setTxDrawer] = useState<TransactionDrawerState | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
 
-  const openAddObl = useCallback(() => setOblModal({ mode: 'add' }), []);
-  const openEditObl = useCallback(
-    (obl: Obligation) => setOblModal({ mode: 'edit', data: obl }),
-    []
+  // ── Summary calculations ─────────────────────────────────────────────────
+  const summary = useMemo(
+    () => calcMonthlySummary(income, categories, expenses, transactions, goals, viewMonth),
+    [income, categories, expenses, transactions, goals, viewMonth]
   );
 
-  const saveObl = useCallback(
-    (data: Partial<Obligation>, mode: 'add' | 'edit', id?: string | number) => {
+  const monthLabel = formatMonthLabel(viewMonth);
+  const currentYear = Number(viewMonth.slice(0, 4));
+
+  // ── Expense CRUD ──────────────────────────────────────────────────────────
+  const openAddExpense = useCallback((categoryId: string) => {
+    setExpModal({ mode: 'add', categoryId });
+  }, []);
+
+  const openEditExpense = useCallback((exp: Expense) => {
+    setExpModal({ mode: 'edit', categoryId: exp.categoryId, data: exp });
+  }, []);
+
+  const saveExpense = useCallback(
+    (data: Partial<Expense>, mode: 'add' | 'edit', id?: string) => {
       if (mode === 'add') {
-        setObligations((prev) => [...prev, { id: crypto.randomUUID(), ...data } as Obligation]);
+        setExpenses((prev) => [...prev, { id: crypto.randomUUID(), ...data } as Expense]);
       } else {
-        setObligations((prev) => prev.map((o) => (o.id === id ? { ...o, ...data } : o)));
+        setExpenses((prev) => prev.map((e) => (e.id === id ? { ...e, ...data } : e)));
       }
-      setOblModal(null);
+      setExpModal(null);
     },
-    [setObligations]
+    [setExpenses]
   );
 
-  const deleteObl = useCallback(
-    (id: string | number) => {
-      if (!window.confirm('حذف هذا الالتزام؟')) return;
-      setObligations((prev) => prev.filter((o) => o.id !== id));
-      setPayments((prev) => prev.filter((p) => p.obligationId !== id));
+  const deleteExpense = useCallback(
+    (id: string) => {
+      setExpenses((prev) => prev.filter((e) => e.id !== id));
+      setTransactions((prev) => prev.filter((t) => t.expenseId !== id));
     },
-    [setObligations, setPayments]
+    [setExpenses, setTransactions]
   );
 
-  const registerPayment = useCallback(
-    (obl: Obligation) => setDrawer({ mode: 'register', obligationId: obl.id }),
-    []
-  );
-  const viewPayments = useCallback(
-    (oblId: string | number) => setDrawer({ mode: 'view', obligationId: oblId }),
-    []
-  );
+  // ── Category CRUD ─────────────────────────────────────────────────────────
+  const openAddCategory = useCallback(() => {
+    setCatModal({ mode: 'add' });
+  }, []);
 
-  const savePayment = useCallback(
-    (payment: Payment) => {
-      setPayments((prev) => [...prev, payment]);
+  const openEditCategory = useCallback((cat: ExpenseCategory) => {
+    setCatModal({ mode: 'edit', data: cat });
+  }, []);
+
+  const saveCategory = useCallback(
+    (data: Partial<ExpenseCategory>, mode: 'add' | 'edit', id?: string) => {
+      if (mode === 'add') {
+        const maxOrder = categories.reduce((max, c) => Math.max(max, c.order), 0);
+        setCategories((prev) => [
+          ...prev,
+          { id: crypto.randomUUID(), order: maxOrder + 1, ...data } as ExpenseCategory,
+        ]);
+      } else {
+        setCategories((prev) => prev.map((c) => (c.id === id ? { ...c, ...data } : c)));
+      }
+      setCatModal(null);
     },
-    [setPayments]
+    [categories, setCategories]
   );
 
-  const deletePayment = useCallback(
-    (payId: string | number) => {
-      setPayments((prev) => prev.filter((p) => p.id !== payId));
+  const setCategoryBudget = useCallback(
+    (catId: string, budget: number) => {
+      setCategories((prev) =>
+        prev.map((c) => (c.id === catId ? { ...c, monthlyBudget: budget } : c))
+      );
     },
-    [setPayments]
+    [setCategories]
   );
 
-  const sortedObligations = useMemo(() => {
-    return [...obligations].sort((a, b) => {
-      if (a.isActive === false && b.isActive !== false) return 1;
-      if (b.isActive === false && a.isActive !== false) return -1;
-      const dA = a.dueDay || 1;
-      const dB = b.dueDay || 1;
-      return dA - dB;
-    });
-  }, [obligations]);
+  // ── Transaction CRUD ──────────────────────────────────────────────────────
+  const saveTransaction = useCallback(
+    (tx: Transaction) => {
+      setTransactions((prev) => [...prev, tx]);
+    },
+    [setTransactions]
+  );
 
-  const drawerObl = drawer ? obligations.find((o) => o.id === drawer.obligationId) : null;
+  const deleteTransaction = useCallback(
+    (id: string) => {
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
+    },
+    [setTransactions]
+  );
 
+  // ── Settings ──────────────────────────────────────────────────────────────
+  const updateSettings = useCallback(
+    (partial: Partial<FinanceSettings>) => {
+      setSettings((prev) => ({ ...prev, ...partial }));
+    },
+    [setSettings]
+  );
+
+  // ── Sync badge ────────────────────────────────────────────────────────────
   const syncMap: Record<string, { icon: string; text: string; cls: string }> = {
     syncing: { icon: '⏳', text: 'جاري الحفظ...', cls: 'syncing' },
     synced: { icon: '☁️', text: 'محفوظ سحابياً', cls: 'synced' },
@@ -99,55 +151,10 @@ export default function FinancePage({ onQuota }: FinancePageProps) {
   };
   const sync = syncMap[syncStatus] || syncMap.offline;
 
-  const exportToSheets = useCallback(async () => {
-    const url =
-      localStorage.getItem('sheet_finance_webhook') ||
-      window.prompt('أدخل رابط Google Apps Script (Web App URL):');
-    if (!url) return;
-    localStorage.setItem('sheet_finance_webhook', url);
-
-    const totalIncome = income
-      .filter((s) => s.isActive !== false)
-      .reduce((sum, s) => {
-        const amt = s.amount || 0;
-        if (s.frequency === 'monthly') return sum + amt;
-        if (s.frequency === 'quarterly') return sum + amt / 3;
-        if (s.frequency === 'semi-annual') return sum + amt / 6;
-        if (s.frequency === 'annual') return sum + amt / 12;
-        return sum;
-      }, 0);
-
-    const monthPayments = payments.filter(
-      (p) => p.date?.startsWith(viewMonth) && p.status === 'paid'
-    );
-    const totalPaid = monthPayments.reduce((s, p) => s + (p.amount || 0), 0);
-
-    try {
-      await fetch(url, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'text/plain' },
-        body: JSON.stringify({
-          month: viewMonth,
-          totalIncome,
-          totalPaid,
-          obligations: obligations.map((o) => ({
-            title: o.title,
-            amount: o.amount,
-            frequency: o.frequency,
-          })),
-          goals: goals.map((g) => ({
-            title: g.title,
-            target: g.targetAmount,
-            saved: g.currentSaved,
-          })),
-        }),
-      });
-      alert('✅ تم إرسال التقرير');
-    } catch {
-      alert('❌ خطأ في الإرسال');
-    }
-  }, [income, obligations, payments, goals, viewMonth]);
+  const sortedCategories = useMemo(
+    () => [...categories].sort((a, b) => a.order - b.order),
+    [categories]
+  );
 
   return (
     <div id="panel-finance" role="tabpanel" aria-label="لوحة المالية">
@@ -157,95 +164,177 @@ export default function FinancePage({ onQuota }: FinancePageProps) {
       </div>
 
       <div style={{ maxWidth: 480, margin: '0 auto', padding: '24px 16px 100px' }}>
-        <header style={{ textAlign: 'center', marginBottom: 'var(--space-xl)' }}>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: 28,
-              fontWeight: 700,
-              color: 'var(--text-gold)',
-              textShadow: '0 2px 20px rgba(var(--gold-rgb),.3)',
-            }}
-          >
-            💰 المالية الشخصية
-          </h1>
-          <div
-            style={{
-              marginTop: 'var(--space-xs)',
-              fontSize: 'var(--font-base)',
-              color: 'rgba(var(--gold-rgb),.45)',
-            }}
-          >
-            إدارة الدخل والالتزامات والأهداف
+        {/* Header */}
+        <header className="fin-page-header">
+          <h1 className="fin-page-header__title">💰 المالية الشخصية</h1>
+          <div className="fin-page-header__sub">إدارة الميزانية والمصروفات والأهداف</div>
+
+          {/* View toggle */}
+          <div className="fin-view-toggle">
+            <button
+              className={`fin-view-toggle__btn ${view === 'monthly' ? 'fin-view-toggle__btn--active' : ''}`}
+              onClick={() => setView('monthly')}
+            >
+              📅 شهري
+            </button>
+            <button
+              className={`fin-view-toggle__btn ${view === 'annual' ? 'fin-view-toggle__btn--active' : ''}`}
+              onClick={() => setView('annual')}
+            >
+              📊 سنوي
+            </button>
+            <button
+              className="fin-view-toggle__btn"
+              onClick={() => setShowSettings(!showSettings)}
+              aria-label="الإعدادات"
+            >
+              ⚙️
+            </button>
           </div>
         </header>
 
-        <MonthlySummary
-          income={income}
-          obligations={obligations}
-          payments={payments}
-          goals={goals}
-          viewMonth={viewMonth}
-          onChangeMonth={setViewMonth}
-        />
-
-        <IncomeSection income={income} setIncome={setIncome} />
-
-        <section className="fin-section" aria-label="الالتزامات المالية">
-          <div className="fin-section__header">
-            <h3 className="fin-section__title">💸 الالتزامات</h3>
-            <span className="fin-section__total">
-              {obligations.filter((o) => o.isActive !== false).length} التزام
-            </span>
+        {/* Settings panel */}
+        {showSettings && (
+          <div className="fin-settings">
+            <div className="fin-row">
+              <label className="fin-label" style={{ flex: 1 }}>
+                العملة الأساسية
+                <select
+                  className="fin-input"
+                  value={settings.currency}
+                  onChange={(e) => updateSettings({ currency: e.target.value as 'SAR' | 'EGP' })}
+                >
+                  <option value="SAR">ريال سعودي (ر.س)</option>
+                  <option value="EGP">جنيه مصري (ج.م)</option>
+                </select>
+              </label>
+            </div>
+            <label
+              className="fin-label"
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}
+            >
+              <input
+                type="checkbox"
+                checked={settings.showExchangeRate}
+                onChange={(e) => updateSettings({ showExchangeRate: e.target.checked })}
+              />
+              إظهار تحويل العملة
+            </label>
+            {settings.showExchangeRate && (
+              <label className="fin-label">
+                سعر التحويل (1 ر.س = ؟ ج.م)
+                <input
+                  className="fin-input"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={settings.exchangeRate || ''}
+                  onChange={(e) =>
+                    updateSettings({ exchangeRate: Number(e.target.value) || undefined })
+                  }
+                  placeholder="مثل: 13.2"
+                />
+              </label>
+            )}
+            {settings.showExchangeRate && settings.exchangeRate && summary.totalIncome > 0 && (
+              <div className="fin-calc-hint">
+                💱 الدخل بالجنيه:{' '}
+                {Math.round(summary.totalIncome * settings.exchangeRate).toLocaleString('ar-SA')}{' '}
+                {CURRENCY_SYMBOLS.EGP}
+              </div>
+            )}
           </div>
+        )}
 
-          {sortedObligations.length === 0 && <div className="fin-empty">لم تضف التزامات بعد</div>}
-
-          {sortedObligations.map((obl) => (
-            <FinanceCard
-              key={obl.id}
-              obligation={obl}
-              payments={payments}
-              onEdit={openEditObl}
-              onDelete={deleteObl}
-              onRegisterPayment={registerPayment}
-              onViewPayments={viewPayments}
+        {/* ── Monthly View ──────────────────────────────────────────────── */}
+        {view === 'monthly' && (
+          <>
+            <FinanceDashboard
+              summary={summary}
+              settings={settings}
+              monthLabel={monthLabel}
+              onPrevMonth={() => setViewMonth((m) => shiftMonth(m, -1))}
+              onNextMonth={() => setViewMonth((m) => shiftMonth(m, 1))}
             />
-          ))}
 
-          <button className="fin-add-btn" onClick={openAddObl}>
-            ＋ إضافة التزام
-          </button>
-        </section>
+            <FinanceInsights
+              summary={summary}
+              settings={settings}
+              month={viewMonth}
+              incomes={income}
+              categories={categories}
+              expenses={expenses}
+              transactions={transactions}
+              goals={goals}
+            />
 
-        <GoalsSection goals={goals} setGoals={setGoals} />
+            <BudgetHealthBars breakdown={summary.categoryBreakdown} settings={settings} />
 
-        <button className="fin-export-btn" onClick={exportToSheets}>
-          📊 تصدير التقرير لـ Google Sheets
-        </button>
+            <IncomeSection income={income} setIncome={setIncome} settings={settings} />
 
-        <footer
-          style={{
-            textAlign: 'center',
-            marginTop: 'var(--space-xl)',
-            color: 'rgba(var(--gold-rgb),.22)',
-            fontSize: 'var(--font-base)',
-          }}
-        >
+            {/* Category sections */}
+            <div className="fin-cats-header">
+              <h3 className="fin-section__title">💸 أقسام المصروفات</h3>
+              <button className="fin-btn-sm" onClick={openAddCategory}>
+                ＋ قسم جديد
+              </button>
+            </div>
+
+            {sortedCategories.map((cat) => (
+              <CategorySection
+                key={cat.id}
+                category={cat}
+                expenses={expenses}
+                transactions={transactions}
+                month={viewMonth}
+                settings={settings}
+                onAddExpense={openAddExpense}
+                onEditExpense={openEditExpense}
+                onDeleteExpense={deleteExpense}
+                onRegisterTx={(exp) => setTxDrawer({ mode: 'register', expense: exp })}
+                onViewTxs={(exp) => setTxDrawer({ mode: 'view', expense: exp })}
+                onEditCategory={openEditCategory}
+                onSetBudget={setCategoryBudget}
+              />
+            ))}
+
+            <GoalsSection goals={goals} setGoals={setGoals} settings={settings} />
+          </>
+        )}
+
+        {/* ── Annual View ───────────────────────────────────────────────── */}
+        {view === 'annual' && (
+          <AnnualView
+            year={currentYear}
+            incomes={income}
+            categories={categories}
+            expenses={expenses}
+            transactions={transactions}
+            goals={goals}
+            settings={settings}
+          />
+        )}
+
+        {/* Footer */}
+        <footer className="fin-footer">
           ﴿ وَلَا تُسْرِفُوا إِنَّهُ لَا يُحِبُّ الْمُسْرِفِينَ ﴾
         </footer>
       </div>
 
-      <FinanceModal modal={oblModal} onSave={saveObl} onClose={() => setOblModal(null)} />
-
-      {drawer && drawerObl && (
-        <PaymentDrawer
-          mode={drawer.mode}
-          obligation={drawerObl}
-          payments={payments}
-          onSavePayment={savePayment}
-          onDeletePayment={deletePayment}
-          onClose={() => setDrawer(null)}
+      {/* Modals & Drawers */}
+      {expModal && (
+        <ExpenseModal modal={expModal} onSave={saveExpense} onClose={() => setExpModal(null)} />
+      )}
+      {catModal && (
+        <CategoryModal modal={catModal} onSave={saveCategory} onClose={() => setCatModal(null)} />
+      )}
+      {txDrawer && (
+        <TransactionDrawer
+          state={txDrawer}
+          transactions={transactions}
+          onSave={saveTransaction}
+          onDelete={deleteTransaction}
+          onClose={() => setTxDrawer(null)}
         />
       )}
     </div>

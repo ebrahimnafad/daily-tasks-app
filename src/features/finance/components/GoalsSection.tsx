@@ -1,25 +1,21 @@
 import { useState, useCallback } from 'react';
-import type { Goal } from '../types';
-
-const GOAL_ICONS = ['🏗️', '🏠', '🚗', '✈️', '💍', '📱', '🎓', '💰', '🏦', '⭐'];
+import type { Goal, FinanceSettings } from '../types';
+import { GOAL_ICONS } from '../constants';
+import { formatAmount, calcGoalMonthlyTarget } from '../utils';
 
 interface GoalsSectionProps {
   goals: Goal[];
-  setGoals: React.Dispatch<React.SetStateAction<Goal[]>>;
+  setGoals: (v: Goal[] | ((prev: Goal[]) => Goal[])) => void;
+  settings: FinanceSettings;
 }
 
-interface GoalModalState {
-  mode: 'add' | 'edit';
-  id?: string | number;
-}
-
-export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
-  const [modal, setModal] = useState<GoalModalState | null>(null);
+export default function GoalsSection({ goals, setGoals, settings }: GoalsSectionProps) {
+  const [modal, setModal] = useState<{ mode: 'add' | 'edit'; id?: string } | null>(null);
   const [form, setForm] = useState({
     icon: '🏗️',
     title: '',
     targetAmount: '',
-    currentSaved: '',
+    currentSaved: '0',
     deadline: '',
     notes: '',
   });
@@ -36,53 +32,46 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
     setModal({ mode: 'add' });
   }, []);
 
-  const openEdit = useCallback((goal: Goal) => {
+  const openEdit = useCallback((g: Goal) => {
     setForm({
-      icon: (goal as any).icon || '🏗️',
-      title: goal.title,
-      targetAmount: String(goal.targetAmount || ''),
-      currentSaved: String(goal.currentSaved || '0'),
-      deadline: (goal as any).deadline || '',
-      notes: goal.notes || '',
+      icon: g.icon || '🏗️',
+      title: g.title,
+      targetAmount: String(g.targetAmount || ''),
+      currentSaved: String(g.currentSaved || '0'),
+      deadline: g.deadline || '',
+      notes: g.notes || '',
     });
-    setModal({ mode: 'edit', id: goal.id });
+    setModal({ mode: 'edit', id: g.id });
   }, []);
 
   const save = useCallback(() => {
     if (!form.title.trim() || !form.targetAmount) return;
     const target = Number(form.targetAmount) || 0;
     const current = Number(form.currentSaved) || 0;
-    const deadlineDate = form.deadline ? new Date(form.deadline) : null;
-    const now = new Date();
-    const monthsLeft = deadlineDate
-      ? Math.max(
-          1,
-          Math.ceil((deadlineDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24 * 30.44))
-        )
-      : 0;
-    const monthlyTarget = monthsLeft > 0 ? Math.ceil((target - current) / monthsLeft) : 0;
+    const monthlyTarget = calcGoalMonthlyTarget(target, current, form.deadline || null);
 
-    const data: any = {
+    const data: Goal = {
+      id: modal?.mode === 'add' ? crypto.randomUUID() : modal!.id!,
       icon: form.icon,
       title: form.title.trim(),
       targetAmount: target,
       currentSaved: current,
       deadline: form.deadline || null,
       monthlyTarget,
-      notes: form.notes,
       isActive: true,
+      notes: form.notes,
     };
 
     if (modal?.mode === 'add') {
-      setGoals((prev) => [...prev, { id: crypto.randomUUID(), ...data } as Goal]);
+      setGoals((prev) => [...prev, data]);
     } else {
-      setGoals((prev) => prev.map((g) => (g.id === modal?.id ? { ...g, ...data } : g)));
+      setGoals((prev) => prev.map((g) => (g.id === modal?.id ? data : g)));
     }
     setModal(null);
   }, [form, modal, setGoals]);
 
   const remove = useCallback(
-    (id: string | number) => {
+    (id: string) => {
       if (!window.confirm('حذف الهدف؟')) return;
       setGoals((prev) => prev.filter((g) => g.id !== id));
     },
@@ -90,7 +79,7 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
   );
 
   const addSavings = useCallback(
-    (goalId: string | number, amount: number) => {
+    (goalId: string, amount: number) => {
       setGoals((prev) =>
         prev.map((g) =>
           g.id === goalId ? { ...g, currentSaved: (g.currentSaved || 0) + amount } : g
@@ -114,7 +103,7 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
             ? Math.min(100, Math.round((goal.currentSaved / goal.targetAmount) * 100))
             : 0;
         const remaining = (goal.targetAmount || 0) - (goal.currentSaved || 0);
-        const deadlineDate = (goal as any).deadline ? new Date((goal as any).deadline) : null;
+        const deadlineDate = goal.deadline ? new Date(goal.deadline) : null;
         const monthsLeft = deadlineDate
           ? Math.max(
               0,
@@ -127,12 +116,12 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
         return (
           <div key={goal.id} className="fin-goal-card">
             <div className="fin-goal-card__header">
-              <span className="fin-goal-card__icon">{(goal as any).icon || '🏗️'}</span>
+              <span className="fin-goal-card__icon">{goal.icon || '🏗️'}</span>
               <div className="fin-goal-card__info">
                 <div className="fin-goal-card__title">{goal.title}</div>
                 <div className="fin-goal-card__amounts">
-                  {(goal.currentSaved || 0).toLocaleString('ar-SA')} /{' '}
-                  {(goal.targetAmount || 0).toLocaleString('ar-SA')} ر.س
+                  {formatAmount(goal.currentSaved, settings)} /{' '}
+                  {formatAmount(goal.targetAmount, settings)}
                 </div>
               </div>
               <div className="fin-goal-card__actions">
@@ -154,8 +143,8 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
             <div className="fin-goal-card__meta">
               <span>{pct}٪</span>
               {monthsLeft !== null && <span>📅 {monthsLeft} شهر متبقي</span>}
-              {(goal as any).monthlyTarget > 0 && (
-                <span>الاقتطاع: {(goal as any).monthlyTarget.toLocaleString('ar-SA')} ر.س/شهر</span>
+              {goal.monthlyTarget > 0 && (
+                <span>الاقتطاع: {formatAmount(goal.monthlyTarget, settings)}/شهر</span>
               )}
             </div>
 
@@ -244,6 +233,11 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
             {form.targetAmount &&
               form.deadline &&
               (() => {
+                const monthly = calcGoalMonthlyTarget(
+                  Number(form.targetAmount) || 0,
+                  Number(form.currentSaved) || 0,
+                  form.deadline
+                );
                 const months = Math.max(
                   1,
                   Math.ceil(
@@ -251,13 +245,10 @@ export default function GoalsSection({ goals, setGoals }: GoalsSectionProps) {
                       (1000 * 60 * 60 * 24 * 30.44)
                   )
                 );
-                const monthly = Math.ceil(
-                  ((Number(form.targetAmount) || 0) - (Number(form.currentSaved) || 0)) / months
-                );
                 return monthly > 0 ? (
                   <div className="fin-calc-hint">
-                    💡 الاقتطاع الشهري المطلوب:{' '}
-                    <strong>{monthly.toLocaleString('ar-SA')} ر.س</strong> لمدة {months} شهر
+                    💡 الاقتطاع الشهري المطلوب: <strong>{formatAmount(monthly, settings)}</strong>{' '}
+                    لمدة {months} شهر
                   </div>
                 ) : null;
               })()}

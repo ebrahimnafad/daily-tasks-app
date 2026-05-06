@@ -1,0 +1,237 @@
+import type { ExpenseCategory, FinanceSettings } from './types';
+
+// ── الأقسام الافتراضية (13 قسم) ─────────────────────────────────────────────
+export const DEFAULT_CATEGORIES: ExpenseCategory[] = [
+  {
+    id: 'cat-housing',
+    name: 'سكن وخدمات',
+    icon: '🏠',
+    color: '#c87a4e',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 1,
+  },
+  {
+    id: 'cat-family',
+    name: 'أسرة',
+    icon: '👨‍👩‍👧‍👦',
+    color: '#9bc87a',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 2,
+  },
+  {
+    id: 'cat-groceries',
+    name: 'مقاضي وتسوق',
+    icon: '🛒',
+    color: '#e6a855',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 3,
+  },
+  {
+    id: 'cat-car',
+    name: 'سيارة',
+    icon: '🚗',
+    color: '#6e9fcf',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 4,
+  },
+  {
+    id: 'cat-health',
+    name: 'صحة',
+    icon: '💊',
+    color: '#cf6e8a',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 5,
+  },
+  {
+    id: 'cat-clothing',
+    name: 'ملابس',
+    icon: '👔',
+    color: '#8e7cc3',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 6,
+  },
+  {
+    id: 'cat-holidays',
+    name: 'أعياد ومناسبات',
+    icon: '🎉',
+    color: '#dca7a5',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 7,
+  },
+  {
+    id: 'cat-entertainment',
+    name: 'ترفيه وأكل خارجي',
+    icon: '🎭',
+    color: '#e88f5a',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 8,
+  },
+  {
+    id: 'cat-realestate',
+    name: 'عقار واستثمار',
+    icon: '🏗️',
+    color: '#b8956a',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 9,
+  },
+  {
+    id: 'cat-education',
+    name: 'تعليم',
+    icon: '📚',
+    color: '#5b9bd5',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 10,
+  },
+  {
+    id: 'cat-sports',
+    name: 'رياضة ونادي',
+    icon: '🏋️',
+    color: '#70c1b3',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 11,
+  },
+  {
+    id: 'cat-charity',
+    name: 'صدقات',
+    icon: '🤲',
+    color: '#a8d08d',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 12,
+  },
+  {
+    id: 'cat-personal',
+    name: 'مصروف شخصي ونثريات',
+    icon: '💰',
+    color: '#bda782',
+    monthlyBudget: 0,
+    isCustom: false,
+    order: 13,
+  },
+];
+
+// ── تسميات التكرار ───────────────────────────────────────────────────────────
+export const FREQUENCY_LABELS: Record<string, string> = {
+  weekly: 'أسبوعي',
+  monthly: 'شهري',
+  quarterly: 'ربع سنوي',
+  'semi-annual': 'نصف سنوي',
+  annual: 'سنوي',
+  'one-time': 'مرة واحدة',
+};
+
+export const FREQUENCY_OPTIONS = [
+  { value: 'weekly', label: 'أسبوعي' },
+  { value: 'monthly', label: 'شهري' },
+  { value: 'quarterly', label: 'ربع سنوي' },
+  { value: 'semi-annual', label: 'نصف سنوي' },
+  { value: 'annual', label: 'سنوي' },
+  { value: 'one-time', label: 'مرة واحدة' },
+] as const;
+
+export const TYPE_OPTIONS = [
+  { value: 'fixed', label: 'ثابت' },
+  { value: 'variable', label: 'متغير (فواتير)' },
+  { value: 'installment', label: 'أقساط بإجمالي' },
+  { value: 'seasonal', label: 'موسمي (أعياد/مناسبات)' },
+] as const;
+
+// ── أيقونات المصروفات ────────────────────────────────────────────────────────
+export const EXPENSE_ICONS = [
+  '🏠',
+  '🔌',
+  '📱',
+  '💧',
+  '🛒',
+  '🍔',
+  '🚗',
+  '⛽',
+  '💊',
+  '🏥',
+  '👔',
+  '👗',
+  '🎉',
+  '🎂',
+  '🎭',
+  '🎮',
+  '🏗️',
+  '🏦',
+  '📚',
+  '🎓',
+  '🏋️',
+  '⚽',
+  '🤲',
+  '💰',
+  '📋',
+  '💳',
+  '🛡️',
+  '✈️',
+  '🐦',
+  '🏡',
+];
+
+export const INCOME_ICONS = ['💼', '💵', '🏦', '📈', '🎁', '💰', '🏢', '🛒'];
+export const GOAL_ICONS = ['🏗️', '🏠', '🚗', '✈️', '💍', '📱', '🎓', '💰', '🏦', '⭐'];
+export const CATEGORY_ICONS = [
+  '🏠',
+  '👨‍👩‍👧‍👦',
+  '🛒',
+  '🚗',
+  '💊',
+  '👔',
+  '🎉',
+  '🎭',
+  '🏗️',
+  '📚',
+  '🏋️',
+  '🤲',
+  '💰',
+  '🎮',
+  '✈️',
+  '🐦',
+  '📋',
+  '🛡️',
+  '🎁',
+  '🧾',
+];
+
+// ── ألوان الأقسام ────────────────────────────────────────────────────────────
+export const CATEGORY_COLORS = [
+  '#c87a4e',
+  '#9bc87a',
+  '#e6a855',
+  '#6e9fcf',
+  '#cf6e8a',
+  '#8e7cc3',
+  '#dca7a5',
+  '#e88f5a',
+  '#b8956a',
+  '#5b9bd5',
+  '#70c1b3',
+  '#a8d08d',
+  '#bda782',
+  '#d97e6a',
+  '#7ca8d9',
+];
+
+// ── إعدادات افتراضية ─────────────────────────────────────────────────────────
+export const DEFAULT_SETTINGS: FinanceSettings = {
+  currency: 'SAR',
+  showExchangeRate: false,
+};
+
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  SAR: 'ر.س',
+  EGP: 'ج.م',
+};

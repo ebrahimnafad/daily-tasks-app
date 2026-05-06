@@ -945,143 +945,508 @@
   color: var(--gold);
 }
 
+/* ── Page Header ── */
+.fin-page-header {
+  text-align: center;
+  margin-bottom: var(--space-xl);
+}
+.fin-page-header__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-gold);
+  text-shadow: 0 2px 20px rgba(var(--gold-rgb), 0.3);
+}
+.fin-page-header__sub {
+  margin-top: var(--space-xs);
+  font-size: var(--font-base);
+  color: rgba(var(--gold-rgb), 0.45);
+}
+
+/* ── View Toggle ── */
+.fin-view-toggle {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xs);
+  margin-top: var(--space-lg);
+  background: rgba(var(--gold-rgb), 0.05);
+  border-radius: var(--radius-pill);
+  padding: var(--space-xs);
+}
+.fin-view-toggle__btn {
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: rgba(var(--gold-rgb), 0.5);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-base);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+.fin-view-toggle__btn--active {
+  background: rgba(var(--gold-rgb), 0.15);
+  color: var(--gold);
+}
+.fin-view-toggle__btn:hover:not(.fin-view-toggle__btn--active) {
+  color: var(--gold);
+}
+
+/* ── Settings Panel ── */
+.fin-settings {
+  background: rgba(var(--gold-rgb), 0.05);
+  border: 1px solid rgba(var(--gold-rgb), 0.12);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+  animation: slideDown 0.22s ease;
+}
+
+/* ── Cats Header ── */
+.fin-cats-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+  margin-top: var(--space-xl);
+}
+
+/* ── Footer ── */
+.fin-footer {
+  text-align: center;
+  margin-top: var(--space-xl);
+  color: rgba(var(--gold-rgb), 0.22);
+  font-size: var(--font-base);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
-   MONTHLY SUMMARY — ملخص الشهر
+   DASHBOARD — لوحة الملخص
 ══════════════════════════════════════════════════════════════════════════════ */
-.fin-summary {
+.fin-dashboard {
   background: rgba(var(--gold-rgb), 0.06);
   border: 1px solid rgba(var(--gold-rgb), 0.15);
   border-radius: 18px;
   padding: var(--space-xl);
   margin-bottom: var(--space-xl);
 }
-
-.fin-summary__header {
+.fin-dashboard__header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-lg);
 }
-
-.fin-summary__title {
+.fin-dashboard__month {
   margin: 0;
   font-size: var(--font-lg);
   font-weight: 700;
   color: var(--text-gold);
 }
-
-.fin-summary__nav {
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-pill);
-  border: 1px solid rgba(var(--gold-rgb), 0.2);
-  background: rgba(var(--gold-rgb), 0.08);
-  color: var(--gold);
-  font-size: var(--font-base);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.fin-summary__nav:hover {
-  background: rgba(var(--gold-rgb), 0.18);
-}
-
-.fin-summary__grid {
+.fin-dashboard__grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-md);
   margin-top: var(--space-lg);
 }
-
-.fin-summary__stat {
+.fin-dashboard__stat {
   background: rgba(var(--gold-rgb), 0.05);
   border-radius: var(--radius-md);
-  padding: var(--space-md) var(--space-md);
+  padding: var(--space-md);
   text-align: center;
 }
-
-.fin-summary__stat-label {
+.fin-dashboard__stat-label {
   display: block;
   font-size: var(--font-sm);
   color: rgba(var(--gold-rgb), 0.45);
   margin-bottom: var(--space-xs);
 }
-
-.fin-summary__stat-value {
+.fin-dashboard__stat-value {
   font-size: var(--font-md);
   font-weight: 700;
 }
-
-.fin-summary__breakdown {
+.fin-dashboard__alert {
   margin-top: var(--space-lg);
-  padding-top: var(--space-md);
-  border-top: 1px solid rgba(var(--gold-rgb), 0.1);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  text-align: center;
+  font-size: var(--font-base);
+  font-weight: 600;
+}
+.fin-dashboard__alert--surplus {
+  background: rgba(155, 200, 122, 0.08);
+  border: 1px solid rgba(155, 200, 122, 0.2);
+  color: #9bc87a;
+}
+.fin-dashboard__alert--deficit {
+  background: rgba(217, 126, 106, 0.08);
+  border: 1px solid rgba(217, 126, 106, 0.2);
+  color: #d97e6a;
+}
+.fin-dashboard__alert-sub {
+  display: block;
+  font-size: var(--font-sm);
+  font-weight: 400;
+  margin-top: var(--space-xs);
+  opacity: 0.7;
 }
 
-.fin-summary__item {
+/* ── Chart ── */
+.fin-chart {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: 6px 0;
-  font-size: var(--font-base);
-  color: rgba(var(--gold-rgb), 0.65);
+  gap: var(--space-lg);
+  justify-content: center;
+}
+.fin-chart__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.fin-chart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-sm);
+}
+.fin-chart__legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fin-chart__legend-label {
+  color: rgba(var(--gold-rgb), 0.7);
+}
+.fin-chart__legend-value {
+  color: var(--text-gold);
+  font-weight: 700;
+  margin-right: var(--space-xs);
+}
+.fin-chart__ring-labels {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.5);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.08);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   INCOME CARD — بطاقة مصدر الدخل
+   INSIGHTS — رؤى مالية ذكية
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-insights {
+  margin-bottom: var(--space-xl);
+}
+.fin-insights__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+.fin-insight {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  border: 1px solid;
+  animation: slideDown 0.35s ease both;
+}
+.fin-insight:nth-child(2) {
+  animation-delay: 0.06s;
+}
+.fin-insight:nth-child(3) {
+  animation-delay: 0.12s;
+}
+.fin-insight:nth-child(4) {
+  animation-delay: 0.18s;
+}
+.fin-insight__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.fin-insight__content {
+  flex: 1;
+  min-width: 0;
+}
+.fin-insight__title {
+  font-size: var(--font-base);
+  font-weight: 700;
+  margin-bottom: 2px;
+}
+.fin-insight__body {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.55);
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BUDGET HEALTH BARS — أشرطة الميزانية
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-budget-bars {
+  margin-bottom: var(--space-xl);
+}
+.fin-budget-bars__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.fin-budget-bar {
+  background: rgba(var(--gold-rgb), 0.04);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+.fin-budget-bar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-xs);
+}
+.fin-budget-bar__name {
+  color: rgba(var(--gold-rgb), 0.7);
+}
+.fin-budget-bar__values {
+  color: rgba(var(--gold-rgb), 0.5);
+}
+.fin-budget-bar__track {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+  position: relative;
+}
+.fin-budget-bar__fill {
+  height: 100%;
+  border-radius: var(--radius-pill);
+}
+.fin-budget-bar__overflow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(217, 126, 106, 0.4),
+    rgba(217, 126, 106, 0.4) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  border-radius: var(--radius-pill);
+}
+.fin-budget-bar__pct {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.4);
+  text-align: left;
+  margin-top: var(--space-xs);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CATEGORY SECTION — قسم مصروفات قابل للطي
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-cat {
+  margin-bottom: var(--space-sm);
+  border: 1px solid rgba(var(--gold-rgb), 0.1);
+  border-radius: var(--radius-lg);
+  border-right: 3px solid var(--cat-color, rgba(var(--gold-rgb), 0.3));
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+.fin-cat:hover {
+  border-color: rgba(var(--gold-rgb), 0.2);
+}
+.fin-cat__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  background: rgba(var(--gold-rgb), 0.04);
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  font-family: 'Amiri', serif;
+  text-align: right;
+  transition: background 0.2s;
+}
+.fin-cat__header:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+}
+.fin-cat__header-main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex: 1;
+  min-width: 0;
+}
+.fin-cat__icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+.fin-cat__info {
+  min-width: 0;
+}
+.fin-cat__name {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-gold);
+  display: block;
+}
+.fin-cat__count {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.4);
+}
+.fin-cat__header-stats {
+  text-align: left;
+  flex-shrink: 0;
+}
+.fin-cat__amounts {
+  font-size: var(--font-base);
+  font-weight: 700;
+}
+.fin-cat__budget-label {
+  font-weight: 400;
+  color: rgba(var(--gold-rgb), 0.4);
+  font-size: var(--font-sm);
+}
+.fin-cat__mini-bar {
+  width: 60px;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-top: 3px;
+  overflow: hidden;
+}
+.fin-cat__mini-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+.fin-cat__chevron {
+  font-size: 10px;
+  color: rgba(var(--gold-rgb), 0.35);
+  transition: transform 0.25s;
+  flex-shrink: 0;
+}
+.fin-cat__chevron--open {
+  transform: rotate(180deg);
+}
+.fin-cat__body {
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  animation: slideDown 0.22s ease;
+}
+.fin-cat__actions-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-md);
+}
+
+/* ── Expense Item ── */
+.fin-exp {
+  background: rgba(var(--gold-rgb), 0.04);
+  border: 1px solid rgba(var(--gold-rgb), 0.08);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+  margin-bottom: var(--space-sm);
+  transition: all 0.2s;
+}
+.fin-exp:hover {
+  background: rgba(var(--gold-rgb), 0.07);
+}
+.fin-exp--disabled {
+  opacity: 0.45;
+}
+.fin-exp__main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.fin-exp__icon {
+  font-size: var(--font-lg);
+  flex-shrink: 0;
+}
+.fin-exp__info {
+  flex: 1;
+  min-width: 0;
+}
+.fin-exp__title {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-gold);
+}
+.fin-exp__meta {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.4);
+  margin-top: 2px;
+}
+.fin-exp__amount-col {
+  text-align: left;
+  flex-shrink: 0;
+}
+.fin-exp__amount {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--gold);
+  display: block;
+}
+.fin-exp__paid {
+  font-size: var(--font-sm);
+  color: #9bc87a;
+}
+.fin-exp__actions {
+  display: flex;
+  gap: var(--space-xs);
+  margin-top: var(--space-sm);
+  padding-top: var(--space-sm);
+  border-top: 1px solid rgba(var(--gold-rgb), 0.06);
+  flex-wrap: wrap;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   INCOME CARD
 ══════════════════════════════════════════════════════════════════════════════ */
 .fin-income-card {
   background: rgba(var(--gold-rgb), 0.06);
   border: 1px solid rgba(var(--gold-rgb), 0.12);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg) var(--space-lg);
+  padding: var(--space-lg);
   margin-bottom: var(--space-md);
   transition: all 0.2s ease;
 }
-
 .fin-income-card:hover {
   border-color: rgba(var(--gold-rgb), 0.25);
   background: rgba(var(--gold-rgb), 0.09);
 }
-
 .fin-income-card__main {
   display: flex;
   align-items: center;
   gap: var(--space-md);
 }
-
 .fin-income-card__icon {
   font-size: var(--font-xl);
   flex-shrink: 0;
 }
-
 .fin-income-card__info {
   flex: 1;
   min-width: 0;
 }
-
 .fin-income-card__title {
   font-size: var(--font-md);
   font-weight: 700;
   color: var(--text-gold);
 }
-
 .fin-income-card__meta {
   font-size: var(--font-sm);
   color: rgba(var(--gold-rgb), 0.45);
   margin-top: var(--space-xs);
 }
-
 .fin-income-card__amount {
   font-size: var(--font-md);
   font-weight: 700;
   color: #9bc87a;
   white-space: nowrap;
 }
-
 .fin-income-card__actions {
   display: flex;
   gap: var(--space-sm);
@@ -1092,169 +1457,41 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
-   FINANCE CARD — بطاقة الالتزام المالي
-══════════════════════════════════════════════════════════════════════════════ */
-.fin-card {
-  background: rgba(var(--gold-rgb), 0.06);
-  border: 1px solid rgba(var(--gold-rgb), 0.12);
-  border-radius: var(--radius-lg);
-  padding: var(--space-lg);
-  margin-bottom: var(--space-md);
-  border-right: 4px solid var(--card-accent, rgba(var(--gold-rgb), 0.3));
-  transition: all 0.25s ease;
-}
-
-.fin-card:hover {
-  border-color: rgba(var(--gold-rgb), 0.22);
-  background: rgba(var(--gold-rgb), 0.09);
-}
-
-.fin-card--overdue {
-  border-right-color: #d97e6a !important;
-  background: rgba(217, 126, 106, 0.06);
-}
-
-.fin-card--disabled {
-  opacity: 0.45;
-}
-
-.fin-card__header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.fin-card__title-row {
-  display: flex;
-  gap: var(--space-md);
-  align-items: center;
-}
-
-.fin-card__icon {
-  font-size: 26px;
-  flex-shrink: 0;
-}
-
-.fin-card__title {
-  font-size: var(--font-md);
-  font-weight: 700;
-  color: var(--text-gold);
-}
-
-.fin-card__meta {
-  font-size: var(--font-sm);
-  color: rgba(var(--gold-rgb), 0.45);
-  margin-top: var(--space-xs);
-}
-
-.fin-card__actions {
-  display: flex;
-  gap: var(--space-xs);
-  flex-shrink: 0;
-}
-
-.fin-card__amount {
-  font-size: var(--font-lg);
-  font-weight: 700;
-  color: var(--gold);
-  margin-top: var(--space-md);
-}
-
-.fin-card__tag {
-  display: inline-block;
-  font-size: var(--font-sm);
-  background: rgba(var(--gold-rgb), 0.12);
-  color: rgba(var(--gold-rgb), 0.6);
-  padding: var(--space-xs) var(--space-sm);
-  border-radius: 6px;
-  margin-right: var(--space-sm);
-  vertical-align: middle;
-}
-
-.fin-card__seasonal {
-  font-size: var(--font-sm);
-  color: #dca7a5;
-  margin-top: var(--space-sm);
-  padding: var(--space-sm) var(--space-md);
-  background: rgba(220, 167, 165, 0.08);
-  border-radius: var(--radius-sm);
-}
-
-.fin-card__due {
-  font-size: var(--font-sm);
-  color: rgba(var(--gold-rgb), 0.5);
-  margin-top: var(--space-sm);
-}
-
-.fin-card__progress {
-  margin-top: var(--space-md);
-}
-
-.fin-card__progress-text {
-  display: flex;
-  justify-content: space-between;
-  font-size: var(--font-sm);
-  color: rgba(var(--gold-rgb), 0.45);
-  margin-top: var(--space-sm);
-}
-
-.fin-card__last-paid {
-  font-size: var(--font-sm);
-  color: rgba(var(--gold-rgb), 0.4);
-  margin-top: var(--space-sm);
-}
-
-.fin-card__footer {
-  display: flex;
-  gap: var(--space-sm);
-  margin-top: var(--space-md);
-  padding-top: var(--space-md);
-  border-top: 1px solid rgba(var(--gold-rgb), 0.08);
-}
-
-/* ══════════════════════════════════════════════════════════════════════════════
    GOAL CARD — بطاقة الهدف الادخاري
 ══════════════════════════════════════════════════════════════════════════════ */
 .fin-goal-card {
   background: rgba(var(--gold-rgb), 0.06);
   border: 1px solid rgba(var(--gold-rgb), 0.12);
   border-radius: var(--radius-lg);
-  padding: var(--space-lg) var(--space-lg);
+  padding: var(--space-lg);
   margin-bottom: var(--space-md);
 }
-
 .fin-goal-card__header {
   display: flex;
   gap: var(--space-md);
   align-items: center;
 }
-
 .fin-goal-card__icon {
   font-size: 26px;
   flex-shrink: 0;
 }
-
 .fin-goal-card__info {
   flex: 1;
 }
-
 .fin-goal-card__title {
   font-size: var(--font-md);
   font-weight: 700;
   color: var(--text-gold);
 }
-
 .fin-goal-card__amounts {
   font-size: var(--font-sm);
   color: rgba(var(--gold-rgb), 0.5);
   margin-top: var(--space-xs);
 }
-
 .fin-goal-card__actions {
   display: flex;
   gap: var(--space-xs);
 }
-
 .fin-goal-card__meta {
   display: flex;
   justify-content: space-between;
@@ -1264,7 +1501,6 @@
   color: rgba(var(--gold-rgb), 0.45);
   margin-top: var(--space-sm);
 }
-
 .fin-goal-card__done {
   text-align: center;
   margin-top: var(--space-sm);
@@ -1287,11 +1523,9 @@
   transition: all 0.2s;
   font-family: 'Amiri', serif;
 }
-
 .fin-btn-sm:hover {
   background: rgba(var(--gold-rgb), 0.14);
 }
-
 .fin-btn-outline {
   flex: 1;
   padding: var(--space-sm) var(--space-md);
@@ -1304,7 +1538,6 @@
   cursor: pointer;
   transition: all 0.2s;
 }
-
 .fin-btn-outline:hover {
   background: rgba(var(--gold-rgb), 0.08);
 }
@@ -1561,6 +1794,153 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   TREND CHART — رسم الاتجاه السنوي
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-trend {
+  margin-top: var(--space-md);
+}
+.fin-trend__legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xl);
+  margin-top: var(--space-md);
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.6);
+}
+.fin-trend__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.fin-trend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ANNUAL VIEW — العرض السنوي
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-annual {
+  animation: slideDown 0.3s ease;
+}
+.fin-annual__title {
+  margin: 0 0 var(--space-xl);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-gold);
+  text-align: center;
+}
+.fin-annual__chart-section,
+.fin-annual__table-section,
+.fin-annual__top-cats {
+  margin-bottom: var(--space-xl);
+}
+.fin-annual__table-wrap {
+  overflow-x: auto;
+  margin-top: var(--space-md);
+}
+.fin-annual__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+  font-family: 'Amiri', serif;
+}
+.fin-annual__table th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  color: rgba(var(--gold-rgb), 0.5);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.12);
+  font-weight: 600;
+}
+.fin-annual__table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.06);
+  font-weight: 600;
+}
+.fin-annual__cat-bar {
+  margin-bottom: var(--space-md);
+}
+.fin-annual__cat-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.7);
+  margin-bottom: var(--space-xs);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COLOR PICKER — اختيار اللون
+══════════════════════════════════════════════════════════════════════════════ */
+.fin-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.fin-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fin-color-btn--active {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.3);
+  transform: scale(1.15);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   SYNC BADGE — حالة المزامنة
+══════════════════════════════════════════════════════════════════════════════ */
+.sync-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  font-size: var(--font-sm);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-pill);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.sync-badge.syncing {
+  color: #e6a855;
+  background: rgba(230, 168, 85, 0.08);
+}
+.sync-badge.synced {
+  color: #9bc87a;
+  background: rgba(155, 200, 122, 0.08);
+}
+.sync-badge.offline {
+  color: rgba(var(--gold-rgb), 0.4);
+  background: rgba(var(--gold-rgb), 0.04);
+}
+.sync-badge.error {
+  color: #d97e6a;
+  background: rgba(217, 126, 106, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   ANIMATION
+══════════════════════════════════════════════════════════════════════════════ */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    FINANCE RESPONSIVE
 ══════════════════════════════════════════════════════════════════════════════ */
 @media (max-width: 400px) {
@@ -1568,12 +1948,18 @@
     flex-direction: column;
     gap: 0;
   }
-  .fin-summary__grid {
+  .fin-dashboard__grid {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-sm);
   }
-  .fin-card__amount {
-    font-size: var(--font-md);
+  .fin-chart {
+    flex-direction: column;
+  }
+  .fin-cat__header-stats {
+    display: none;
+  }
+  .fin-annual__table {
+    font-size: 11px;
   }
 }
 
