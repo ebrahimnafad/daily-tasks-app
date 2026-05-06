@@ -99,7 +99,7 @@ export interface CategoryModalState {
 
 export type TransactionDrawerState =
   | { mode: 'register' | 'view'; expense: Expense; expenseType: ExpenseType }
-  | { mode: 'register-category'; category: ExpenseCategory };
+  | { mode: 'register-category' | 'view-category'; category: ExpenseCategory };
 
 // ── حسابات الميزانية ─────────────────────────────────────────────────────────
 export interface CategoryBudgetInfo {

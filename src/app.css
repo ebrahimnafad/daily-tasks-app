@@ -1788,6 +1788,13 @@
   gap: var(--space-xs);
 }
 
+.fin-drawer__item--editing {
+  display: block;
+  background: rgba(var(--gold-rgb), 0.08);
+  border-color: rgba(var(--gold-rgb), 0.25);
+  padding: var(--space-md);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    EXPORT BUTTON
 ══════════════════════════════════════════════════════════════════════════════ */

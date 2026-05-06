@@ -295,6 +295,7 @@ export default function FinancePage() {
                   setTxDrawer({ mode: 'view', expense: exp, expenseType: exp.type })
                 }
                 onAddCategoryTx={(cat) => setTxDrawer({ mode: 'register-category', category: cat })}
+                onViewCategoryTxs={(cat) => setTxDrawer({ mode: 'view-category', category: cat })}
                 onEditCategory={openEditCategory}
                 onSetBudget={setCategoryBudget}
               />

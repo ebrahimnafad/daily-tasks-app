@@ -16,6 +16,7 @@ interface CategorySectionProps {
   onViewTxs: (expense: Expense) => void;
   onEditCategory: (cat: ExpenseCategory) => void;
   onAddCategoryTx: (cat: ExpenseCategory) => void;
+  onViewCategoryTxs: (cat: ExpenseCategory) => void;
   onSetBudget: (catId: string, budget: number) => void;
 }
 
@@ -32,6 +33,7 @@ export default function CategorySection({
   onViewTxs,
   onEditCategory,
   onAddCategoryTx,
+  onViewCategoryTxs,
 }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -58,6 +60,14 @@ export default function CategorySection({
           (t) => t.categoryId === category.id && t.date.startsWith(month) && t.status === 'paid'
         )
         .reduce((s, t) => s + t.amount, 0),
+    [transactions, category.id, month]
+  );
+
+  const directTxCount = useMemo(
+    () =>
+      transactions.filter(
+        (t) => t.categoryId === category.id && !t.expenseId && t.date.startsWith(month)
+      ).length,
     [transactions, category.id, month]
   );
 
@@ -121,8 +131,15 @@ export default function CategorySection({
             >
               📝 فاتورة مباشرة
             </button>
-            <button className="fin-btn-sm" onClick={() => onEditCategory(category)}>
-              ⚙️ إعدادات القسم
+            <button className="fin-btn-sm" onClick={() => onViewCategoryTxs(category)}>
+              📋 السجل{directTxCount > 0 ? ` (${directTxCount})` : ''}
+            </button>
+            <button
+              className="fin-btn-sm"
+              onClick={() => onEditCategory(category)}
+              style={{ marginInlineStart: 'auto' }}
+            >
+              ⚙️
             </button>
           </div>
 

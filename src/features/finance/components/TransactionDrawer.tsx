@@ -16,30 +16,51 @@ export default function TransactionDrawer({
   onDelete,
   onClose,
 }: TransactionDrawerProps) {
-  const isCategoryMode = state.mode === 'register-category';
-  const targetId = state.mode === 'register-category' ? state.category.id : state.expense.id;
-  const targetIcon = state.mode === 'register-category' ? state.category.icon : state.expense.icon;
-  const targetTitle =
-    state.mode === 'register-category' ? state.category.name : state.expense.title;
-  const targetCategoryId =
-    state.mode === 'register-category' ? state.category.id : state.expense.categoryId;
+  const isCategoryMode = 'category' in state;
+  const targetId = 'category' in state ? state.category.id : state.expense.id;
+  const targetIcon = 'category' in state ? state.category.icon : state.expense.icon;
+  const targetTitle = 'category' in state ? state.category.name : state.expense.title;
+  const targetCategoryId = 'category' in state ? state.category.id : state.expense.categoryId;
 
   const expenseTxs = transactions
     .filter((t) =>
-      isCategoryMode
-        ? t.categoryId === targetId && !t.expenseId // Only direct category transactions
-        : t.expenseId === targetId
+      isCategoryMode ? t.categoryId === targetId && !t.expenseId : t.expenseId === targetId
     )
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
+  // نموذج إضافة فاتورة جديدة
   const [form, setForm] = useState({
-    amount:
-      state.mode !== 'register-category' && state.expense.amount
-        ? String(state.expense.amount)
-        : '',
+    amount: !('category' in state) && state.expense.amount ? String(state.expense.amount) : '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
+
+  // تعديل فاتورة قائمة
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ amount: '', date: '', notes: '' });
+
+  const startEdit = (tx: Transaction) => {
+    setEditingId(tx.id);
+    setEditForm({ amount: String(tx.amount), date: tx.date, notes: tx.notes || '' });
+  };
+
+  const cancelEdit = () => setEditingId(null);
+
+  const saveEdit = useCallback(
+    (tx: Transaction) => {
+      if (!editForm.amount || !editForm.date) return;
+      onDelete(tx.id); // نحذف القديم
+      onSave({
+        ...tx,
+        id: crypto.randomUUID(),
+        amount: Number(editForm.amount),
+        date: editForm.date,
+        notes: editForm.notes.trim() || undefined,
+      });
+      setEditingId(null);
+    },
+    [editForm, onDelete, onSave]
+  );
 
   const [saving, setSaving] = useState(false);
 
@@ -120,36 +141,88 @@ export default function TransactionDrawer({
         ) : (
           <>
             <h3 className="fin-drawer__title">
-              📎 سجل المعاملات — {targetIcon} {targetTitle}
+              {state.mode === 'view-category' ? '📝' : '📎'} سجل الفواتير — {targetIcon}{' '}
+              {targetTitle}
             </h3>
 
             {expenseTxs.length === 0 ? (
-              <div className="fin-empty">لا توجد معاملات مسجلة بعد</div>
+              <div className="fin-empty">لا توجد فواتير مسجلة بعد</div>
             ) : (
               <div className="fin-drawer__list">
-                {expenseTxs.map((tx) => (
-                  <div key={tx.id} className="fin-drawer__item">
-                    <div className="fin-drawer__item-main">
-                      <span className="fin-drawer__item-status">✅</span>
-                      <div>
-                        <div className="fin-drawer__item-date">{tx.date}</div>
-                        <div className="fin-drawer__item-amount">
-                          {(tx.amount || 0).toLocaleString('ar-SA')} ر.س
-                        </div>
-                        {tx.notes && <div className="fin-drawer__item-notes">{tx.notes}</div>}
+                {expenseTxs.map((tx) =>
+                  editingId === tx.id ? (
+                    // نموذج تعديل مضمن
+                    <div key={tx.id} className="fin-drawer__item fin-drawer__item--editing">
+                      <div
+                        className="fin-row"
+                        style={{ gap: 'var(--space-xs)', marginBottom: 'var(--space-xs)' }}
+                      >
+                        <input
+                          className="fin-input"
+                          type="number"
+                          min="0"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm((p) => ({ ...p, amount: e.target.value }))}
+                          placeholder="المبلغ"
+                          style={{ flex: 1 }}
+                        />
+                        <input
+                          className="fin-input"
+                          type="date"
+                          value={editForm.date}
+                          onChange={(e) => setEditForm((p) => ({ ...p, date: e.target.value }))}
+                          style={{ flex: 1 }}
+                        />
+                      </div>
+                      <input
+                        className="fin-input"
+                        value={editForm.notes}
+                        onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+                        placeholder="ملاحظة (اختياري)"
+                        style={{ marginBottom: 'var(--space-xs)' }}
+                      />
+                      <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+                        <button className="fin-btn-primary fin-btn-sm" onClick={() => saveEdit(tx)}>
+                          💾 حفظ
+                        </button>
+                        <button className="fin-btn-secondary fin-btn-sm" onClick={cancelEdit}>
+                          إلغاء
+                        </button>
                       </div>
                     </div>
-                    <button
-                      className="fin-btn-sm"
-                      onClick={() => {
-                        if (window.confirm('حذف هذه المعاملة؟')) onDelete(tx.id);
-                      }}
-                      aria-label="حذف"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                ))}
+                  ) : (
+                    <div key={tx.id} className="fin-drawer__item">
+                      <div className="fin-drawer__item-main">
+                        <span className="fin-drawer__item-status">📝</span>
+                        <div>
+                          <div className="fin-drawer__item-date">{tx.date}</div>
+                          <div className="fin-drawer__item-amount">
+                            {(tx.amount || 0).toLocaleString('ar-SA')} ر.س
+                          </div>
+                          {tx.notes && <div className="fin-drawer__item-notes">{tx.notes}</div>}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+                        <button
+                          className="fin-btn-sm"
+                          onClick={() => startEdit(tx)}
+                          aria-label="تعديل"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          className="fin-btn-sm"
+                          onClick={() => {
+                            if (window.confirm('حذف هذه الفاتورة؟')) onDelete(tx.id);
+                          }}
+                          aria-label="حذف"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                  )
+                )}
               </div>
             )}
           </>
