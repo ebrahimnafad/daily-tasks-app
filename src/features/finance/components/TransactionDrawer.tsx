@@ -17,12 +17,13 @@ export default function TransactionDrawer({
   onClose,
 }: TransactionDrawerProps) {
   const expense = state.expense;
+  const isReceipt = state.expenseType === 'variable';
   const expenseTxs = transactions
     .filter((t) => t.expenseId === expense.id)
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const [form, setForm] = useState({
-    amount: String(expense.amount || ''),
+    amount: isReceipt ? '' : String(expense.amount || ''),
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -59,7 +60,8 @@ export default function TransactionDrawer({
         {state.mode === 'register' ? (
           <>
             <h3 className="fin-drawer__title">
-              ✅ تسجيل دفعة — {expense.icon} {expense.title}
+              {isReceipt ? '📝' : '✅'} {isReceipt ? 'تسجيل فاتورة' : 'تسجيل دفعة'} — {expense.icon}{' '}
+              {expense.title}
             </h3>
 
             <label className="fin-label">
@@ -95,7 +97,7 @@ export default function TransactionDrawer({
 
             <div className="fin-modal__actions">
               <button className="fin-btn-primary" onClick={save} disabled={saving}>
-                {saving ? '⏳ جاري الحفظ...' : '💾 حفظ الدفعة'}
+                {saving ? '⏳ جاري الحفظ...' : isReceipt ? '💾 حفظ الفاتورة' : '💾 حفظ الدفعة'}
               </button>
               <button className="fin-btn-secondary" onClick={onClose}>
                 إلغاء

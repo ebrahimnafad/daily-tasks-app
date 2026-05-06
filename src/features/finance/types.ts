@@ -100,6 +100,7 @@ export interface CategoryModalState {
 export interface TransactionDrawerState {
   mode: 'register' | 'view';
   expense: Expense;
+  expenseType: ExpenseType;
 }
 
 // ── حسابات الميزانية ─────────────────────────────────────────────────────────

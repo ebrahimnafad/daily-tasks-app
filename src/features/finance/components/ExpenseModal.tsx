@@ -49,6 +49,9 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
 
   const [saving, setSaving] = useState(false);
 
+  // هل هذا النوع يحتاج يوم استحقاق؟
+  const needsDueDay = form.type === 'fixed' || form.type === 'installment';
+
   const save = useCallback(() => {
     if (!form.title?.trim() || !form.amount || saving) return;
     setSaving(true);
@@ -58,11 +61,14 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
       categoryId: modal.categoryId,
       type: form.type as Expense['type'],
       frequency: form.frequency as Expense['frequency'],
-      dueDay: Number(form.dueDay) || 1,
       amount: Number(form.amount) || 0,
       isActive: true,
       notes: form.notes,
     };
+    // يوم الاستحقاق فقط للثابت والأقساط
+    if (form.type === 'fixed' || form.type === 'installment') {
+      data.dueDay = Number(form.dueDay) || 1;
+    }
     if (form.type === 'installment') {
       data.totalAmount = Number(form.totalAmount) || 0;
       data.totalInstallments = Number(form.totalInstallments) || 0;
@@ -143,27 +149,36 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
 
           <div className="fin-row">
             <label className="fin-label" style={{ flex: 1 }}>
-              {form.type === 'variable' ? 'المبلغ التقديري' : 'المبلغ'} (ر.س)
+              {form.type === 'variable' ? 'الميزانية التقديرية' : 'المبلغ'} (ر.س)
               <input
                 className="fin-input"
                 type="number"
                 min="0"
                 value={form.amount}
                 onChange={(e) => f('amount', e.target.value)}
+                placeholder={form.type === 'variable' ? 'الحد الأقصى الشهري' : ''}
               />
             </label>
-            <label className="fin-label" style={{ flex: 1 }}>
-              يوم الاستحقاق
-              <input
-                className="fin-input"
-                type="number"
-                min="1"
-                max="28"
-                value={form.dueDay}
-                onChange={(e) => f('dueDay', e.target.value)}
-              />
-            </label>
+            {needsDueDay && (
+              <label className="fin-label" style={{ flex: 1 }}>
+                يوم الاستحقاق
+                <input
+                  className="fin-input"
+                  type="number"
+                  min="1"
+                  max="28"
+                  value={form.dueDay}
+                  onChange={(e) => f('dueDay', e.target.value)}
+                />
+              </label>
+            )}
           </div>
+
+          {form.type === 'variable' && (
+            <div className="fin-calc-hint" style={{ marginTop: 'var(--space-xs)' }}>
+              💡 هذا البند يُسجَّل كفواتير مباشرة — لا يحتاج يوم استحقاق
+            </div>
+          )}
 
           {form.type === 'installment' && (
             <>

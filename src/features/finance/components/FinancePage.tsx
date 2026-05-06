@@ -291,8 +291,12 @@ export default function FinancePage() {
                 onAddExpense={openAddExpense}
                 onEditExpense={openEditExpense}
                 onDeleteExpense={deleteExpense}
-                onRegisterTx={(exp) => setTxDrawer({ mode: 'register', expense: exp })}
-                onViewTxs={(exp) => setTxDrawer({ mode: 'view', expense: exp })}
+                onRegisterTx={(exp) =>
+                  setTxDrawer({ mode: 'register', expense: exp, expenseType: exp.type })
+                }
+                onViewTxs={(exp) =>
+                  setTxDrawer({ mode: 'view', expense: exp, expenseType: exp.type })
+                }
                 onEditCategory={openEditCategory}
                 onSetBudget={setCategoryBudget}
               />

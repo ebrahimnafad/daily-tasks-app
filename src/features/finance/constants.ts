@@ -142,7 +142,7 @@ export const FREQUENCY_OPTIONS = [
 
 export const TYPE_OPTIONS = [
   { value: 'fixed', label: 'ثابت' },
-  { value: 'variable', label: 'متغير (فواتير)' },
+  { value: 'variable', label: 'فواتير مباشرة (متغير)' },
   { value: 'installment', label: 'أقساط بإجمالي' },
   { value: 'seasonal', label: 'موسمي (أعياد/مناسبات)' },
 ] as const;

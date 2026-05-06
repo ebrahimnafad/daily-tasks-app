@@ -130,7 +130,7 @@ export default function CategorySection({
                     <div className="fin-exp__title">{exp.title}</div>
                     <div className="fin-exp__meta">
                       {FREQUENCY_LABELS[exp.frequency] || exp.frequency}
-                      {exp.type === 'variable' && ' · متغير'}
+                      {exp.type === 'variable' && ' · فواتير مباشرة'}
                       {exp.type === 'installment' && ` · قسط`}
                       {exp.type === 'seasonal' && ' · موسمي'}
                     </div>
@@ -148,9 +148,9 @@ export default function CategorySection({
                   <button
                     className="fin-btn-sm"
                     onClick={() => onRegisterTx(exp)}
-                    aria-label="تسجيل دفع"
+                    aria-label={exp.type === 'variable' ? 'سجّل فاتورة' : 'تسجيل دفع'}
                   >
-                    ✅
+                    {exp.type === 'variable' ? '📝' : '✅'}
                   </button>
                   <button className="fin-btn-sm" onClick={() => onViewTxs(exp)} aria-label="السجل">
                     📎 {expTxCount > 0 && `(${expTxCount})`}
