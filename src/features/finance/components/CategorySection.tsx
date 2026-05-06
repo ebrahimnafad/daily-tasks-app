@@ -15,6 +15,7 @@ interface CategorySectionProps {
   onRegisterTx: (expense: Expense) => void;
   onViewTxs: (expense: Expense) => void;
   onEditCategory: (cat: ExpenseCategory) => void;
+  onAddCategoryTx: (cat: ExpenseCategory) => void;
   onSetBudget: (catId: string, budget: number) => void;
 }
 
@@ -30,6 +31,7 @@ export default function CategorySection({
   onRegisterTx,
   onViewTxs,
   onEditCategory,
+  onAddCategoryTx,
 }: CategorySectionProps) {
   const [expanded, setExpanded] = useState(false);
 
@@ -112,7 +114,13 @@ export default function CategorySection({
       {expanded && (
         <div className="fin-cat__body">
           {/* Edit category button */}
-          <div className="fin-cat__actions-row">
+          <div className="fin-cat__actions-row" style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+            <button
+              className="fin-btn-secondary fin-btn-sm"
+              onClick={() => onAddCategoryTx(category)}
+            >
+              📝 فاتورة مباشرة
+            </button>
             <button className="fin-btn-sm" onClick={() => onEditCategory(category)}>
               ⚙️ إعدادات القسم
             </button>
@@ -141,7 +149,6 @@ export default function CategorySection({
                     <div className="fin-exp__title">{exp.title}</div>
                     <div className="fin-exp__meta">
                       {FREQUENCY_LABELS[exp.frequency] || exp.frequency}
-                      {exp.type === 'variable' && ' · فواتير مباشرة'}
                       {exp.type === 'installment' && ` · قسط`}
                       {exp.type === 'seasonal' && ' · موسمي'}
                     </div>
@@ -159,9 +166,9 @@ export default function CategorySection({
                   <button
                     className="fin-btn-sm"
                     onClick={() => onRegisterTx(exp)}
-                    aria-label={exp.type === 'variable' ? 'سجّل فاتورة' : 'تسجيل دفع'}
+                    aria-label="تسجيل دفعة"
                   >
-                    {exp.type === 'variable' ? '📝' : '✅'}
+                    ✅
                   </button>
                   <button className="fin-btn-sm" onClick={() => onViewTxs(exp)} aria-label="السجل">
                     📎 {expTxCount > 0 && `(${expTxCount})`}

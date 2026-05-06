@@ -18,7 +18,7 @@ export type ExpenseFrequency =
   | 'annual'
   | 'one-time';
 
-export type ExpenseType = 'fixed' | 'variable' | 'installment' | 'seasonal';
+export type ExpenseType = 'fixed' | 'installment' | 'seasonal';
 
 export interface Expense {
   id: string;
@@ -43,7 +43,7 @@ export interface Expense {
 // ── معاملة مالية ─────────────────────────────────────────────────────────────
 export interface Transaction {
   id: string;
-  expenseId: string;
+  expenseId?: string;
   categoryId: string;
   amount: number;
   date: string; // YYYY-MM-DD
@@ -97,11 +97,9 @@ export interface CategoryModalState {
   data?: ExpenseCategory;
 }
 
-export interface TransactionDrawerState {
-  mode: 'register' | 'view';
-  expense: Expense;
-  expenseType: ExpenseType;
-}
+export type TransactionDrawerState =
+  | { mode: 'register' | 'view'; expense: Expense; expenseType: ExpenseType }
+  | { mode: 'register-category'; category: ExpenseCategory };
 
 // ── حسابات الميزانية ─────────────────────────────────────────────────────────
 export interface CategoryBudgetInfo {

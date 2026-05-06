@@ -149,14 +149,13 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
 
           <div className="fin-row">
             <label className="fin-label" style={{ flex: 1 }}>
-              {form.type === 'variable' ? 'الميزانية التقديرية' : 'المبلغ'} (ر.س)
+              المبلغ (ر.س)
               <input
                 className="fin-input"
                 type="number"
                 min="0"
                 value={form.amount}
                 onChange={(e) => f('amount', e.target.value)}
-                placeholder={form.type === 'variable' ? 'الحد الأقصى الشهري' : ''}
               />
             </label>
             {needsDueDay && (
@@ -173,12 +172,6 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
               </label>
             )}
           </div>
-
-          {form.type === 'variable' && (
-            <div className="fin-calc-hint" style={{ marginTop: 'var(--space-xs)' }}>
-              💡 هذا البند يُسجَّل كفواتير مباشرة — لا يحتاج يوم استحقاق
-            </div>
-          )}
 
           {form.type === 'installment' && (
             <>

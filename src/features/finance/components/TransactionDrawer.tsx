@@ -16,14 +16,27 @@ export default function TransactionDrawer({
   onDelete,
   onClose,
 }: TransactionDrawerProps) {
-  const expense = state.expense;
-  const isReceipt = state.expenseType === 'variable';
+  const isCategoryMode = state.mode === 'register-category';
+  const targetId = state.mode === 'register-category' ? state.category.id : state.expense.id;
+  const targetIcon = state.mode === 'register-category' ? state.category.icon : state.expense.icon;
+  const targetTitle =
+    state.mode === 'register-category' ? state.category.name : state.expense.title;
+  const targetCategoryId =
+    state.mode === 'register-category' ? state.category.id : state.expense.categoryId;
+
   const expenseTxs = transactions
-    .filter((t) => t.expenseId === expense.id)
+    .filter((t) =>
+      isCategoryMode
+        ? t.categoryId === targetId && !t.expenseId // Only direct category transactions
+        : t.expenseId === targetId
+    )
     .sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
   const [form, setForm] = useState({
-    amount: isReceipt ? '' : String(expense.amount || ''),
+    amount:
+      state.mode !== 'register-category' && state.expense.amount
+        ? String(state.expense.amount)
+        : '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
   });
@@ -35,15 +48,15 @@ export default function TransactionDrawer({
     setSaving(true);
     onSave({
       id: crypto.randomUUID(),
-      expenseId: expense.id,
-      categoryId: expense.categoryId,
+      expenseId: isCategoryMode ? undefined : targetId,
+      categoryId: targetCategoryId,
       amount: Number(form.amount),
       date: form.date,
       status: 'paid',
       notes: form.notes.trim() || undefined,
     });
     onClose();
-  }, [form, expense, onSave, onClose, saving]);
+  }, [form, isCategoryMode, targetId, targetCategoryId, onSave, onClose, saving]);
 
   return (
     <div
@@ -57,11 +70,11 @@ export default function TransactionDrawer({
           ✕
         </button>
 
-        {state.mode === 'register' ? (
+        {state.mode === 'register' || state.mode === 'register-category' ? (
           <>
             <h3 className="fin-drawer__title">
-              {isReceipt ? '📝' : '✅'} {isReceipt ? 'تسجيل فاتورة' : 'تسجيل دفعة'} — {expense.icon}{' '}
-              {expense.title}
+              {isCategoryMode ? '📝' : '✅'} {isCategoryMode ? 'تسجيل فاتورة' : 'تسجيل دفعة'} —{' '}
+              {targetIcon} {targetTitle}
             </h3>
 
             <label className="fin-label">
@@ -97,7 +110,7 @@ export default function TransactionDrawer({
 
             <div className="fin-modal__actions">
               <button className="fin-btn-primary" onClick={save} disabled={saving}>
-                {saving ? '⏳ جاري الحفظ...' : isReceipt ? '💾 حفظ الفاتورة' : '💾 حفظ الدفعة'}
+                {saving ? '⏳ جاري الحفظ...' : isCategoryMode ? '💾 حفظ الفاتورة' : '💾 حفظ الدفعة'}
               </button>
               <button className="fin-btn-secondary" onClick={onClose}>
                 إلغاء
@@ -107,7 +120,7 @@ export default function TransactionDrawer({
         ) : (
           <>
             <h3 className="fin-drawer__title">
-              📎 سجل المعاملات — {expense.icon} {expense.title}
+              📎 سجل المعاملات — {targetIcon} {targetTitle}
             </h3>
 
             {expenseTxs.length === 0 ? (
