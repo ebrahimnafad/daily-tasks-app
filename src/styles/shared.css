@@ -39,7 +39,7 @@
 .sync-badge {
   position: fixed;
   bottom: 72px; /* sits above tab bar (~56px) */
-  left: 16px;
+  inset-inline-start: 16px; /* right in RTL (Arabic), left in LTR */
   z-index: 50;
   display: flex;
   align-items: center;
@@ -47,6 +47,7 @@
   font-size: var(--font-sm);
   padding: var(--space-xs) var(--space-md);
   border-radius: var(--radius-pill);
+  white-space: nowrap;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   pointer-events: none;

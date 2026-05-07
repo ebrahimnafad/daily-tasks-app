@@ -25,26 +25,26 @@ export default function TasksHeader({
 
       <div className="th-actions">
         {notifPerm !== 'granted' && (
-          <button className="bbtn th-btn-notif" onClick={requestNotifPerm}>
+          <button className="toggle-btn th-btn-notif" onClick={requestNotifPerm}>
             🔔 تفعيل الإشعارات
           </button>
         )}
-        <button className="bbtn th-btn-sheets" onClick={sendToSheets}>
+        <button className="toggle-btn th-btn-sheets" onClick={sendToSheets}>
           📊 إرسال التقرير لـ Sheets
         </button>
-        <button className="bbtn th-btn-reset" onClick={resetNewDay}>
+        <button className="toggle-btn th-btn-reset" onClick={resetNewDay}>
           🔄 بدء يوم جديد
         </button>
         <div className="th-shift-group">
           <button
-            className={`bbtn th-btn-shift ${shift === 'morning' ? 'on' : ''}`}
+            className={`toggle-btn th-btn-shift ${shift === 'morning' ? 'on' : ''}`}
             onClick={() => setShift('morning')}
             aria-pressed={shift === 'morning' ? 'true' : 'false'}
           >
             ☀️ صباحي
           </button>
           <button
-            className={`bbtn th-btn-shift ${shift === 'night' ? 'on' : ''}`}
+            className={`toggle-btn th-btn-shift ${shift === 'night' ? 'on' : ''}`}
             onClick={() => setShift('night')}
             aria-pressed={shift === 'night' ? 'true' : 'false'}
           >
