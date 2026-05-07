@@ -1,5 +1,6 @@
 import { useEffect, useRef, memo } from 'react';
 import type { TaskForm } from '@/types';
+import { SHIFTS } from '@/features/tasks/data/scheduleConfig';
 
 const CATEGORIES = [
   { label: 'عبادة', color: 'var(--gold)' },
@@ -32,21 +33,6 @@ const ICONS = [
   '⭐',
   '🔔',
 ];
-const TIMES = [
-  'الصباح الباكر',
-  'الصباح',
-  'الضحى',
-  'قبل الظهر',
-  'الظهر',
-  'بعد الظهر',
-  'العصر',
-  'بعد العصر',
-  'المغرب',
-  'بين المغرب والعشاء',
-  'العشاء',
-  'الليل',
-  'طوال اليوم',
-];
 const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'مرة واحدة'];
 
 interface ModalState {
@@ -66,6 +52,9 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
   const titleId = 'modal-title';
   const modalRef = useRef<HTMLDivElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
+
+  const currentShift = form.shifts?.[0] || 'morning';
+  const availableBlocks = SHIFTS[currentShift]?.blocks || [];
 
   useEffect(() => {
     const t = setTimeout(() => titleInput.current?.focus(), 50);
@@ -206,9 +195,10 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
               value={form.timeBlock}
               onChange={(e) => onFormField('timeBlock', e.target.value)}
             >
-              {TIMES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
+              <option value="anytime">مهام أخرى (بدون وقت محدد)</option>
+              {availableBlocks.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.label}
                 </option>
               ))}
             </select>
