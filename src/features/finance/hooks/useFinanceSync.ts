@@ -61,7 +61,7 @@ export default function useFinanceSync(onQuota?: () => void) {
     lsGet(KEYS.settings, DEFAULT_SETTINGS)
   );
   const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'offline' | 'error'>(
-    'offline'
+    'syncing'
   );
 
   const dbAvailable = useRef(false);
@@ -164,7 +164,7 @@ export default function useFinanceSync(onQuota?: () => void) {
       if (results.some((r) => !r.ok)) throw new Error('API error');
       setSyncStatus('synced');
     } catch {
-      setSyncStatus('error');
+      setSyncStatus(navigator.onLine ? 'error' : 'offline');
     }
   }, [income, categories, expenses, transactions, goals]);
 
@@ -184,61 +184,68 @@ export default function useFinanceSync(onQuota?: () => void) {
     scheduleSync();
   }, [income, categories, expenses, transactions, goals, scheduleSync]);
 
+  // Load data from server (initial load + online retry)
+  const loadFromServer = useCallback(async () => {
+    try {
+      const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
+      const responses = await Promise.all(resources.map((r) => fetch(`/api/db?resource=${r}`)));
+      if (responses.some((r) => !r.ok)) {
+        setSyncStatus('offline');
+        return;
+      }
+
+      const data = await Promise.all(responses.map((r) => r.json()));
+      dbAvailable.current = true;
+
+      const localTs = lsGet<string | null>(KEYS.localTs, null);
+      const localTime = localTs ? new Date(localTs).getTime() : 0;
+      const dbTimes = data.map((d) => (d.updatedAt ? new Date(d.updatedAt).getTime() : 0));
+      const dbNewest = Math.max(...dbTimes);
+
+      if (dbNewest > localTime) {
+        const setters = [
+          setIncomeState,
+          setCategoriesState,
+          setExpensesState,
+          setTransactionsState,
+          setGoalsState,
+        ] as const;
+        const keys = [KEYS.income, KEYS.categories, KEYS.expenses, KEYS.transactions, KEYS.goals];
+        const fields = resources;
+
+        fields.forEach((field, i) => {
+          const arr = data[i]?.[field];
+          if (Array.isArray(arr) && arr.length > 0) {
+            (setters[i] as React.Dispatch<React.SetStateAction<unknown[]>>)(arr);
+            lsSet(keys[i], arr, onQuota);
+          }
+        });
+      }
+      setSyncStatus('synced');
+    } catch {
+      setSyncStatus('offline');
+    }
+  }, [onQuota]);
+
   // Initial load from DB
   useEffect(() => {
-    const load = async () => {
-      try {
-        const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
-        const responses = await Promise.all(resources.map((r) => fetch(`/api/db?resource=${r}`)));
-        if (responses.some((r) => !r.ok)) return;
-
-        const data = await Promise.all(responses.map((r) => r.json()));
-        dbAvailable.current = true;
-
-        const localTs = lsGet<string | null>(KEYS.localTs, null);
-        const localTime = localTs ? new Date(localTs).getTime() : 0;
-        const dbTimes = data.map((d) => (d.updatedAt ? new Date(d.updatedAt).getTime() : 0));
-        const dbNewest = Math.max(...dbTimes);
-
-        if (dbNewest > localTime) {
-          const setters = [
-            setIncomeState,
-            setCategoriesState,
-            setExpensesState,
-            setTransactionsState,
-            setGoalsState,
-          ] as const;
-          const keys = [KEYS.income, KEYS.categories, KEYS.expenses, KEYS.transactions, KEYS.goals];
-          const fields = resources;
-
-          fields.forEach((field, i) => {
-            const arr = data[i]?.[field];
-            if (Array.isArray(arr) && arr.length > 0) {
-              (setters[i] as React.Dispatch<React.SetStateAction<unknown[]>>)(arr);
-              lsSet(keys[i], arr, onQuota);
-            }
-          });
-        }
-        setSyncStatus('synced');
-      } catch {
-        setSyncStatus('offline');
-      }
-    };
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+    loadFromServer();
   }, []);
 
   // Online retry
   useEffect(() => {
     const handle = () => {
+      setSyncStatus('syncing');
       if (dbAvailable.current) {
-        setSyncStatus('syncing');
         doSync();
+      } else {
+        loadFromServer();
       }
     };
     window.addEventListener('online', handle);
     return () => window.removeEventListener('online', handle);
-  }, [doSync]);
+  }, [doSync, loadFromServer]);
 
   // Cleanup
   useEffect(

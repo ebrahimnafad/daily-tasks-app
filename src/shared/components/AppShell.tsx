@@ -48,7 +48,7 @@ export default function AppShell({
       }}
     >
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} financeBadge={0} />
-      <SyncBadge status={syncStatus} />
+      {activeTab !== 'finance' && <SyncBadge status={syncStatus} />}
 
       {newDayToast && (
         <div

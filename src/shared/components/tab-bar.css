@@ -98,8 +98,10 @@
 ══════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   .sync-badge {
+    position: fixed;
     bottom: 8px;
     left: 62px;
+    z-index: 100;
     font-size: var(--font-sm);
     padding: var(--space-xs) var(--space-sm);
   }
