@@ -54,7 +54,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         ))}
       </main>
 
-      <button className="addbtn" onClick={tm.openAdd} aria-label="إضافة مهمة جديدة">
+      <button className="btn-add-task" onClick={tm.openAdd} aria-label="إضافة مهمة جديدة">
         <span className="tpg-fab-icon" aria-hidden="true">
           ＋
         </span>{' '}

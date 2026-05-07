@@ -8,7 +8,7 @@ export default function View() {
 
   return (
     <article
-      className={`card ${done ? 'done' : ''} ${task.isWarning ? 'warn' : ''}`}
+      className={`task-card ${done ? 'done' : ''} ${task.isWarning ? 'warn' : ''}`}
       aria-label={`مهمة: ${task.title}`}
     >
       <Header />

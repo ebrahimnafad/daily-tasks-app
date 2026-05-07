@@ -116,8 +116,13 @@ export default function App() {
 
       {/* Delete Confirm */}
       {tm.deleteConfirm !== null && (
-        <div className="cov" role="dialog" aria-modal="true" aria-labelledby="del-title">
-          <div className="cbox">
+        <div
+          className="confirm-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="del-title"
+        >
+          <div className="confirm-box">
             <div style={{ fontSize: '36px', marginBottom: 'var(--space-md)' }} aria-hidden="true">
               🗑️
             </div>

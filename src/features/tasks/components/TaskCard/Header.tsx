@@ -114,7 +114,7 @@ export default function Header() {
         }}
       >
         <span
-          className="badge"
+          className="task-badge"
           style={{
             background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
             color: task.color,
@@ -127,7 +127,7 @@ export default function Header() {
           {/* زر القائمة الفرعية */}
           {!task.isPrayerTask && (
             <button
-              className={`lbtn ${isSubtaskOpen ? 'on' : ''}`}
+              className={`toggle-btn--list ${isSubtaskOpen ? 'on' : ''}`}
               aria-expanded={isSubtaskOpen}
               aria-label={isSubtaskOpen ? 'إخفاء القائمة الفرعية' : 'عرض القائمة الفرعية'}
               onClick={(e) => {
@@ -144,7 +144,7 @@ export default function Header() {
           {/* زر الصلوات */}
           {task.isPrayerTask && (
             <button
-              className={`bbtn ${isExpanded ? 'on' : ''}`}
+              className={`toggle-btn ${isExpanded ? 'on' : ''}`}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'إخفاء الصلوات' : 'عرض الصلوات'}
               onClick={(e) => {
@@ -160,7 +160,7 @@ export default function Header() {
           )}
           {/* زر البريف */}
           <button
-            className={`bbtn ${isBriefOpen ? 'on' : ''}`}
+            className={`toggle-btn ${isBriefOpen ? 'on' : ''}`}
             aria-expanded={isBriefOpen}
             aria-label={isBriefOpen ? 'إخفاء البريف' : 'عرض البريف'}
             onClick={(e) => {
@@ -175,7 +175,7 @@ export default function Header() {
           </button>
           {/* زر التعديل */}
           <button
-            className="ibtn ebtn"
+            className="icon-btn icon-btn--edit"
             aria-label={`تعديل مهمة: ${task.title}`}
             onClick={(e) => tm.openEdit(task, e)}
           >
@@ -183,7 +183,7 @@ export default function Header() {
           </button>
           {/* زر الحذف */}
           <button
-            className="ibtn dbtn"
+            className="icon-btn icon-btn--delete"
             aria-label={`حذف مهمة: ${task.title}`}
             onClick={(e) => {
               e.stopPropagation();

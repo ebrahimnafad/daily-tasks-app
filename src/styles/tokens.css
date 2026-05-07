@@ -1,0 +1,87 @@
+/* ═══════════════════════════════════════════════════
+   tokens.css — Design Tokens & Time-Based Themes
+   مهام اليوم — نظام الألوان والمتغيرات
+═══════════════════════════════════════════════════ */
+
+/* ── Design Tokens (default: afternoon/dark) ── */
+:root {
+  --gold: #c8a96e;
+  --gold-light: #e8c980;
+  --gold-rgb: 200, 169, 110;
+  --text-gold: #e8d5a8;
+  --bg-gradient: linear-gradient(160deg, #1a1209 0%, #2c1f0e 50%, #1a1209 100%);
+  --bg-card: #231806;
+  --bg-input: #1e1508;
+
+  /* ── Typography ── */
+  --font-sm: 11px;
+  --font-base: 13px;
+  --font-md: 15px;
+  --font-lg: 18px;
+  --font-xl: 24px;
+
+  /* ── Spacing ── */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+
+  /* ── Radii ── */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 9999px;
+}
+
+/* ── Dynamic Time Themes ── */
+[data-theme='dawn'] {
+  --gold: #dca7a5;
+  --gold-light: #ebd1d0;
+  --gold-rgb: 220, 167, 165;
+  --text-gold: #f5ebeb;
+  --bg-gradient: linear-gradient(160deg, #1f1315 0%, #331e22 50%, #1f1315 100%);
+  --bg-card: #26171a;
+  --bg-input: #1a0f12;
+}
+
+[data-theme='morning'] {
+  --gold: #e6c27a;
+  --gold-light: #f5dfaa;
+  --gold-rgb: 230, 194, 122;
+  --text-gold: #fdf6e3;
+  --bg-gradient: linear-gradient(160deg, #1a1710 0%, #2c2514 50%, #1a1710 100%);
+  --bg-card: #211d12;
+  --bg-input: #17140b;
+}
+
+[data-theme='sunset'] {
+  --gold: #cc7a52;
+  --gold-light: #e69f7a;
+  --gold-rgb: 204, 122, 82;
+  --text-gold: #f0d9cc;
+  --bg-gradient: linear-gradient(160deg, #1f100a 0%, #331a10 50%, #1f100a 100%);
+  --bg-card: #26130c;
+  --bg-input: #1a0d08;
+}
+
+[data-theme='night'] {
+  --gold: #998561;
+  --gold-light: #bda782;
+  --gold-rgb: 153, 133, 97;
+  --text-gold: #cfc4b0;
+  --bg-gradient: linear-gradient(160deg, #0d0905 0%, #1a1209 50%, #0d0905 100%);
+  --bg-card: #140d07;
+  --bg-input: #0d0905;
+}
+
+/* ── Night Shift Override (يتغلب على data-theme) ── */
+[data-shift='night'] {
+  --gold: #7ca8d9 !important;
+  --gold-light: #a6c8e8 !important;
+  --gold-rgb: 124, 168, 217 !important;
+  --text-gold: #dbe9f5 !important;
+  --bg-gradient: linear-gradient(160deg, #09121a 0%, #0e1f2c 50%, #09121a 100%) !important;
+  --bg-card: #061826 !important;
+  --bg-input: #05101a !important;
+}

@@ -1,0 +1,106 @@
+/* ═══════════════════════════════════════════════════
+   tab-bar.css — Bottom Navigation Tab Bar
+   مهام اليوم
+═══════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TAB BAR — شريط التنقل السفلي
+══════════════════════════════════════════════════════════════════════════════ */
+.tab-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  gap: 0;
+  background: rgba(var(--bg-base-rgb, 20, 18, 30), 0.85);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(var(--gold-rgb), 0.12);
+  padding: 6px 0 env(safe-area-inset-bottom, 8px);
+}
+
+.tab-bar__item {
+  position: relative;
+  flex: 1;
+  max-width: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-family: 'Amiri', serif;
+  color: rgba(var(--gold-rgb), 0.4);
+  transition: color 0.3s ease;
+}
+
+.tab-bar__item--active {
+  color: var(--gold);
+}
+
+.tab-bar__icon {
+  font-size: var(--font-xl);
+  line-height: 1;
+}
+
+.tab-bar__label {
+  font-size: var(--font-sm);
+  font-weight: 600;
+}
+
+.tab-bar__badge {
+  position: absolute;
+  top: 4px;
+  right: calc(50% - 20px);
+  min-width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  background: #d97e6a;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.tab-bar__indicator {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 3px;
+  border-radius: 3px;
+  background: var(--gold);
+  animation: tabSlide 0.3s ease;
+}
+
+@keyframes tabSlide {
+  from {
+    opacity: 0;
+    width: 0;
+  }
+  to {
+    opacity: 1;
+    width: 24px;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   SYNC BADGE — تحسين موضع الـ Badge على الهواتف
+══════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  .sync-badge {
+    bottom: 8px;
+    left: 62px;
+    font-size: var(--font-sm);
+    padding: var(--space-xs) var(--space-sm);
+  }
+}

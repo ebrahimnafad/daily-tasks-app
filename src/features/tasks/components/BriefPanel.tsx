@@ -7,7 +7,7 @@ interface BriefPanelProps {
 export function BriefPanel({ brief }: BriefPanelProps) {
   if (!brief) return null;
   return (
-    <div className="panel">
+    <div className="expand-panel">
       <div style={{ display: 'flex', gap: 'var(--space-lg)' }}>
         <div style={{ flex: 1 }}>
           <div
@@ -22,8 +22,8 @@ export function BriefPanel({ brief }: BriefPanelProps) {
           </div>
           {brief.blockers && brief.blockers.length > 0 ? (
             brief.blockers.map((b, i) => (
-              <div key={i} className="bitem">
-                <div className="bdot" style={{ background: '#d97e6a', opacity: 0.75 }} />
+              <div key={i} className="brief-item">
+                <div className="brief-item__dot" style={{ background: '#d97e6a', opacity: 0.75 }} />
                 {b}
               </div>
             ))
@@ -33,7 +33,7 @@ export function BriefPanel({ brief }: BriefPanelProps) {
             </div>
           )}
         </div>
-        <div className="dvv" />
+        <div className="brief-divider" />
         <div style={{ flex: 1 }}>
           <div
             style={{
@@ -47,8 +47,8 @@ export function BriefPanel({ brief }: BriefPanelProps) {
           </div>
           {brief.helpers && brief.helpers.length > 0 ? (
             brief.helpers.map((h, i) => (
-              <div key={i} className="bitem">
-                <div className="bdot" style={{ background: '#9bc87a', opacity: 0.85 }} />
+              <div key={i} className="brief-item">
+                <div className="brief-item__dot" style={{ background: '#9bc87a', opacity: 0.85 }} />
                 {h}
               </div>
             ))

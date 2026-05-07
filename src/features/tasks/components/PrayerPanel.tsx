@@ -12,7 +12,10 @@ export function PrayerPanel({ subtasks, subChecked, onToggleSub }: PrayerPanelPr
   const handleKeyDown = useAccessibleClick();
 
   return (
-    <div className="panel" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)' }}>
+    <div
+      className="expand-panel"
+      style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)' }}
+    >
       {subtasks.map((s) => {
         const done = !!subChecked[s.id];
         return (
@@ -36,7 +39,7 @@ export function PrayerPanel({ subtasks, subChecked, onToggleSub }: PrayerPanelPr
               transition: 'all .2s',
             }}
           >
-            <div className={`schk ${done ? 'on' : ''}`} aria-hidden="true">
+            <div className={`task-checkbox--small ${done ? 'on' : ''}`} aria-hidden="true">
               {done && <Tick size={10} />}
             </div>
             <span

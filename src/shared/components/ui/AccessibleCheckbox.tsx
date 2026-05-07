@@ -17,7 +17,7 @@ export function AccessibleCheckbox({ checked, color, onToggle, label }: Accessib
       aria-checked={!!checked}
       aria-label={label}
       tabIndex={0}
-      className={`chk ${checked ? 'on' : ''}`}
+      className={`task-checkbox ${checked ? 'on' : ''}`}
       style={{ color, borderColor: color }}
       onClick={onToggle}
       onKeyDown={(e) => handleKeyDown(e, onToggle)}

@@ -1,0 +1,74 @@
+/* ═══════════════════════════════════════════════════
+   reset.css — Global Reset, Focus & Motion
+   مهام اليوم
+═══════════════════════════════════════════════════ */
+
+/* ── Reset & Base ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* ══════════════════════════════════════════════════
+   ACCESSIBILITY — Focus Styles
+   يظهر فقط عند التنقل بلوحة المفاتيح (لا يظهر بالماوس)
+══════════════════════════════════════════════════ */
+:focus-visible {
+  outline: 2px solid rgba(var(--gold-rgb), 0.75);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* إزالة outline الافتراضي لمن يستخدم الماوس */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* focus للـ checkboxes الدائرية */
+.task-checkbox:focus-visible,
+.task-checkbox--small:focus-visible {
+  outline: 2px solid rgba(var(--gold-rgb), 0.75);
+  outline-offset: 3px;
+  border-radius: var(--radius-pill);
+}
+
+/* focus لعناصر الـ Modal (icon grid) */
+.icon-grid__option:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* focus للأزرار */
+.toggle-btn:focus-visible,
+.toggle-btn--list:focus-visible,
+.icon-btn:focus-visible,
+.btn-add-task:focus-visible,
+.btn-save:focus-visible,
+.btn-cancel:focus-visible {
+  outline: 2px solid rgba(var(--gold-rgb), 0.75);
+  outline-offset: 2px;
+}
+
+/* ══════════════════════════════════════════════════
+   TOUCH DEVICES — إظهار sub-actions دائماً
+   (لأن hover لا يعمل باللمس)
+══════════════════════════════════════════════════ */
+@media (hover: none) {
+  .sub-actions {
+    opacity: 1 !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════
+   REDUCED MOTION — احترام إعدادات المستخدم
+══════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

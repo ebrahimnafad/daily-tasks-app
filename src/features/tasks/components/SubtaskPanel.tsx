@@ -44,7 +44,7 @@ export function SubtaskPanel({
   };
 
   return (
-    <div className="panel" role="list" aria-label={`قائمة مهام ${task.title} الفرعية`}>
+    <div className="expand-panel" role="list" aria-label={`قائمة مهام ${task.title} الفرعية`}>
       <div
         style={{
           fontSize: 'var(--font-sm)',
@@ -85,7 +85,7 @@ export function SubtaskPanel({
               aria-checked={sdone}
               aria-label={s.text}
               tabIndex={0}
-              className={`schk ${sdone ? 'on' : ''}`}
+              className={`task-checkbox--small ${sdone ? 'on' : ''}`}
               onClick={() => onToggleSub(s.id)}
               onKeyDown={(e) => handleKeyDown(e, () => onToggleSub(s.id))}
             >
@@ -128,7 +128,7 @@ export function SubtaskPanel({
                 onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
               >
                 <button
-                  className="ibtn ebtn"
+                  className="icon-btn icon-btn--edit"
                   aria-label={`تعديل ${s.text}`}
                   style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
                   onClick={() => onStartEditSub(s)}
@@ -136,7 +136,7 @@ export function SubtaskPanel({
                   ✏️
                 </button>
                 <button
-                  className="ibtn dbtn"
+                  className="icon-btn icon-btn--delete"
                   aria-label={`حذف ${s.text}`}
                   style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
                   onClick={() => onDeleteSubItem(s.id)}

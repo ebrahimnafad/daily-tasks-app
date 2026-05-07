@@ -124,10 +124,10 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
   if (!modal) return null;
 
   return (
-    <div className="ov" onClick={onClose} role="presentation" aria-hidden="false">
+    <div className="modal-overlay" onClick={onClose} role="presentation" aria-hidden="false">
       <div
         ref={modalRef}
-        className="mb"
+        className="modal-box"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -137,15 +137,15 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
           {modal.mode === 'add' ? '➕ مهمة جديدة' : '✏️ تعديل المهمة'}
         </h2>
 
-        <div className="sg">
-          <label className="ml" id="icon-label">
+        <div className="form-group">
+          <label className="form-label" id="icon-label">
             الأيقونة
           </label>
-          <div className="ig" role="radiogroup" aria-labelledby="icon-label">
+          <div className="icon-grid" role="radiogroup" aria-labelledby="icon-label">
             {ICONS.map((ic) => (
               <div
                 key={ic}
-                className={`io ${form.icon === ic ? 'sel' : ''}`}
+                className={`icon-grid__option ${form.icon === ic ? 'sel' : ''}`}
                 role="radio"
                 {...{ 'aria-checked': form.icon === ic ? 'true' : 'false' }}
                 aria-label={ic}
@@ -164,14 +164,14 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
           </div>
         </div>
 
-        <div className="sg">
-          <label className="ml" htmlFor="task-title">
+        <div className="form-group">
+          <label className="form-label" htmlFor="task-title">
             اسم المهمة *
           </label>
           <input
             id="task-title"
             ref={titleInput}
-            className="mi"
+            className="form-input"
             placeholder="اكتب المهمة هنا..."
             value={form.title}
             onChange={(e) => onFormField('title', e.target.value)}
@@ -180,12 +180,12 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
 
         <div className="tm-row">
           <div className="tm-col">
-            <label className="ml" htmlFor="task-category">
+            <label className="form-label" htmlFor="task-category">
               التصنيف
             </label>
             <select
               id="task-category"
-              className="ms"
+              className="form-select"
               value={form.category}
               onChange={(e) => onFormField('category', e.target.value)}
             >
@@ -197,12 +197,12 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
             </select>
           </div>
           <div className="tm-col">
-            <label className="ml" htmlFor="task-time">
+            <label className="form-label" htmlFor="task-time">
               الوقت
             </label>
             <select
               id="task-time"
-              className="ms"
+              className="form-select"
               value={form.time}
               onChange={(e) => onFormField('time', e.target.value)}
             >
@@ -217,12 +217,12 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
 
         <div className="tm-row-xl">
           <div className="tm-col">
-            <label className="ml" htmlFor="task-recurrence">
+            <label className="form-label" htmlFor="task-recurrence">
               التكرار
             </label>
             <select
               id="task-recurrence"
-              className="ms"
+              className="form-select"
               value={form.recurrence}
               onChange={(e) => onFormField('recurrence', e.target.value)}
             >
@@ -234,41 +234,47 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
             </select>
           </div>
           <div className="tm-col">
-            <label className="ml" htmlFor="task-alert">
+            <label className="form-label" htmlFor="task-alert">
               وقت التنبيه (اختياري)
             </label>
             <input
               id="task-alert"
               type="time"
-              className="ms"
+              className="form-select"
               value={form.alertTime || ''}
               onChange={(e) => onFormField('alertTime', e.target.value)}
             />
           </div>
         </div>
 
-        <div className="sg tm-switch-row">
-          <label className="ml tm-switch-label" id="warning-label">
+        <div className="form-group tm-switch-row">
+          <label className="form-label tm-switch-label" id="warning-label">
             🚫 تنبيه مهم (تأشير أحمر)
           </label>
           <button
             role="switch"
             {...{ 'aria-checked': form.isWarning ? 'true' : 'false' }}
             aria-labelledby="warning-label"
-            className="tg tm-switch-btn"
+            className="toggle-switch tm-switch-btn"
             onClick={() => onFormField('isWarning', !form.isWarning)}
           >
-            <div className={`tgtr ${form.isWarning ? 'on' : ''}`} aria-hidden="true" />
-            <div className={`tgth ${form.isWarning ? 'on' : ''}`} aria-hidden="true" />
+            <div
+              className={`toggle-switch__track ${form.isWarning ? 'on' : ''}`}
+              aria-hidden="true"
+            />
+            <div
+              className={`toggle-switch__thumb ${form.isWarning ? 'on' : ''}`}
+              aria-hidden="true"
+            />
           </button>
         </div>
 
-        <div className="sg">
-          <label className="ml">⚠️ العوائق المحتملة</label>
+        <div className="form-group">
+          <label className="form-label">⚠️ العوائق المحتملة</label>
           {form.blockers.map((b, i) => (
             <input
               key={i}
-              className="mi tm-input-mb"
+              className="form-input tm-input-mb"
               placeholder={`عائق ${i + 1}...`}
               value={b}
               aria-label={`عائق ${i + 1}`}
@@ -277,12 +283,12 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
           ))}
         </div>
 
-        <div className="sg">
-          <label className="ml">✅ المساعدات</label>
+        <div className="form-group">
+          <label className="form-label">✅ المساعدات</label>
           {form.helpers.map((h, i) => (
             <input
               key={i}
-              className="mi tm-input-mb"
+              className="form-input tm-input-mb"
               placeholder={`مساعدة ${i + 1}...`}
               value={h}
               aria-label={`مساعدة ${i + 1}`}
@@ -291,10 +297,10 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
           ))}
         </div>
 
-        <button className="svbtn" disabled={!form.title.trim()} onClick={onSave}>
+        <button className="btn-save" disabled={!form.title.trim()} onClick={onSave}>
           {modal.mode === 'add' ? 'إضافة المهمة' : 'حفظ التعديلات'}
         </button>
-        <button className="cxbtn" onClick={onClose}>
+        <button className="btn-cancel" onClick={onClose}>
           إلغاء
         </button>
       </div>
