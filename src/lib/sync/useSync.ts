@@ -2,6 +2,13 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task, CheckedMap, SubCheckedMap, SyncStatus } from '@/types';
+import {
+  type ShiftType,
+  computeShift,
+  getMostRecentFriday,
+  DEFAULT_EPOCH_KEY,
+  LEGACY_TIME_TO_BLOCK,
+} from '@/features/tasks/data/scheduleConfig';
 
 export const todayISO = (): string => new Date().toISOString().split('T')[0];
 
@@ -30,16 +37,25 @@ function lsSet(key: string, value: unknown, onQuota?: () => void): void {
   }
 }
 
+// ── Task migration — handle old tasks without shifts/timeBlock ────────────
+const migrateTasks = (tasks: Task[]): Task[] =>
+  tasks.map((t) => ({
+    ...t,
+    shifts: t.shifts ?? (['morning', 'evening'] as ShiftType[]),
+    timeBlock: t.timeBlock ?? (t.time ? (LEGACY_TIME_TO_BLOCK[t.time] ?? 'anytime') : 'anytime'),
+  }));
+
 // ── Fetchers ──────────────────────────────────────────────────────────────
 const fetchTasks = async (): Promise<Task[]> => {
   const res = await fetch('/api/db?resource=tasks');
   if (!res.ok) throw new Error('Network error');
   const data = (await res.json()) as { tasks?: Task[] };
   if (data.tasks) {
-    lsSet('mhm_tasks', data.tasks);
-    return data.tasks;
+    const migrated = migrateTasks(data.tasks);
+    lsSet('mhm_tasks', migrated);
+    return migrated;
   }
-  return lsGet<Task[]>('mhm_tasks', []);
+  return migrateTasks(lsGet<Task[]>('mhm_tasks', []));
 };
 
 const fetchDaily = async (): Promise<DailyState> => {
@@ -73,8 +89,9 @@ export interface UseSyncReturn {
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   subChecked: SubCheckedMap;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
-  shift: string;
-  setShift: (v: string) => void;
+  shift: ShiftType;
+  /** Override the auto-computed shift (updates epoch so the change persists) */
+  setShift: (v: ShiftType) => void;
   syncStatus: SyncStatus;
 }
 
@@ -114,12 +131,47 @@ export default function useSync(
     };
   }, [queryClient]);
 
-  // ── Shift ─────────────────────────────────────────────────────────────
-  const [shift, setShiftState] = useState<string>(() => lsGet('mhm_shift', 'morning'));
+  // ── Auto Shift from epoch ─────────────────────────────────────────────
+  /**
+   * Epoch = ISO date of a Friday that started an EVENING week.
+   * If never stored, we default to the most recent Friday as evening-start.
+   */
+  const [shiftEpoch, setShiftEpoch] = useState<string>(() => {
+    const stored = lsGet<string | null>(DEFAULT_EPOCH_KEY, null);
+    if (stored) return stored;
+    const defaultEpoch = getMostRecentFriday();
+    lsSet(DEFAULT_EPOCH_KEY, defaultEpoch);
+    return defaultEpoch;
+  });
+
+  const [shift, setShiftState] = useState<ShiftType>(() => computeShift(shiftEpoch));
+
+  // Re-compute shift every minute (catches the Friday transition at midnight)
+  useEffect(() => {
+    const tick = () => setShiftState(computeShift(shiftEpoch));
+    const t = setInterval(tick, 60_000);
+    return () => clearInterval(t);
+  }, [shiftEpoch]);
+
+  /**
+   * Manual override: user toggles shift → we adjust the epoch so the
+   * computed shift matches what the user chose for THIS week.
+   */
   const setShift = useCallback(
-    (v: string) => {
+    (v: ShiftType) => {
+      // Find the current week's Friday
+      const thisFriday = getMostRecentFriday();
+      // If user wants 'evening', set epoch = this Friday (even weeks = evening)
+      // If user wants 'morning', set epoch = one week ago (odd weeks = morning)
+      const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+      const fridayDate = new Date(thisFriday + 'T00:00:00');
+      const newEpoch =
+        v === 'evening'
+          ? thisFriday
+          : new Date(fridayDate.getTime() - oneWeekMs).toISOString().split('T')[0];
+      setShiftEpoch(newEpoch);
       setShiftState(v);
-      lsSet('mhm_shift', v, onQuota);
+      lsSet(DEFAULT_EPOCH_KEY, newEpoch, onQuota);
     },
     [onQuota]
   );

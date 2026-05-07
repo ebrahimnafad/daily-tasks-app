@@ -30,7 +30,7 @@ export default function App() {
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 
   // ── UI State ─────────────────────────────────────────────────────────────
-  const tm = useTaskManager(tasks, setTasks, checked, setChecked, subChecked, setSubChecked);
+  const tm = useTaskManager(tasks, setTasks, checked, setChecked, subChecked, setSubChecked, shift);
   const { prayersDone, prayerTotal } = tm;
 
   // ── Dynamic Theme ─────────────────────────────────────────────────────────

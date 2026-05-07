@@ -203,8 +203,8 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
             <select
               id="task-time"
               className="form-select"
-              value={form.time}
-              onChange={(e) => onFormField('time', e.target.value)}
+              value={form.timeBlock}
+              onChange={(e) => onFormField('timeBlock', e.target.value)}
             >
               {TIMES.map((t) => (
                 <option key={t} value={t}>

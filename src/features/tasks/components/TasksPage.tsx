@@ -1,10 +1,12 @@
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard, TasksHeader, TasksProgress } from '@/features/tasks';
+import { SHIFTS } from '@/features/tasks/data/scheduleConfig';
+import type { ShiftType } from '@/features/tasks/data/scheduleConfig';
 
 interface TasksPageProps {
   today: string;
-  shift: string;
-  setShift: (shift: string) => void;
+  shift: ShiftType;
+  setShift: (shift: ShiftType) => void;
 }
 
 export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
@@ -14,11 +16,15 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     countDone,
     totalOther,
     taskSubCheckedMap,
-    tasks,
     checked,
     sendToSheets,
     resetNewDay,
+    tasksByBlock,
+    currentBlockId,
+    prayerTask,
   } = tm;
+
+  const shiftConfig = SHIFTS[shift];
 
   return (
     <div className="tpg-main">
@@ -42,16 +48,70 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         totalOther={totalOther}
       />
 
-      {/* Task Cards */}
+      {/* Current block indicator */}
+      {currentBlockId && (
+        <div className="tpg-current-block" role="status" aria-live="polite">
+          {(() => {
+            const block = shiftConfig.blocks.find((b) => b.id === currentBlockId);
+            return block ? (
+              <>
+                <span className="tpg-current-block__label">الآن</span>
+                <span className="tpg-current-block__name">
+                  {block.icon} {block.label}
+                </span>
+                {block.isOptional && <span className="tpg-current-block__tag">اختياري</span>}
+              </>
+            ) : null;
+          })()}
+        </div>
+      )}
+
+      {/* Task blocks — grouped by time block */}
       <main aria-label="قائمة المهام">
-        {tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            isChecked={!!checked[task.id]}
-            taskSubChecked={taskSubCheckedMap[task.id]}
-          />
-        ))}
+        {tasksByBlock.length === 0 ? (
+          <div className="tpg-empty">
+            <span>🎉</span>
+            <p>لا توجد مهام لهذا اليوم</p>
+          </div>
+        ) : (
+          tasksByBlock.map(({ block, tasks: blockTasks, isCurrent }) => (
+            <section
+              key={block.id}
+              className={`tpg-block${isCurrent ? ' tpg-block--current' : ''}`}
+              aria-label={block.label}
+            >
+              {/* Block header — don't show for prayer (rendered separately above via TasksProgress) */}
+              {block.id !== 'prayer' && (
+                <div className="tpg-block__header">
+                  <span className="tpg-block__icon">{block.icon}</span>
+                  <span className="tpg-block__label">{block.label}</span>
+                  {isCurrent && <span className="tpg-block__now-badge">الآن ✨</span>}
+                  {block.isOptional && <span className="tpg-block__optional">اختياري</span>}
+                </div>
+              )}
+
+              {/* Prayer task card */}
+              {block.id === 'prayer' && prayerTask && (
+                <TaskCard
+                  task={prayerTask}
+                  isChecked={!!checked[prayerTask.id]}
+                  taskSubChecked={taskSubCheckedMap[prayerTask.id]}
+                />
+              )}
+
+              {/* Other task cards */}
+              {block.id !== 'prayer' &&
+                blockTasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    isChecked={!!checked[task.id]}
+                    taskSubChecked={taskSubCheckedMap[task.id]}
+                  />
+                ))}
+            </section>
+          ))
+        )}
       </main>
 
       <button className="btn-add-task" onClick={tm.openAdd} aria-label="إضافة مهمة جديدة">
@@ -61,7 +121,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         إضافة مهمة جديدة
       </button>
 
-      {progress === 100 && tasks.length > 1 && (
+      {progress === 100 && tasksByBlock.length > 0 && (
         <div role="status" className="tpg-status">
           🌙 ما شاء الله! أتممت يومك بخير ✨
         </div>

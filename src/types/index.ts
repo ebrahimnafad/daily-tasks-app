@@ -1,4 +1,5 @@
 import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
+import type { TimeBlock } from '@/features/tasks/data/scheduleConfig';
 
 // ── Primitive domain types ────────────────────────────────────────────────
 
@@ -18,13 +19,18 @@ export interface Task {
   title: string;
   category: string;
   color: string;
-  time: string;
+  /** Which shift(s) this task belongs to */
+  shifts: ('morning' | 'evening')[];
+  /** Time block ID from scheduleConfig.ts (e.g. 'work-early', 'family') */
+  timeBlock: string;
   isWarning: boolean;
   recurrence: string;
   alertTime?: string;
   isPrayerTask: boolean;
   subtasks: Subtask[];
   brief: Brief;
+  /** Legacy field — kept for migration only, do not use */
+  time?: string;
 }
 
 export interface Category {
@@ -40,7 +46,8 @@ export interface TaskForm {
   title: string;
   category: string;
   color: string;
-  time: string;
+  shifts: ('morning' | 'evening')[];
+  timeBlock: string;
   isWarning: boolean;
   recurrence: string;
   alertTime: string;
@@ -117,6 +124,18 @@ export interface TaskManagerReturn {
   totalOther: number;
   progress: number;
   taskSubCheckedMap: TaskSubCheckedMap;
+
+  // Shift-aware derived state
+  /** Tasks filtered to the current shift + day */
+  shiftTasks: Task[];
+  /** ID of the currently active time block, or null */
+  currentBlockId: string | null;
+  /** Tasks grouped by time block, ordered by shift config */
+  tasksByBlock: {
+    block: TimeBlock & { id: string };
+    tasks: Task[];
+    isCurrent: boolean;
+  }[];
 }
 
 // ── TaskContext value ──────────────────────────────────────────────────────

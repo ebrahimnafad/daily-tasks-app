@@ -1,11 +1,13 @@
+import type { ShiftType } from '@/features/tasks/data/scheduleConfig';
+
 interface TasksHeaderProps {
   today: string;
   notifPerm: NotificationPermission;
   requestNotifPerm: () => void;
   sendToSheets: () => void;
   resetNewDay: () => void;
-  shift: string;
-  setShift: (shift: string) => void;
+  shift: ShiftType;
+  setShift: (shift: ShiftType) => void;
 }
 
 export default function TasksHeader({
@@ -44,9 +46,9 @@ export default function TasksHeader({
             ☀️ صباحي
           </button>
           <button
-            className={`toggle-btn th-btn-shift ${shift === 'night' ? 'on' : ''}`}
-            onClick={() => setShift('night')}
-            aria-pressed={shift === 'night' ? 'true' : 'false'}
+            className={`toggle-btn th-btn-shift ${shift === 'evening' ? 'on' : ''}`}
+            onClick={() => setShift('evening')}
+            aria-pressed={shift === 'evening' ? 'true' : 'false'}
           >
             🌙 مسائي
           </button>

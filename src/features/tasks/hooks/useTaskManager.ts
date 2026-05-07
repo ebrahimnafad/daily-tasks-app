@@ -2,6 +2,12 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
 import { CATEGORIES } from '@/features/tasks';
 import { sendProgressToSheets } from '@/api/googleSheets';
+import {
+  SHIFTS,
+  getCurrentBlockId,
+  isWorkday,
+  type ShiftType,
+} from '@/features/tasks/data/scheduleConfig';
 import type {
   Task,
   Subtask,
@@ -18,7 +24,8 @@ const EMPTY_FORM: TaskForm = {
   title: '',
   category: 'أخرى',
   color: '#aaaaaa',
-  time: 'الصباح',
+  shifts: ['morning', 'evening'],
+  timeBlock: 'anytime',
   isWarning: false,
   recurrence: 'يومي',
   alertTime: '',
@@ -34,7 +41,8 @@ export default function useTaskManager(
   checked: CheckedMap,
   setChecked: Dispatch<SetStateAction<CheckedMap>>,
   subChecked: SubCheckedMap,
-  setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>
+  setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>,
+  shift: ShiftType
 ): TaskManagerReturn {
   const [newItemText, setNewItemText] = useState<Record<number, string>>({});
   const [editingSubId, setEditingSubId] = useState<string | number | null>(null);
@@ -42,7 +50,7 @@ export default function useTaskManager(
   const [modal, setModal] = useState<ModalState | null>(null);
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [nextId, setNextId] = useState(100);
+  const [nextId, setNextId] = useState(200);
 
   // ── Subtask CRUD ──────────────────────────────────────────────────────────
   const addSubItem = useCallback(
@@ -104,9 +112,16 @@ export default function useTaskManager(
 
   // ── Task CRUD ─────────────────────────────────────────────────────────────
   const openAdd = useCallback(() => {
-    setForm({ ...EMPTY_FORM });
+    // Pre-select current shift and current block in the form
+    const now = new Date();
+    const currentBlockId = getCurrentBlockId(shift, now.getHours() + now.getMinutes() / 60);
+    setForm({
+      ...EMPTY_FORM,
+      shifts: [shift],
+      timeBlock: currentBlockId ?? 'anytime',
+    });
     setModal({ mode: 'add' });
-  }, []);
+  }, [shift]);
 
   const openEdit = useCallback((task: Task, e: MouseEvent) => {
     e.stopPropagation();
@@ -115,7 +130,8 @@ export default function useTaskManager(
       title: task.title,
       category: task.category,
       color: task.color,
-      time: task.time,
+      shifts: task.shifts ?? ['morning', 'evening'],
+      timeBlock: task.timeBlock ?? 'anytime',
       isWarning: task.isWarning || false,
       recurrence: task.recurrence || 'يومي',
       alertTime: task.alertTime || '',
@@ -147,7 +163,10 @@ export default function useTaskManager(
       title: form.title.trim(),
       category: form.category,
       color,
-      time: form.time,
+      shifts: (form.shifts.length > 0
+        ? form.shifts
+        : (['morning', 'evening'] as ShiftType[])) as ShiftType[],
+      timeBlock: form.timeBlock || 'anytime',
       isWarning: form.isWarning,
       recurrence: form.recurrence,
       alertTime: form.alertTime || '',
@@ -186,28 +205,79 @@ export default function useTaskManager(
     [tasks, setTasks, setChecked, setSubChecked]
   );
 
-  // ── Derived State ─────────────────────────────────────────────────────────
-  const { prayerTask, prayersDone, prayerTotal, otherTasks, countDone, totalOther, progress } =
-    useMemo(() => {
-      const pt = tasks.find((t) => t.isPrayerTask);
-      const pd = pt ? pt.subtasks.filter((s) => subChecked[s.id]).length : 0;
-      const pTotal = pt ? pt.subtasks.length : 0;
-      const others = tasks.filter((t) => !t.isPrayerTask);
-      const done = others.filter((t) =>
-        t.subtasks.length > 0 ? t.subtasks.every((s) => subChecked[s.id]) : checked[t.id]
-      ).length;
-      const total = others.length;
-      const prog = pTotal + total === 0 ? 0 : Math.round(((pd + done) / (pTotal + total)) * 100);
-      return {
-        prayerTask: pt,
-        prayersDone: pd,
-        prayerTotal: pTotal,
-        otherTasks: others,
-        countDone: done,
-        totalOther: total,
-        progress: prog,
-      };
-    }, [tasks, checked, subChecked]);
+  // ── Shift-aware Derived State ─────────────────────────────────────────────
+  const {
+    shiftTasks,
+    prayerTask,
+    prayersDone,
+    prayerTotal,
+    otherTasks,
+    countDone,
+    totalOther,
+    progress,
+    currentBlockId,
+    tasksByBlock,
+  } = useMemo(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const hourDecimal = now.getHours() + now.getMinutes() / 60;
+    const workday = isWorkday(shift, dayOfWeek);
+    const blockId = getCurrentBlockId(shift, hourDecimal);
+    const shiftConfig = SHIFTS[shift];
+
+    // Filter tasks applicable to current shift + day
+    const shiftFiltered = tasks.filter((t) => {
+      const taskShifts = t.shifts ?? ['morning', 'evening'];
+      if (!taskShifts.includes(shift)) return false;
+      const rec = t.recurrence ?? 'يومي';
+      if (rec === 'أيام العمل' && !workday) return false;
+      if (rec === 'عطل' && workday) return false;
+      return true;
+    });
+
+    const pt = shiftFiltered.find((t) => t.isPrayerTask);
+    const pd = pt ? pt.subtasks.filter((s) => subChecked[s.id]).length : 0;
+    const pTotal = pt ? pt.subtasks.length : 0;
+    const others = shiftFiltered.filter((t) => !t.isPrayerTask);
+    const done = others.filter((t) =>
+      t.subtasks.length > 0 ? t.subtasks.every((s) => subChecked[s.id]) : checked[t.id]
+    ).length;
+    const total = others.length;
+    const prog = pTotal + total === 0 ? 0 : Math.round(((pd + done) / (pTotal + total)) * 100);
+
+    // Group by time block (ordered by shiftConfig.blocks definition)
+    const byBlock = shiftConfig.blocks
+      .map((block) => ({
+        block,
+        tasks: others.filter((t) => (t.timeBlock ?? 'anytime') === block.id),
+        isCurrent: block.id === blockId,
+      }))
+      .filter((entry) => entry.tasks.length > 0 || entry.isCurrent);
+
+    // Prayer task gets its own virtual block
+    const prayerBlockEntry = pt
+      ? [
+          {
+            block: { id: 'prayer', label: 'الصلوات الخمس', icon: '🕌', startHour: 0, endHour: 24 },
+            tasks: [pt],
+            isCurrent: false,
+          },
+        ]
+      : [];
+
+    return {
+      shiftTasks: shiftFiltered,
+      prayerTask: pt,
+      prayersDone: pd,
+      prayerTotal: pTotal,
+      otherTasks: others,
+      countDone: done,
+      totalOther: total,
+      progress: prog,
+      currentBlockId: blockId,
+      tasksByBlock: [...prayerBlockEntry, ...byBlock],
+    };
+  }, [tasks, shift, checked, subChecked]);
 
   // ── Google Sheets Export ──────────────────────────────────────────────────
   const sendToSheets = useCallback(async () => {
@@ -231,15 +301,21 @@ export default function useTaskManager(
     }
   }, [progress, prayersDone, prayerTotal, countDone, totalOther]);
 
-  // ── Reset New Day ─────────────────────────────────────────────────────────
+  // ── Shift-aware Reset New Day ─────────────────────────────────────────────
   const resetNewDay = useCallback(() => {
     if (!window.confirm('تصفير المهام لبدء يوم جديد؟')) return;
     const day = new Date().getDay();
-    const isWorkday = day !== 5 && day !== 6;
-    const isStartOfWeek = day === 0;
+    const workday = isWorkday(shift, day);
+    const isStartOfWeek = day === 5; // Friday starts the new week
+
     const toReset = tasks.filter((t) => {
       const r = t.recurrence ?? 'يومي';
-      return r === 'يومي' || (r === 'أيام العمل' && isWorkday) || (r === 'أسبوعي' && isStartOfWeek);
+      return (
+        r === 'يومي' ||
+        (r === 'أيام العمل' && workday) ||
+        (r === 'أسبوعي' && isStartOfWeek) ||
+        r === 'مرة واحدة'
+      );
     });
     const ids = toReset.map((t) => t.id);
     setChecked((p) => {
@@ -252,7 +328,7 @@ export default function useTaskManager(
       toReset.forEach((t) => t.subtasks.forEach((s) => delete n[s.id]));
       return n;
     });
-  }, [tasks, setChecked, setSubChecked]);
+  }, [tasks, shift, setChecked, setSubChecked]);
 
   // ── taskSubCheckedMap ─────────────────────────────────────────────────────
   const taskSubCheckedMap = useMemo<TaskSubCheckedMap>(() => {
@@ -306,5 +382,9 @@ export default function useTaskManager(
     totalOther,
     progress,
     taskSubCheckedMap,
+    // New shift-aware exports
+    shiftTasks,
+    currentBlockId,
+    tasksByBlock,
   };
 }
