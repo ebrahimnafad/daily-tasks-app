@@ -257,6 +257,17 @@ export default function useTaskManager(
       }))
       .filter((entry) => entry.tasks.length > 0 || entry.isCurrent);
 
+    // Catch-all: tasks with 'anytime' or unrecognized timeBlock always appear
+    const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
+    const unassigned = others.filter((t) => !assignedIds.has(t.id));
+    if (unassigned.length > 0) {
+      byBlock.push({
+        block: { id: 'anytime', label: 'مهام أخرى', icon: '📌', startHour: 0, endHour: 24 },
+        tasks: unassigned,
+        isCurrent: false,
+      });
+    }
+
     // Prayer task gets its own virtual block
     const prayerBlockEntry = pt
       ? [
