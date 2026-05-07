@@ -88,12 +88,12 @@ export default function ExpenseModal({ modal, onSave, onClose }: ExpenseModalPro
 
   return (
     <div
-      className="cov"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-label={modal.mode === 'add' ? 'إضافة بند' : 'تعديل بند'}
     >
-      <div className="cbox fin-modal fin-modal--lg">
+      <div className="modal-box fin-modal fin-modal--lg">
         <h3 className="fin-modal__title">
           {modal.mode === 'add' ? 'إضافة بند مصروف' : 'تعديل بند'}
         </h3>

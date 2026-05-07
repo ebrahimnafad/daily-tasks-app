@@ -22,14 +22,14 @@ export default function TasksProgress({
         </span>
       </div>
       <div
-        className="pbar"
+        className="progress-bar"
         role="progressbar"
         aria-valuenow={progress}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-label={`التقدم: ${progress}%`}
       >
-        <div className="pfill" style={{ width: `${progress}%` }} />
+        <div className="progress-bar__fill" style={{ width: `${progress}%` }} />
       </div>
       <div className="tp-stats">
         {prayersDone}/{prayerTotal} صلوات · {countDone}/{totalOther} مهام

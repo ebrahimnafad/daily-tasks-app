@@ -822,11 +822,23 @@
    DRAWER â€” Ø¯Ø±Ø¬ Ø§Ù„Ø¯ÙØ¹Ø§Øª
 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 .fin-drawer {
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: var(--space-xl);
+  width: 100%;
   max-width: 440px;
-  width: 92%;
-  max-height: 80vh;
+  max-height: 82vh;
   overflow-y: auto;
   position: relative;
+  animation: slideUp 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (min-width: 481px) {
+  .fin-drawer {
+    border-radius: var(--radius-lg);
+    animation: popUp 0.22s ease;
+  }
 }
 
 .fin-drawer__close {

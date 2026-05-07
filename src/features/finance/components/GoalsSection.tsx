@@ -134,9 +134,9 @@ export default function GoalsSection({ goals, setGoals, settings }: GoalsSection
               </div>
             </div>
 
-            <div className="pbar" style={{ marginTop: 'var(--space-sm)' }}>
+            <div className="progress-bar" style={{ marginTop: 'var(--space-sm)' }}>
               <div
-                className="pfill"
+                className="progress-bar__fill"
                 style={{ width: `${pct}%`, background: pct >= 100 ? '#9bc87a' : '#6e9fcf' }}
               />
             </div>
@@ -171,8 +171,8 @@ export default function GoalsSection({ goals, setGoals, settings }: GoalsSection
       </button>
 
       {modal && (
-        <div className="cov" role="dialog" aria-modal="true">
-          <div className="cbox fin-modal">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-box fin-modal">
             <h3 className="fin-modal__title">{modal.mode === 'add' ? 'إضافة هدف' : 'تعديل هدف'}</h3>
 
             <div className="fin-modal__icons">

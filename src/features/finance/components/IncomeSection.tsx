@@ -110,8 +110,8 @@ export default function IncomeSection({ income, setIncome, settings }: IncomeSec
       </button>
 
       {modal && (
-        <div className="cov" role="dialog" aria-modal="true">
-          <div className="cbox fin-modal">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
+          <div className="modal-box fin-modal">
             <h3 className="fin-modal__title">
               {modal.mode === 'add' ? 'إضافة مصدر دخل' : 'تعديل مصدر دخل'}
             </h3>

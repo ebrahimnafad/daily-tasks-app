@@ -43,12 +43,12 @@ export default function CategoryModal({ modal, onSave, onClose }: CategoryModalP
 
   return (
     <div
-      className="cov"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-label={modal.mode === 'add' ? 'إضافة قسم' : 'تعديل قسم'}
     >
-      <div className="cbox fin-modal">
+      <div className="modal-box fin-modal">
         <h3 className="fin-modal__title">
           {modal.mode === 'add' ? 'إضافة قسم جديد' : 'تعديل القسم'}
         </h3>

@@ -81,12 +81,12 @@ export default function TransactionDrawer({
 
   return (
     <div
-      className="cov"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-label={state.mode === 'register' ? 'تسجيل دفعة' : 'سجل المعاملات'}
     >
-      <div className="cbox fin-drawer">
+      <div className="modal-box fin-drawer">
         <button className="fin-drawer__close" onClick={onClose} aria-label="إغلاق">
           ✕
         </button>
