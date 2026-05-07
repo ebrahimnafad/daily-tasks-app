@@ -94,15 +94,12 @@
 }
 
 /* ══════════════════════════════════════════════════
-   SYNC BADGE — تحسين موضع الـ Badge على الهواتف
+   SYNC BADGE — موضع الـ Badge على الهواتف
 ══════════════════════════════════════════════════ */
 @media (max-width: 480px) {
   .sync-badge {
-    position: fixed;
-    bottom: 8px;
-    left: 62px;
-    z-index: 100;
-    font-size: var(--font-sm);
+    bottom: calc(56px + env(safe-area-inset-bottom, 8px) + 6px);
+    inset-inline-start: 12px;
     padding: var(--space-xs) var(--space-sm);
   }
 }

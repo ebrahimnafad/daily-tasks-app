@@ -13,7 +13,7 @@ const FinancePage = lazy(() => import('@/features/finance/components/FinancePage
 export default function App() {
   const [activeTab, setActiveTab] = useState('tasks');
   const toasts = useToasts();
-  const { onNewDay } = toasts;
+  const { onNewDay, onQuota } = toasts;
 
   const {
     tasks,
@@ -25,7 +25,7 @@ export default function App() {
     shift,
     setShift,
     syncStatus,
-  } = useSync(INITIAL_TASKS, onNewDay);
+  } = useSync(INITIAL_TASKS, onNewDay, onQuota);
 
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 

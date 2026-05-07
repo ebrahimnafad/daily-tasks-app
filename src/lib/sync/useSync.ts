@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task, CheckedMap, SubCheckedMap, SyncStatus } from '@/types';
@@ -19,11 +19,14 @@ function lsGet<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
-function lsSet(key: string, value: unknown): void {
+function lsSet(key: string, value: unknown, onQuota?: () => void): void {
   try {
     localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* quota exceeded — silent */
+  } catch (e) {
+    // Surface quota exceeded errors to the UI
+    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
+      onQuota?.();
+    }
   }
 }
 
@@ -75,19 +78,60 @@ export interface UseSyncReturn {
   syncStatus: SyncStatus;
 }
 
-export default function useSync(initialTasks: Task[], onNewDay?: () => void): UseSyncReturn {
+export default function useSync(
+  initialTasks: Task[],
+  onNewDay?: () => void,
+  onQuota?: () => void
+): UseSyncReturn {
   const queryClient = useQueryClient();
 
-  const [shift, setShiftState] = useState<string>(() => lsGet('mhm_shift', 'morning'));
-  const setShift = useCallback((v: string) => {
-    setShiftState(v);
-    lsSet('mhm_shift', v);
-  }, []);
+  // ── Online / Offline detection ────────────────────────────────────────
+  const [isOnline, setIsOnline] = useState<boolean>(() => navigator.onLine);
+  // Track mutation errors separately — reset when a mutation succeeds
+  const [hasError, setHasError] = useState(false);
+  // Guard: don't trigger refetch on the very first online event at mount
+  const didMountRef = useRef(false);
 
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      setHasError(false); // clear transient errors on reconnect
+      // Re-fetch both queries to sync any missed writes
+      if (didMountRef.current) {
+        void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        void queryClient.invalidateQueries({ queryKey: ['daily', todayISO()] });
+      }
+    };
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    didMountRef.current = true;
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [queryClient]);
+
+  // ── Shift ─────────────────────────────────────────────────────────────
+  const [shift, setShiftState] = useState<string>(() => lsGet('mhm_shift', 'morning'));
+  const setShift = useCallback(
+    (v: string) => {
+      setShiftState(v);
+      lsSet('mhm_shift', v, onQuota);
+    },
+    [onQuota]
+  );
+
+  // ── Queries ───────────────────────────────────────────────────────────
   const { data: tasks = initialTasks, isFetching: fetchingTasks } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
     initialData: () => lsGet<Task[]>('mhm_tasks', initialTasks),
+    // Don't refetch while offline — avoids failed network requests piling up
+    enabled: isOnline,
+    retry: isOnline ? 3 : false,
   });
 
   const { data: daily = { checked: {}, subChecked: {} }, isFetching: fetchingDaily } =
@@ -104,6 +148,8 @@ export default function useSync(initialTasks: Task[], onNewDay?: () => void): Us
         }
         return { checked: {}, subChecked: {} };
       },
+      enabled: isOnline,
+      retry: isOnline ? 3 : false,
     });
 
   const { checked, subChecked } = daily;
@@ -121,14 +167,16 @@ export default function useSync(initialTasks: Task[], onNewDay?: () => void): Us
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       const prevTasks = queryClient.getQueryData<Task[]>(['tasks']);
       queryClient.setQueryData(['tasks'], newTasks);
-      lsSet('mhm_tasks', newTasks);
+      lsSet('mhm_tasks', newTasks, onQuota);
       return { prevTasks };
     },
+    onSuccess: () => setHasError(false),
     onError: (_err, _newTasks, context) => {
+      setHasError(true);
       const ctx = context as { prevTasks?: Task[] } | undefined;
       if (ctx?.prevTasks) {
         queryClient.setQueryData(['tasks'], ctx.prevTasks);
-        lsSet('mhm_tasks', ctx.prevTasks);
+        lsSet('mhm_tasks', ctx.prevTasks, onQuota);
       }
     },
   });
@@ -147,12 +195,14 @@ export default function useSync(initialTasks: Task[], onNewDay?: () => void): Us
       await queryClient.cancelQueries({ queryKey: ['daily', today] });
       const prevDaily = queryClient.getQueryData<DailyState>(['daily', today]);
       queryClient.setQueryData(['daily', today], { checked: c, subChecked: sc });
-      lsSet('mhm_checked', c);
-      lsSet('mhm_sub_checked', sc);
-      lsSet('mhm_date', today);
+      lsSet('mhm_checked', c, onQuota);
+      lsSet('mhm_sub_checked', sc, onQuota);
+      lsSet('mhm_date', today, onQuota);
       return { prevDaily };
     },
+    onSuccess: () => setHasError(false),
     onError: (_err, _vars, context) => {
+      setHasError(true);
       const ctx = context as { prevDaily?: DailyState } | undefined;
       if (ctx?.prevDaily) {
         queryClient.setQueryData(['daily', todayISO()], ctx.prevDaily);
@@ -201,17 +251,24 @@ export default function useSync(initialTasks: Task[], onNewDay?: () => void): Us
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {} });
-        lsSet('mhm_checked', {});
-        lsSet('mhm_sub_checked', {});
-        lsSet('mhm_date', today);
+        lsSet('mhm_checked', {}, onQuota);
+        lsSet('mhm_sub_checked', {}, onQuota);
+        lsSet('mhm_date', today, onQuota);
         onNewDay?.();
       }
     };
     const t = setInterval(checkDate, 60_000);
     return () => clearInterval(t);
-  }, [onNewDay, queryClient]);
+  }, [onNewDay, onQuota, queryClient]);
 
-  const syncStatus: SyncStatus = fetchingTasks || fetchingDaily ? 'syncing' : 'synced';
+  // ── Derived sync status ───────────────────────────────────────────────
+  const syncStatus: SyncStatus = !isOnline
+    ? 'offline'
+    : hasError
+      ? 'error'
+      : fetchingTasks || fetchingDaily
+        ? 'syncing'
+        : 'synced';
 
   return {
     tasks,
