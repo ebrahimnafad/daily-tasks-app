@@ -112,13 +112,16 @@ export default function useTaskManager(
 
   // ── Task CRUD ─────────────────────────────────────────────────────────────
   const openAdd = useCallback(() => {
-    // Pre-select current shift and current block in the form
     const now = new Date();
     const currentBlockId = getCurrentBlockId(shift, now.getHours() + now.getMinutes() / 60);
+    // Don't pre-select optional (walking) or rest (sleep) blocks — user should choose explicitly
+    const currentBlock = SHIFTS[shift].blocks.find((b) => b.id === currentBlockId);
+    const defaultBlock =
+      currentBlock && !currentBlock.isOptional && !currentBlock.isRest ? currentBlockId : 'anytime';
     setForm({
       ...EMPTY_FORM,
       shifts: [shift],
-      timeBlock: currentBlockId ?? 'anytime',
+      timeBlock: defaultBlock ?? 'anytime',
     });
     setModal({ mode: 'add' });
   }, [shift]);
