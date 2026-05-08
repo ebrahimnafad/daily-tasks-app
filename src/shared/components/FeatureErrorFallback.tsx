@@ -1,6 +1,6 @@
-interface FeatureErrorProps {
-  featureName: string;
-}
+export type FeatureErrorProps = {
+  featureName?: string;
+};
 
 export function TasksErrorFallback({ featureName = 'المهام' }: FeatureErrorProps) {
   return (

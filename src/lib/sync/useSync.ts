@@ -186,7 +186,7 @@ export default function useSync(
   });
   const schedule = scheduleResp?.schedule ?? DEFAULT_SHIFTS;
 
-  const [shift, setShiftState] = useState<string>(() => computeShift(shiftEpoch, schedule));
+  const [shift, setShiftState] = useState<ShiftType>(() => computeShift(shiftEpoch, schedule));
 
   // Combined: shift recompute + midnight auto-reset
   useEffect(() => {

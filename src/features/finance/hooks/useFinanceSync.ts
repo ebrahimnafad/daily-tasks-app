@@ -206,9 +206,14 @@ export default function useFinanceSync(onQuota?: () => void) {
 
   // Initial load from DB
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
-    loadFromServer();
-  }, []);
+    if (!isMounted.current) {
+      isMounted.current = true;
+      loadFromServer();
+      return;
+    }
+    scheduleSync();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+  }, [income, categories, expenses, transactions, goals, scheduleSync]);
 
   // Online retry
   useEffect(() => {
