@@ -280,8 +280,7 @@ export default function useTaskManager(
         block,
         tasks: others.filter((t) => (t.timeBlock ?? 'anytime') === block.id),
         isCurrent: block.id === blockId,
-      }))
-      .filter((entry) => entry.tasks.length > 0 || entry.isCurrent);
+      }));
 
     // Catch-all: tasks with 'anytime' or unrecognized timeBlock always appear
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));

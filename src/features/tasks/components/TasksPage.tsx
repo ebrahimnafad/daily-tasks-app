@@ -143,14 +143,18 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
               {/* Other task cards - collapsible */}
               {block.id !== 'prayer' && !collapsedBlocks[block.id] && (
                 <div className="tpg-block__tasks">
-                  {blockTasks.map((task) => (
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      isChecked={!!checked[task.id]}
-                      taskSubChecked={taskSubCheckedMap[task.id]}
-                    />
-                  ))}
+                  {blockTasks.length > 0 ? (
+                    blockTasks.map((task) => (
+                      <TaskCard
+                        key={task.id}
+                        task={task}
+                        isChecked={!!checked[task.id]}
+                        taskSubChecked={taskSubCheckedMap[task.id]}
+                      />
+                    ))
+                  ) : (
+                    <p className="tpg-empty-block-msg" style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-muted)', margin: '10px 0' }}>لا توجد مهام مجدولة في هذه الفترة</p>
+                  )}
                 </div>
               )}
             </section>

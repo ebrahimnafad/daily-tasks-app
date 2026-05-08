@@ -11,7 +11,7 @@ import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../constants';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
-const KEYS = {
+export const KEYS = {
   income: 'mhm_fin2_income',
   categories: 'mhm_fin2_categories',
   expenses: 'mhm_fin2_expenses',
