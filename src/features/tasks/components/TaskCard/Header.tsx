@@ -182,9 +182,6 @@ export default function Header() {
           بريف
         </button>
 
-        {/* فاصل مرن يدفع أزرار التعديل/الحذف لأقصى اليمين */}
-        <span style={{ flex: '1 1 auto' }} />
-
         {/* زر التعديل */}
         <button
           className="icon-btn icon-btn--edit"
