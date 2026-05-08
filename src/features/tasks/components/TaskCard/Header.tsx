@@ -127,7 +127,7 @@ export default function Header() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            gap: '6px',
             width: '100%',
           }}
         >
@@ -149,6 +149,7 @@ export default function Header() {
           {!task.isPrayerTask && (
             <button
               className={`toggle-btn--list ${isSubtaskOpen ? 'on' : ''}`}
+              style={{ flex: 1, textAlign: 'center' }}
               aria-expanded={isSubtaskOpen}
               aria-label={isSubtaskOpen ? 'إخفاء القائمة الفرعية' : 'عرض القائمة الفرعية'}
               onClick={(e) => {
@@ -166,6 +167,7 @@ export default function Header() {
           {task.isPrayerTask && (
             <button
               className={`toggle-btn ${isExpanded ? 'on' : ''}`}
+              style={{ flex: 1, textAlign: 'center' }}
               aria-expanded={isExpanded}
               aria-label={isExpanded ? 'إخفاء الصلوات' : 'عرض الصلوات'}
               onClick={(e) => {
@@ -182,6 +184,7 @@ export default function Header() {
 
           <button
             className={`toggle-btn ${isBriefOpen ? 'on' : ''}`}
+            style={{ flex: 1, textAlign: 'center' }}
             aria-expanded={isBriefOpen}
             aria-label={isBriefOpen ? 'إخفاء البريف' : 'عرض البريف'}
             onClick={(e) => {
@@ -197,6 +200,7 @@ export default function Header() {
 
           <button
             className="icon-btn icon-btn--edit"
+            style={{ flex: 1, textAlign: 'center' }}
             aria-label={`تعديل مهمة: ${task.title}`}
             onClick={(e) => tm.openEdit(task, e)}
           >
@@ -205,6 +209,7 @@ export default function Header() {
 
           <button
             className="icon-btn icon-btn--delete"
+            style={{ flex: 1, textAlign: 'center' }}
             aria-label={`حذف مهمة: ${task.title}`}
             onClick={(e) => {
               e.stopPropagation();
