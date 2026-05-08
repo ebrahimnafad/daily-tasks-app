@@ -152,15 +152,6 @@ export default function useFinanceSync(onQuota?: () => void) {
     syncTimer.current = setTimeout(doSync, 1500);
   }, [doSync]);
 
-  // Trigger sync on data changes (skip initial mount)
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      return;
-    }
-    scheduleSync();
-  }, [income, categories, expenses, transactions, goals, scheduleSync]);
-
   // Load data from server (initial load + online retry)
   const loadFromServer = useCallback(async () => {
     try {
@@ -204,7 +195,7 @@ export default function useFinanceSync(onQuota?: () => void) {
     }
   }, [onQuota]);
 
-  // Initial load from DB
+  // Initial load from DB and trigger sync on changes
   useEffect(() => {
     if (!isMounted.current) {
       isMounted.current = true;
@@ -213,7 +204,7 @@ export default function useFinanceSync(onQuota?: () => void) {
     }
     scheduleSync();
     // eslint-disable-next-line react-hooks/set-state-in-effect
-  }, [income, categories, expenses, transactions, goals, scheduleSync]);
+  }, [income, categories, expenses, transactions, goals, scheduleSync, loadFromServer]);
 
   // Online retry
   useEffect(() => {
