@@ -115,7 +115,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                     aria-expanded={!collapsedBlocks[block.id]}
                     aria-label={`${collapsedBlocks[block.id] ? '展开' : 'collapse'} ${block.label}`}
                   >
-                    {collapsedBlocks[block.id] ? '▶' : '▼'}
+                    {collapsedBlocks[block.id] ? '◀' : '▼'}
                   </button>
                   <span className="tpg-block__icon">{block.icon}</span>
                   <span className="tpg-block__label">{block.label}</span>

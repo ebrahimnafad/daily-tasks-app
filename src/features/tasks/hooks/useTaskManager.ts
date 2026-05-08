@@ -9,6 +9,9 @@ import {
   type ShiftType,
   type ShiftConfig,
 } from '@/features/tasks/data/scheduleConfig';
+
+const todayISO = (): string => new Date().toISOString().split('T')[0];
+
 import type {
   Task,
   Subtask,
@@ -29,6 +32,7 @@ const EMPTY_FORM: TaskForm = {
   timeBlock: 'anytime',
   isWarning: false,
   recurrence: 'يومي',
+  date: '',
   alertTime: '',
   blockers: ['', '', ''],
   helpers: ['', '', ''],
@@ -143,6 +147,7 @@ export default function useTaskManager(
       timeBlock: task.timeBlock ?? 'anytime',
       isWarning: task.isWarning || false,
       recurrence: task.recurrence || 'يومي',
+      date: task.date ?? '',
       alertTime: task.alertTime || '',
       blockers: [...(task.brief?.blockers ?? []), '', '', ''].slice(0, 3) as [
         string,
@@ -178,6 +183,7 @@ export default function useTaskManager(
       timeBlock: form.timeBlock || 'anytime',
       isWarning: form.isWarning,
       recurrence: form.recurrence,
+      date: form.date || undefined,
       alertTime: form.alertTime || '',
       brief: {
         blockers: form.blockers.filter((b) => b.trim()),
@@ -241,6 +247,11 @@ export default function useTaskManager(
       const rec = t.recurrence ?? 'يومي';
       if (rec === 'أيام العمل' && !workday) return false;
       if (rec === 'عطل' && workday) return false;
+      // Handle specific date tasks
+      if (rec === 'موعد محدد' && t.date) {
+        const today = todayISO();
+        if (t.date !== today) return false;
+      }
       return true;
     });
 

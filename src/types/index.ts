@@ -25,6 +25,8 @@ export interface Task {
   timeBlock: string;
   isWarning: boolean;
   recurrence: string;
+  /** Specific date for one-time tasks (YYYY-MM-DD) */
+  date?: string;
   alertTime?: string;
   isPrayerTask: boolean;
   subtasks: Subtask[];
@@ -50,6 +52,7 @@ export interface TaskForm {
   timeBlock: string;
   isWarning: boolean;
   recurrence: string;
+  date: string;
   alertTime: string;
   blockers: [string, string, string];
   helpers: [string, string, string];

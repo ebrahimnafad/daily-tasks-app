@@ -33,7 +33,7 @@ const ICONS = [
   '⭐',
   '🔔',
 ];
-const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'مرة واحدة'];
+const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'مرة واحدة', 'موعد محدد'];
 
 interface ModalState {
   mode: 'add' | 'edit';
@@ -229,6 +229,21 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
               ))}
             </select>
           </div>
+          {form.recurrence === 'موعد محدد' && (
+            <div className="tm-col">
+              <label className="form-label" htmlFor="task-date">
+                التاريخ
+              </label>
+              <input
+                id="task-date"
+                type="date"
+                className="form-select"
+                value={form.date || ''}
+                onChange={(e) => onFormField('date', e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          )}
           <div className="tm-col">
             <label className="form-label" htmlFor="task-alert">
               وقت التنبيه (اختياري)
