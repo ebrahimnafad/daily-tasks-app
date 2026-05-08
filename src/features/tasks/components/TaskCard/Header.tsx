@@ -56,6 +56,9 @@ export default function Header() {
             fontWeight: 700,
             textDecoration: done ? 'line-through' : 'none',
             transition: 'all .3s',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
           }}
         >
           {task.title}
