@@ -7,3 +7,4 @@ export {
   getMutationMeta,
 } from './clientId';
 export { reconcile, reconcileChecked } from './reconcile';
+export { getSyncBadgeInfo, SYNC_STATUS_MAP } from './syncBadge';

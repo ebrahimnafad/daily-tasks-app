@@ -10,6 +10,8 @@ import FinanceInsights from './FinanceInsights';
 import ExpenseModal from './ExpenseModal';
 import CategoryModal from './CategoryModal';
 import TransactionDrawer from './TransactionDrawer';
+import type { SyncStatus } from '@/types';
+import { getSyncBadgeInfo } from '@/lib/sync/syncBadge';
 import type {
   Expense,
   ExpenseCategory,
@@ -30,7 +32,11 @@ import {
   shiftQuarter,
 } from '../utils';
 
-export default function FinancePage() {
+interface FinancePageProps {
+  syncStatus: SyncStatus;
+}
+
+export default function FinancePage({ syncStatus }: FinancePageProps) {
   const {
     income,
     setIncome,
@@ -44,7 +50,6 @@ export default function FinancePage() {
     setGoals,
     settings,
     setSettings,
-    syncStatus,
   } = useFinanceSync();
 
   const [view, setView] = useState<FinanceView>('monthly');
@@ -150,14 +155,7 @@ export default function FinancePage() {
     [setSettings]
   );
 
-  // ── Sync badge ────────────────────────────────────────────────────────────
-  const syncMap: Record<string, { icon: string; text: string; cls: string }> = {
-    syncing: { icon: '⏳', text: 'جاري الحفظ...', cls: 'syncing' },
-    synced: { icon: '☁️', text: 'محفوظ سحابياً', cls: 'synced' },
-    offline: { icon: '💾', text: 'محفوظ محلياً', cls: 'offline' },
-    error: { icon: '⚠️', text: 'خطأ في المزامنة', cls: 'error' },
-  };
-  const sync = syncMap[syncStatus] || syncMap.offline;
+  const sync = getSyncBadgeInfo(syncStatus);
 
   const sortedCategories = useMemo(
     () => [...categories].sort((a, b) => a.order - b.order),

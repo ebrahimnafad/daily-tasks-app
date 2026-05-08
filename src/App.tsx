@@ -140,7 +140,7 @@ export default function App() {
           </ErrorBoundary>
 
           <ErrorBoundary level="feature" fallback={<FinanceErrorFallback />}>
-            {activeTab === 'finance' && <FinancePage />}
+            {activeTab === 'finance' && <FinancePage syncStatus={syncStatus} />}
           </ErrorBoundary>
         </Suspense>
 

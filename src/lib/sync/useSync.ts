@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task, CheckedMap, SubCheckedMap, SyncStatus } from '@/types';
+import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import {
   type ShiftConfig,
   type ShiftType,
@@ -17,26 +18,6 @@ export const todayISO = (): string => new Date().toISOString().split('T')[0];
 interface DailyState {
   checked: CheckedMap;
   subChecked: SubCheckedMap;
-}
-
-// ── localStorage helpers ──────────────────────────────────────────────────
-function lsGet<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v !== null ? (JSON.parse(v) as T) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-function lsSet(key: string, value: unknown, onQuota?: () => void): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    // Surface quota exceeded errors to the UI
-    if (e instanceof DOMException && e.name === 'QuotaExceededError') {
-      onQuota?.();
-    }
-  }
 }
 
 // ── Task migration — handle old tasks without shifts/timeBlock ────────────
@@ -207,12 +188,23 @@ export default function useSync(
 
   const [shift, setShiftState] = useState<string>(() => computeShift(shiftEpoch, schedule));
 
-  // Re-compute shift every minute (catches the Friday transition at midnight)
+  // Combined: shift recompute + midnight auto-reset
   useEffect(() => {
-    const tick = () => setShiftState(computeShift(shiftEpoch, schedule));
+    const tick = () => {
+      setShiftState(computeShift(shiftEpoch, schedule));
+      const today = todayISO();
+      const storedDate = lsGet<string | null>('mhm_date', null);
+      if (storedDate && storedDate !== today) {
+        queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {} });
+        lsSet('mhm_checked', {}, onQuota);
+        lsSet('mhm_sub_checked', {}, onQuota);
+        lsSet('mhm_date', today, onQuota);
+        onNewDay?.();
+      }
+    };
     const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
-  }, [shiftEpoch, schedule]);
+  }, [shiftEpoch, schedule, onNewDay, onQuota, queryClient]);
 
   /**
    * Manual override: user toggles shift → we adjust the epoch so the
@@ -421,23 +413,6 @@ export default function useSync(
     },
     [queryClient, updateDailyMut]
   );
-
-  // ── Midnight auto-reset ───────────────────────────────────────────────
-  useEffect(() => {
-    const checkDate = () => {
-      const today = todayISO();
-      const storedDate = lsGet<string | null>('mhm_date', null);
-      if (storedDate && storedDate !== today) {
-        queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {} });
-        lsSet('mhm_checked', {}, onQuota);
-        lsSet('mhm_sub_checked', {}, onQuota);
-        lsSet('mhm_date', today, onQuota);
-        onNewDay?.();
-      }
-    };
-    const t = setInterval(checkDate, 60_000);
-    return () => clearInterval(t);
-  }, [onNewDay, onQuota, queryClient]);
 
   // ── Derived sync status ───────────────────────────────────────────────
   const syncStatus: SyncStatus = !isOnline

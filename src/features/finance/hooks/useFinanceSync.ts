@@ -8,6 +8,7 @@ import type {
   FinanceSettings,
 } from '../types';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../constants';
+import { lsGet, lsSet } from '@/lib/storage/localStorage';
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
 const KEYS = {
@@ -19,30 +20,6 @@ const KEYS = {
   settings: 'mhm_fin2_settings',
   localTs: 'mhm_fin2_local_ts',
 };
-
-function lsGet<T>(key: string, fallback: T): T {
-  try {
-    const v = localStorage.getItem(key);
-    return v !== null ? JSON.parse(v) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-function lsSet(key: string, value: unknown, onQuota?: () => void) {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (e: unknown) {
-    if (
-      e instanceof DOMException &&
-      (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED')
-    ) {
-      onQuota?.();
-    }
-    return false;
-  }
-}
 
 type SetterFn<T> = T | ((prev: T) => T);
 

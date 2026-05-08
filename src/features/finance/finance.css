@@ -841,6 +841,14 @@
   }
 }
 
+@media (max-width: 480px) {
+  .fin-drawer,
+  .fin-modal,
+  .fin-modal--lg {
+    padding-bottom: calc(56px + var(--space-lg));
+  }
+}
+
 .fin-drawer__close {
   position: absolute;
   top: 12px;

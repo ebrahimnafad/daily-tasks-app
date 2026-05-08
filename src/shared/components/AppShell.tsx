@@ -1,23 +1,19 @@
 import { TabBar } from '@/shared/components';
 import type { ToastsReturn } from '@/shared/hooks/useToasts';
+import { getSyncBadgeInfo } from '@/lib/sync/syncBadge';
+import type { SyncStatus } from '@/types';
 
 interface AppShellProps {
   children: React.ReactNode;
   activeTab: string;
   setActiveTab: (tab: string) => void;
   shift: string;
-  syncStatus: string;
+  syncStatus: SyncStatus;
   toasts: ToastsReturn;
 }
 
-function SyncBadge({ status }: { status: string }) {
-  const map: Record<string, { icon: string; text: string; cls: string }> = {
-    syncing: { icon: '⏳', text: 'جاري الحفظ...', cls: 'syncing' },
-    synced: { icon: '☁️', text: 'محفوظ سحابياً', cls: 'synced' },
-    offline: { icon: '💾', text: 'محفوظ محلياً', cls: 'offline' },
-    error: { icon: '⚠️', text: 'خطأ في المزامنة', cls: 'error' },
-  };
-  const { icon, text, cls } = map[status] ?? map['offline'];
+function SyncBadge({ status }: { status: SyncStatus }) {
+  const { icon, text, cls } = getSyncBadgeInfo(status);
   return (
     <div className={`sync-badge ${cls}`} role="status" aria-live="polite">
       <span aria-hidden="true">{icon}</span>
