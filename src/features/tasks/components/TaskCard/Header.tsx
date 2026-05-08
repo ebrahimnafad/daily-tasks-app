@@ -30,7 +30,7 @@ export default function Header() {
         direction: 'rtl',
       }}
     >
-      {/* ── Right column: progress indicator spans both rows ── */}
+      {/* ── Right column: circle spans full height of both rows ── */}
       <div
         style={{
           display: 'flex',
@@ -53,7 +53,7 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Content column: 2 rows ── */}
+      {/* ── Content column: 2 rows, excludes area under circle ── */}
       <div
         style={{
           flex: '1 1 auto',
@@ -122,12 +122,13 @@ export default function Header() {
           </span>
         </div>
 
-        {/* Row 2: alert chip · قائمة/صلوات · بريف · edit · delete */}
+        {/* Row 2: full width of content column — alert · قائمة/صلوات · بريف · edit · delete */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 'var(--space-xs)',
+            width: '100%',
           }}
         >
           {task.alertTime && (
