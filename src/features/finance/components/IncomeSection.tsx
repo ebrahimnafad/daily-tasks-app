@@ -82,28 +82,82 @@ export default function IncomeSection({ income, setIncome, settings }: IncomeSec
 
       {income.length === 0 && <div className="fin-empty">لم تضف مصادر دخل بعد</div>}
 
-      {income.map((item) => (
-        <div key={item.id} className="fin-income-card">
-          <div className="fin-income-card__main">
-            <span className="fin-income-card__icon">{item.icon || '💼'}</span>
+      {income.length > 0 && (
+        <div
+          className="fin-income-card"
+          style={{ flexDirection: 'column', gap: 'var(--space-sm)' }}
+        >
+          <div className="fin-income-card__main" style={{ marginBottom: 'var(--space-xs)' }}>
+            <span className="fin-income-card__icon">💰</span>
             <div className="fin-income-card__info">
-              <div className="fin-income-card__title">{item.title}</div>
-              <div className="fin-income-card__meta">
-                {item.type === 'fixed' ? 'ثابت' : 'متغير'} · {freqLabel(item.frequency)}
-              </div>
+              <div className="fin-income-card__title">إجمالي الدخل</div>
+              <div className="fin-income-card__meta">{income.length} مصدر</div>
             </div>
-            <span className="fin-income-card__amount">{formatAmount(item.amount, settings)}</span>
+            <span
+              className="fin-income-card__amount"
+              style={{ fontWeight: 700, color: 'var(--gold)' }}
+            >
+              {formatAmount(totalMonthly, settings)}
+            </span>
           </div>
-          <div className="fin-income-card__actions">
-            <button className="fin-btn-sm" onClick={() => openEdit(item)} aria-label="تعديل">
-              ✏️
-            </button>
-            <button className="fin-btn-sm" onClick={() => remove(item.id)} aria-label="حذف">
-              🗑️
-            </button>
+          <div
+            style={{
+              borderTop: '1px solid rgba(var(--gold-rgb),0.1)',
+              paddingTop: 'var(--space-sm)',
+            }}
+          >
+            {income.map((item) => (
+              <div
+                key={item.id}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: 'var(--space-xs) 0',
+                  gap: 'var(--space-sm)',
+                }}
+              >
+                <div
+                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', flex: 1 }}
+                >
+                  <span style={{ fontSize: 'var(--font-base)' }}>{item.icon || '💼'}</span>
+                  <div>
+                    <div style={{ fontSize: 'var(--font-sm)', color: 'var(--text-gold)' }}>
+                      {item.title}
+                    </div>
+                    <div style={{ fontSize: 'var(--font-xs)', color: 'rgba(var(--gold-rgb),0.5)' }}>
+                      {item.type === 'fixed' ? 'ثابت' : 'متغير'} · {freqLabel(item.frequency)}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                  <span style={{ fontSize: 'var(--font-sm)', color: 'var(--gold)' }}>
+                    {formatAmount(item.amount, settings)}
+                  </span>
+                  <div style={{ display: 'flex', gap: '2px' }}>
+                    <button
+                      className="fin-btn-sm"
+                      onClick={() => openEdit(item)}
+                      aria-label="تعديل"
+                      style={{ padding: '2px 6px' }}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className="fin-btn-sm"
+                      onClick={() => remove(item.id)}
+                      aria-label="حذف"
+                      style={{ padding: '2px 6px' }}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ))}
+      )}
 
       <button className="fin-add-btn" onClick={openAdd}>
         ＋ إضافة مصدر دخل
