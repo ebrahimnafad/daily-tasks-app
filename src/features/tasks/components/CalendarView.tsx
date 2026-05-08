@@ -46,8 +46,10 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
   const [transactions] = useState<Transaction[]>(() => lsGet(KEYS.transactions, []));
 
   const financeEventsByDate = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
     const map: Record<string, FinanceEvent[]> = {};
-    const monthStr = `${year}-${String(month + 1).padStart(2, '0')}`;
+    const monthStr = `${y}-${String(m + 1).padStart(2, '0')}`;
 
     // 1. Paid Transactions
     transactions.forEach((t) => {
@@ -74,13 +76,13 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
       if (e.frequency === 'monthly' || e.frequency === 'weekly') {
         isDueThisMonth = true;
       } else if (e.frequency === 'annual' && e.seasonMonth) {
-        if (e.seasonMonth === month + 1) isDueThisMonth = true;
+        if (e.seasonMonth === m + 1) isDueThisMonth = true;
       } else if (e.frequency === 'semi-annual' && e.seasonMonth) {
-        if (e.seasonMonth === month + 1 || ((e.seasonMonth + 6) % 12 || 12) === month + 1) {
+        if (e.seasonMonth === m + 1 || ((e.seasonMonth + 6) % 12 || 12) === m + 1) {
           isDueThisMonth = true;
         }
       } else if (e.frequency === 'quarterly' && e.quarterMonth) {
-        const currentQuarterMonth = (month % 3) + 1;
+        const currentQuarterMonth = (m % 3) + 1;
         if (currentQuarterMonth === e.quarterMonth) {
           isDueThisMonth = true;
         }
@@ -112,7 +114,7 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
     });
 
     return map;
-  }, [expenses, transactions, year, month]);
+  }, [expenses, transactions, currentDate]);
 
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
@@ -242,7 +244,11 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
                     <div
                       key={fe.id}
                       className="cal-task-item"
-                      style={{ opacity: fe.isPaid ? 0.6 : 1, borderRight: `3px solid ${fe.isPaid ? 'var(--text-muted)' : 'var(--danger)'}`, paddingRight: '8px' }}
+                      style={{
+                        opacity: fe.isPaid ? 0.6 : 1,
+                        borderRight: `3px solid ${fe.isPaid ? 'var(--text-muted)' : 'var(--danger)'}`,
+                        paddingRight: '8px',
+                      }}
                     >
                       <span>{fe.icon}</span>
                       <span
@@ -269,10 +275,12 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
               </div>
             );
           })}
-        {Object.keys(tasksByDate).filter((d) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).length === 0 &&
-         Object.keys(financeEventsByDate).filter((d) => d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)).length === 0 && (
-          <p className="cal-empty">لا توجد مهام أو استحقاقات مجدولة هذا الشهر</p>
-        )}
+        {Object.keys(tasksByDate).filter((d) =>
+          d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)
+        ).length === 0 &&
+          Object.keys(financeEventsByDate).filter((d) =>
+            d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)
+          ).length === 0 && <p className="cal-empty">لا توجد مهام أو استحقاقات مجدولة هذا الشهر</p>}
       </div>
     </div>
   );
