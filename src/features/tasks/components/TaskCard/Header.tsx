@@ -48,15 +48,8 @@ export default function Header() {
       </span>
 
       {/* عنوان المهمة ومعلوماتها */}
-      <div
-        style={{
-          flex: '1 1 auto',
-          minWidth: 0,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-sm)',
-        }}
-      >
+      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+        {/* Line 1: Title */}
         <div
           style={{
             color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
@@ -64,35 +57,59 @@ export default function Header() {
             fontWeight: 700,
             textDecoration: done ? 'line-through' : 'none',
             transition: 'all .3s',
-            whiteSpace: 'nowrap',
           }}
         >
           {task.title}
         </div>
-        <span>{task.time}</span>
-        <span
+        {/* Line 2: Info chips */}
+        <div
           style={{
             fontSize: 'var(--font-sm)',
-            background: 'rgba(255,255,255,0.05)',
-            padding: 'var(--space-xs) var(--space-sm)',
-            borderRadius: 'var(--radius-sm)',
+            color: 'rgba(var(--gold-rgb),.48)',
+            marginTop: 'var(--space-xs)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-sm)',
+            flexWrap: 'wrap',
           }}
         >
-          {task.recurrence || 'يومي'}
-        </span>
-        {task.alertTime && (
+          {task.time && <span>{task.time}</span>}
           <span
             style={{
               fontSize: 'var(--font-sm)',
-              color: '#d97e6a',
-              background: 'rgba(217,126,106,.08)',
-              padding: 'var(--space-xs) var(--space-sm)',
+              background: 'rgba(255,255,255,0.05)',
+              padding: '2px 8px',
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            🔔 {task.alertTime}
+            {task.recurrence || 'يومي'}
           </span>
-        )}
+          <span
+            style={{
+              fontSize: 'var(--font-sm)',
+              background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
+              color: task.color,
+              border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {task.category}
+          </span>
+          {task.alertTime && (
+            <span
+              style={{
+                fontSize: 'var(--font-sm)',
+                color: '#d97e6a',
+                background: 'rgba(217,126,106,.08)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              🔔 {task.alertTime}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* أزرار الجانب */}
@@ -105,16 +122,6 @@ export default function Header() {
           flexShrink: 0,
         }}
       >
-        <span
-          className="task-badge"
-          style={{
-            background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
-            color: task.color,
-            border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
-          }}
-        >
-          {task.category}
-        </span>
         <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
           {/* زر القائمة الفرعية */}
           {!task.isPrayerTask && (
