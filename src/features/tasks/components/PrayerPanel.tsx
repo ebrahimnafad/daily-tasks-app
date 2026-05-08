@@ -14,7 +14,12 @@ export function PrayerPanel({ subtasks, subChecked, onToggleSub }: PrayerPanelPr
   return (
     <div
       className="expand-panel"
-      style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)' }}
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 'var(--space-sm)',
+        justifyContent: 'center',
+      }}
     >
       {subtasks.map((s) => {
         const done = !!subChecked[s.id];
@@ -37,6 +42,8 @@ export function PrayerPanel({ subtasks, subChecked, onToggleSub }: PrayerPanelPr
               borderRadius: 'var(--radius-pill)',
               padding: '5px 12px 5px 9px',
               transition: 'all .2s',
+              minWidth: '80px',
+              flexShrink: 0,
             }}
           >
             <div className={`task-checkbox--small ${done ? 'on' : ''}`} aria-hidden="true">
