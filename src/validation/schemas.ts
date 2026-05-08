@@ -65,8 +65,8 @@ export const TaskFormSchema = z.object({
   timeBlock: z.string().min(1).max(50),
   isWarning: z.boolean(),
   recurrence: z.string().min(1).max(50),
-  date: z.string().regex(DATE_REGEX).optional(),
-  alertTime: z.string().regex(TIME_REGEX).optional(),
+  date: z.string().regex(DATE_REGEX).or(z.literal('')).optional(),
+  alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).optional(),
   blockers: z.tuple([z.string().max(200), z.string().max(200), z.string().max(200)]),
   helpers: z.tuple([z.string().max(200), z.string().max(200), z.string().max(200)]),
 });
