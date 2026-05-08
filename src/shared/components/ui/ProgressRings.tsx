@@ -110,8 +110,8 @@ export function SubRing({ done, total, color }: SubRingProps) {
           style={{ transition: 'stroke-dasharray .4s ease' }}
         />
       </svg>
-      <span style={{ fontSize: 'var(--font-sm)', color, fontWeight: 700, position: 'relative' }}>
-        {done}
+      <span style={{ fontSize: '10px', color, fontWeight: 700, position: 'relative' }}>
+        {done}/{total}
       </span>
     </div>
   );

@@ -56,12 +56,9 @@ export default function Header() {
             fontWeight: 700,
             textDecoration: done ? 'line-through' : 'none',
             transition: 'all .3s',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
           }}
         >
-          {task.title.length > 50 ? task.title.slice(0, 50) + '...' : task.title}
+          {task.title}
         </div>
         <div
           style={{
