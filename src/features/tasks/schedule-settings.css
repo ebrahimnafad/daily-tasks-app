@@ -1,0 +1,259 @@
+/* ── Schedule Settings Modal ── */
+
+/* Header & Typography */
+.ss-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.15);
+  padding-bottom: var(--space-md);
+}
+
+.ss-title {
+  color: var(--text-gold);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  margin: 0;
+}
+
+.ss-section-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: var(--space-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+/* Tabs */
+.ss-tabs {
+  display: flex;
+  gap: var(--space-xs);
+  background: rgba(var(--gold-rgb), 0.05);
+  padding: 4px;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.ss-tab {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-base);
+  font-family: inherit;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+}
+
+.ss-tab:hover {
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.05);
+}
+
+.ss-tab.active {
+  background: var(--bg-card);
+  color: var(--gold);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+}
+
+/* Off Days Chips */
+.ss-chips-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.ss-chip {
+  padding: var(--space-sm);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  background: rgba(var(--gold-rgb), 0.03);
+  color: var(--text-main);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  font-size: var(--font-sm);
+  transition: all 0.2s ease;
+  text-align: center;
+  font-weight: 500;
+  user-select: none;
+}
+
+.ss-chip:hover {
+  border-color: rgba(var(--gold-rgb), 0.5);
+  background: rgba(var(--gold-rgb), 0.08);
+}
+
+.ss-chip.selected {
+  background: rgba(var(--gold-rgb), 0.15);
+  border-color: var(--gold);
+  color: var(--gold);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--gold);
+}
+
+/* Cards */
+.ss-card {
+  background: rgba(var(--gold-rgb), 0.02);
+  border: 1px solid rgba(var(--gold-rgb), 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  margin-bottom: var(--space-lg);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.ss-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.2);
+  background: rgba(var(--gold-rgb), 0.04);
+}
+
+/* Time Blocks */
+.ss-blocks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-md);
+}
+
+.ss-add-btn {
+  background: transparent;
+  border: 1px dashed rgba(var(--gold-rgb), 0.4);
+  color: var(--gold);
+  padding: var(--space-xs) var(--space-md);
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.ss-add-btn:hover {
+  background: rgba(var(--gold-rgb), 0.1);
+  border-style: solid;
+}
+
+.ss-block-card {
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--gold-rgb), 0.15);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-bottom: var(--space-md);
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.ss-block-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.ss-block-delete {
+  position: absolute;
+  top: var(--space-sm);
+  left: var(
+    --space-sm
+  ); /* RTL: left means right side visually? Wait, RTL means left is logical right... no, left is left. Arabic is RTL. Top right in RTL is left */
+  opacity: 0.6;
+  padding: 4px;
+}
+
+.ss-block-delete:hover {
+  opacity: 1;
+}
+
+/* Grid Layouts */
+.ss-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+}
+
+.ss-grid-icon-name {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  gap: var(--space-sm);
+}
+
+/* Forms overrides inside modal */
+.ss-input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ss-label {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Custom Checkbox / Toggle */
+.ss-toggles {
+  display: flex;
+  gap: var(--space-lg);
+  padding-top: var(--space-xs);
+  border-top: 1px dashed rgba(var(--gold-rgb), 0.15);
+}
+
+.ss-toggle-label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  font-size: var(--font-sm);
+  color: var(--text-main);
+  cursor: pointer;
+  user-select: none;
+}
+
+.ss-toggle-checkbox {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s;
+  display: grid;
+  place-items: center;
+}
+
+.ss-toggle-checkbox:checked {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.ss-toggle-checkbox:checked::before {
+  content: '✓';
+  color: var(--bg-main);
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Actions */
+.ss-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-top: var(--space-xl);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(var(--gold-rgb), 0.15);
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { ShiftConfig, TimeBlock } from '@/features/tasks/data/scheduleConfig';
-import '../tasks.css'; // Use existing tasks styling
+import '../tasks.css';
+import './schedule-settings.css';
 
 interface ScheduleSettingsModalProps {
   isOpen: boolean;
@@ -70,108 +71,74 @@ export default function ScheduleSettingsModal({
 
   return (
     <div
-      className="confirm-overlay"
+      className="modal-overlay"
       role="dialog"
       aria-modal="true"
       aria-labelledby="schedule-settings-title"
+      onClick={onClose}
     >
-      <div
-        className="confirm-box"
-        style={{ maxHeight: '90vh', overflowY: 'auto', maxWidth: '600px' }}
-      >
-        <div
-          id="schedule-settings-title"
-          style={{
-            color: 'var(--text-gold)',
-            fontSize: 'var(--font-lg)',
-            fontWeight: 700,
-            marginBottom: 'var(--space-md)',
-          }}
-        >
-          ⚙️ إعدادات الجدول
+      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+        <div className="ss-header">
+          <h2 id="schedule-settings-title" className="ss-title">
+            ⚙️ إعدادات الجدول
+          </h2>
+          <button className="icon-btn" onClick={onClose} aria-label="إغلاق">
+            ✕
+          </button>
         </div>
 
-        {/* Shift Selector */}
-        <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: 600 }}>
-            اختر نوع الأسبوع
-          </label>
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-            {editingSchedule.map((s) => (
-              <button
-                key={s.id}
-                onClick={() => setSelectedShiftId(s.id)}
-                style={{
-                  flex: 1,
-                  padding: 'var(--space-sm)',
-                  border:
-                    selectedShiftId === s.id ? '2px solid var(--gold)' : '1px solid var(--gold)',
-                  backgroundColor:
-                    selectedShiftId === s.id ? 'rgba(var(--gold-rgb),.1)' : 'transparent',
-                  color: 'var(--gold)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                }}
-              >
-                {s.icon} {s.label}
-              </button>
-            ))}
-          </div>
+        {/* Shift Selector Tabs */}
+        <div className="ss-tabs" role="tablist">
+          {editingSchedule.map((s) => (
+            <button
+              key={s.id}
+              role="tab"
+              aria-selected={selectedShiftId === s.id}
+              className={`ss-tab ${selectedShiftId === s.id ? 'active' : ''}`}
+              onClick={() => setSelectedShiftId(s.id)}
+            >
+              <span>{s.icon}</span>
+              <span>{s.label}</span>
+            </button>
+          ))}
         </div>
 
         {/* Off Days Section */}
-        <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: 600 }}>
-            أيام الإجازة
-          </label>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 'var(--space-sm)',
-            }}
-          >
-            {days.map((day, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleAddOffDay(idx)}
-                style={{
-                  padding: 'var(--space-sm)',
-                  border: selectedShift.offDays.includes(idx)
-                    ? '2px solid var(--gold)'
-                    : '1px solid rgba(var(--gold-rgb),.3)',
-                  backgroundColor: selectedShift.offDays.includes(idx)
-                    ? 'rgba(var(--gold-rgb),.2)'
-                    : 'transparent',
-                  color: 'var(--gold)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: 'var(--font-sm)',
-                }}
-              >
-                {day}
-              </button>
-            ))}
+        <div>
+          <div className="ss-section-title">🏖️ أيام الإجازة</div>
+          <div className="ss-chips-grid">
+            {days.map((day, idx) => {
+              const isOff = selectedShift.offDays.includes(idx);
+              return (
+                <div
+                  key={idx}
+                  className={`ss-chip ${isOff ? 'selected' : ''}`}
+                  onClick={() => handleAddOffDay(idx)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddOffDay(idx);
+                    }
+                  }}
+                >
+                  {day}
+                </div>
+              );
+            })}
           </div>
         </div>
 
         {/* Friday Schedule Section */}
-        <div
-          style={{
-            marginBottom: 'var(--space-lg)',
-            padding: 'var(--space-md)',
-            backgroundColor: 'rgba(var(--gold-rgb),.05)',
-            borderRadius: '4px',
-          }}
-        >
-          <label style={{ display: 'block', marginBottom: 'var(--space-sm)', fontWeight: 600 }}>
-            جدول يوم الجمعة
-          </label>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)' }}>
-            <div>
-              <label style={{ fontSize: 'var(--font-sm)' }}>الوقت (بداية)</label>
+        <div className="ss-card">
+          <div className="ss-section-title">🕌 جدول يوم الجمعة الخاص</div>
+          <div className="ss-grid-2">
+            <div className="ss-input-group">
+              <label className="ss-label">وقت البداية</label>
               <input
                 type="time"
+                className="form-input"
                 value={
                   selectedShift.fridaySchedule.start.toString().padStart(2, '0').slice(0, 2) + ':00'
                 }
@@ -184,21 +151,13 @@ export default function ScheduleSettingsModal({
                     },
                   });
                 }}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-sm)',
-                  marginTop: 'var(--space-xs)',
-                  backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                  border: '1px solid var(--gold)',
-                  color: 'var(--gold)',
-                  borderRadius: '4px',
-                }}
               />
             </div>
-            <div>
-              <label style={{ fontSize: 'var(--font-sm)' }}>الوقت (نهاية)</label>
+            <div className="ss-input-group">
+              <label className="ss-label">وقت النهاية</label>
               <input
                 type="time"
+                className="form-input"
                 value={
                   selectedShift.fridaySchedule.end.toString().padStart(2, '0').slice(0, 2) + ':00'
                 }
@@ -211,22 +170,14 @@ export default function ScheduleSettingsModal({
                     },
                   });
                 }}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-sm)',
-                  marginTop: 'var(--space-xs)',
-                  backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                  border: '1px solid var(--gold)',
-                  color: 'var(--gold)',
-                  borderRadius: '4px',
-                }}
               />
             </div>
           </div>
-          <div style={{ marginTop: 'var(--space-md)' }}>
-            <label style={{ fontSize: 'var(--font-sm)' }}>الوصف</label>
+          <div className="ss-input-group" style={{ marginTop: 'var(--space-md)' }}>
+            <label className="ss-label">وصف فترة الجمعة</label>
             <input
               type="text"
+              className="form-input"
               value={selectedShift.fridaySchedule.label}
               onChange={(e) =>
                 handleUpdateShift({
@@ -236,245 +187,116 @@ export default function ScheduleSettingsModal({
                   },
                 })
               }
-              style={{
-                width: '100%',
-                padding: 'var(--space-sm)',
-                marginTop: 'var(--space-xs)',
-                backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                border: '1px solid var(--gold)',
-                color: 'var(--gold)',
-                borderRadius: '4px',
-              }}
             />
           </div>
         </div>
 
         {/* Time Blocks Section */}
-        <div style={{ marginBottom: 'var(--space-lg)' }}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 'var(--space-md)',
-            }}
-          >
-            <label style={{ fontWeight: 600 }}>الكتل الزمنية</label>
-            <button
-              onClick={handleAddBlock}
-              style={{
-                padding: '4px 12px',
-                backgroundColor: 'rgba(var(--gold-rgb),.2)',
-                border: '1px solid var(--gold)',
-                color: 'var(--gold)',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: 'var(--font-sm)',
-              }}
-            >
+        <div>
+          <div className="ss-blocks-header">
+            <div className="ss-section-title" style={{ marginBottom: 0 }}>
+              ⏱️ الكتل الزمنية (يومياً)
+            </div>
+            <button className="ss-add-btn" onClick={handleAddBlock}>
               + إضافة كتلة
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+          <div>
             {selectedShift.blocks.map((block) => (
-              <div
-                key={block.id}
-                style={{
-                  padding: 'var(--space-md)',
-                  backgroundColor: 'rgba(var(--gold-rgb),.05)',
-                  borderRadius: '4px',
-                  border: '1px solid rgba(var(--gold-rgb),.1)',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--space-sm)',
-                    marginBottom: 'var(--space-md)',
-                  }}
+              <div key={block.id} className="ss-block-card">
+                <button
+                  className="icon-btn icon-btn--delete ss-block-delete"
+                  aria-label="حذف الكتلة"
+                  onClick={() => handleDeleteBlock(block.id)}
                 >
-                  <div>
-                    <label style={{ fontSize: 'var(--font-sm)' }}>الأيقونة</label>
+                  🗑️
+                </button>
+
+                <div className="ss-grid-icon-name">
+                  <div className="ss-input-group">
+                    <label className="ss-label">رمز</label>
                     <input
                       type="text"
+                      className="form-input"
+                      style={{ textAlign: 'center' }}
                       value={block.icon}
                       onChange={(e) => handleUpdateBlock(block.id, { icon: e.target.value })}
                       maxLength={2}
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-sm)',
-                        marginTop: 'var(--space-xs)',
-                        backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                        border: '1px solid var(--gold)',
-                        color: 'var(--gold)',
-                        borderRadius: '4px',
-                        textAlign: 'center',
-                      }}
                     />
                   </div>
-                  <div>
-                    <label style={{ fontSize: 'var(--font-sm)' }}>الاسم</label>
+                  <div className="ss-input-group">
+                    <label className="ss-label">اسم الكتلة</label>
                     <input
                       type="text"
+                      className="form-input"
                       value={block.label}
                       onChange={(e) => handleUpdateBlock(block.id, { label: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-sm)',
-                        marginTop: 'var(--space-xs)',
-                        backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                        border: '1px solid var(--gold)',
-                        color: 'var(--gold)',
-                        borderRadius: '4px',
-                      }}
                     />
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr',
-                    gap: 'var(--space-sm)',
-                    marginBottom: 'var(--space-md)',
-                  }}
-                >
-                  <div>
-                    <label style={{ fontSize: 'var(--font-sm)' }}>البداية (الساعة)</label>
+                <div className="ss-grid-2">
+                  <div className="ss-input-group">
+                    <label className="ss-label">من الساعة</label>
                     <input
                       type="time"
+                      className="form-input"
                       value={block.startHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
                       onChange={(e) => {
                         const [hours] = e.target.value.split(':').map(Number);
                         handleUpdateBlock(block.id, { startHour: hours });
                       }}
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-sm)',
-                        marginTop: 'var(--space-xs)',
-                        backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                        border: '1px solid var(--gold)',
-                        color: 'var(--gold)',
-                        borderRadius: '4px',
-                      }}
                     />
                   </div>
-                  <div>
-                    <label style={{ fontSize: 'var(--font-sm)' }}>النهاية (الساعة)</label>
+                  <div className="ss-input-group">
+                    <label className="ss-label">إلى الساعة</label>
                     <input
                       type="time"
+                      className="form-input"
                       value={block.endHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
                       onChange={(e) => {
                         const [hours] = e.target.value.split(':').map(Number);
                         handleUpdateBlock(block.id, { endHour: hours });
                       }}
-                      style={{
-                        width: '100%',
-                        padding: 'var(--space-sm)',
-                        marginTop: 'var(--space-xs)',
-                        backgroundColor: 'rgba(var(--gold-rgb),.1)',
-                        border: '1px solid var(--gold)',
-                        color: 'var(--gold)',
-                        borderRadius: '4px',
-                      }}
                     />
                   </div>
                 </div>
 
-                <div
-                  style={{
-                    display: 'flex',
-                    gap: 'var(--space-md)',
-                    marginBottom: 'var(--space-md)',
-                  }}
-                >
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-xs)',
-                      fontSize: 'var(--font-sm)',
-                    }}
-                  >
+                <div className="ss-toggles">
+                  <label className="ss-toggle-label">
                     <input
                       type="checkbox"
+                      className="ss-toggle-checkbox"
                       checked={block.isOptional || false}
                       onChange={(e) =>
                         handleUpdateBlock(block.id, { isOptional: e.target.checked })
                       }
-                      style={{ cursor: 'pointer' }}
                     />
-                    اختياري
+                    وقت اختياري
                   </label>
-                  <label
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 'var(--space-xs)',
-                      fontSize: 'var(--font-sm)',
-                    }}
-                  >
+                  <label className="ss-toggle-label">
                     <input
                       type="checkbox"
+                      className="ss-toggle-checkbox"
                       checked={block.isRest || false}
                       onChange={(e) => handleUpdateBlock(block.id, { isRest: e.target.checked })}
-                      style={{ cursor: 'pointer' }}
                     />
-                    راحة
+                    وقت راحة/نوم
                   </label>
                 </div>
-
-                <button
-                  onClick={() => handleDeleteBlock(block.id)}
-                  style={{
-                    width: '100%',
-                    padding: 'var(--space-sm)',
-                    backgroundColor: 'rgba(244, 67, 54, 0.2)',
-                    border: '1px solid #f44336',
-                    color: '#f44336',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  🗑️ حذف الكتلة
-                </button>
               </div>
             ))}
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', marginTop: 'var(--space-lg)' }}>
-          <button
-            onClick={handleSave}
-            style={{
-              flex: 1,
-              padding: 'var(--space-md)',
-              backgroundColor: 'rgba(var(--gold-rgb),.2)',
-              border: '1px solid var(--gold)',
-              color: 'var(--gold)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 600,
-            }}
-          >
-            ✅ حفظ التغييرات
-          </button>
-          <button
-            onClick={onClose}
-            style={{
-              flex: 1,
-              padding: 'var(--space-md)',
-              backgroundColor: 'rgba(var(--gold-rgb),.1)',
-              border: '1px solid rgba(var(--gold-rgb),.3)',
-              color: 'var(--gold)',
-              borderRadius: '4px',
-              cursor: 'pointer',
-            }}
-          >
+        <div className="ss-actions">
+          <button className="btn-secondary" onClick={onClose}>
             إلغاء
+          </button>
+          <button className="btn-save" onClick={handleSave}>
+            ✅ حفظ التغييرات
           </button>
         </div>
       </div>
