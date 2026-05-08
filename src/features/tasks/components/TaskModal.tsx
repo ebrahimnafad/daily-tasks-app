@@ -123,9 +123,14 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
         aria-labelledby={titleId}
         onClick={(e) => e.stopPropagation()}
       >
-        <h2 id={titleId} className="tm-title">
-          {modal.mode === 'add' ? '➕ مهمة جديدة' : '✏️ تعديل المهمة'}
-        </h2>
+        <div className="tm-header">
+          <h2 id={titleId} className="tm-title">
+            {modal.mode === 'add' ? '➕ مهمة جديدة' : '✏️ تعديل المهمة'}
+          </h2>
+          <button className="tm-close" onClick={onClose} aria-label="إغلاق">
+            ✕
+          </button>
+        </div>
 
         <div className="form-group">
           <label className="form-label" id="icon-label">

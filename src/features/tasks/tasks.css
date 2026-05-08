@@ -169,13 +169,32 @@
 }
 
 /* TaskModal */
+.tm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-xl);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.15);
+  padding-bottom: var(--space-lg);
+}
 .tm-title {
-  margin: 0 0 var(--space-xl);
+  margin: 0;
   color: var(--text-gold);
   font-size: var(--font-xl);
   font-weight: 700;
-  border-bottom: 1px solid rgba(var(--gold-rgb), 0.15);
-  padding-bottom: var(--space-lg);
+}
+.tm-close {
+  background: none;
+  border: none;
+  color: rgba(var(--gold-rgb), 0.6);
+  font-size: var(--font-xl);
+  cursor: pointer;
+  padding: var(--space-xs);
+  line-height: 1;
+  transition: color 0.2s;
+}
+.tm-close:hover {
+  color: var(--gold);
 }
 .tm-row {
   display: flex;
