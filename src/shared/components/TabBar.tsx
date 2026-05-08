@@ -16,6 +16,7 @@ export default function TabBar({ activeTab, onTabChange, financeBadge }: TabBarP
   const tabs = useMemo<Tab[]>(
     () => [
       { id: 'tasks', icon: '📋', label: 'المهام' },
+      { id: 'calendar', icon: '📅', label: 'التقويم' },
       { id: 'finance', icon: '💰', label: 'المالية' },
     ],
     []

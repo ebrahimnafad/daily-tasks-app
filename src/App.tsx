@@ -7,6 +7,7 @@ import { TaskContext, useTaskManager, INITIAL_TASKS, TaskModal } from '@/feature
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
+const CalendarView = lazy(() => import('@/features/tasks/components/CalendarView'));
 const FinancePage = lazy(() => import('@/features/finance/components/FinancePage'));
 
 // ── App ──────────────────────────────────────────────────────────────────────
@@ -125,6 +126,7 @@ export default function App() {
             <TasksPage today={today} shift={shift} setShift={setShift} />
           </TaskContext.Provider>
         )}
+        {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
         {activeTab === 'finance' && <FinancePage />}
       </Suspense>
 
