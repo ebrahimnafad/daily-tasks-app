@@ -48,7 +48,15 @@ export default function Header() {
       </span>
 
       {/* عنوان المهمة ومعلوماتها */}
-      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+      <div
+        style={{
+          flex: '1 1 auto',
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-sm)',
+        }}
+      >
         <div
           style={{
             color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
@@ -56,46 +64,35 @@ export default function Header() {
             fontWeight: 700,
             textDecoration: done ? 'line-through' : 'none',
             transition: 'all .3s',
+            whiteSpace: 'nowrap',
           }}
         >
           {task.title}
         </div>
-        <div
+        <span>{task.time}</span>
+        <span
           style={{
             fontSize: 'var(--font-sm)',
-            color: 'rgba(var(--gold-rgb),.48)',
-            marginTop: 'var(--space-xs)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-sm)',
-            flexWrap: 'wrap',
+            background: 'rgba(255,255,255,0.05)',
+            padding: 'var(--space-xs) var(--space-sm)',
+            borderRadius: 'var(--radius-sm)',
           }}
         >
-          <span>{task.time}</span>
+          {task.recurrence || 'يومي'}
+        </span>
+        {task.alertTime && (
           <span
             style={{
               fontSize: 'var(--font-sm)',
-              background: 'rgba(255,255,255,0.05)',
+              color: '#d97e6a',
+              background: 'rgba(217,126,106,.08)',
               padding: 'var(--space-xs) var(--space-sm)',
               borderRadius: 'var(--radius-sm)',
             }}
           >
-            {task.recurrence || 'يومي'}
+            🔔 {task.alertTime}
           </span>
-          {task.alertTime && (
-            <span
-              style={{
-                fontSize: 'var(--font-sm)',
-                color: '#d97e6a',
-                background: 'rgba(217,126,106,.08)',
-                padding: 'var(--space-xs) var(--space-sm)',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              🔔 {task.alertTime}
-            </span>
-          )}
-        </div>
+        )}
       </div>
 
       {/* أزرار الجانب */}
