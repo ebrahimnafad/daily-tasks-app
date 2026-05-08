@@ -51,6 +51,12 @@
   padding: var(--space-sm) var(--space-lg);
   background: rgba(var(--gold-rgb), 0.1);
 }
+.th-btn-settings {
+  font-size: var(--font-base);
+  padding: var(--space-sm) var(--space-lg);
+  background: rgba(var(--gold-rgb), 0.15);
+  color: var(--gold);
+}
 .th-shift-group {
   background: rgba(var(--gold-rgb), 0.05);
   border-radius: var(--radius-pill);
