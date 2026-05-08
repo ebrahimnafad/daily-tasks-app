@@ -79,14 +79,33 @@ export default function useNotifications(tasks: Task[]): UseNotificationsReturn 
         now.getMinutes().toString().padStart(2, '0');
 
       tasks.forEach((t) => {
-        if (!t.alertTime || t.alertTime !== hhmm) return;
-        const key = `task_${t.id}_${hhmm}`;
-        if (notifiedRefs.current[key]) return;
-        try {
-          new Notification('تذكير بمهمة 🔔', { body: t.title, icon: '/favicon.ico', tag: key });
-          notifiedRefs.current[key] = true;
-        } catch (e) {
-          console.warn('[useNotifications] فشل إرسال الإشعار:', e);
+        // Task alert time notification
+        if (t.alertTime && t.alertTime === hhmm) {
+          const key = `task_${t.id}_${hhmm}`;
+          if (!notifiedRefs.current[key]) {
+            try {
+              new Notification('تذكير بمهمة 🔔', { body: t.title, icon: '/favicon.ico', tag: key });
+              notifiedRefs.current[key] = true;
+            } catch (e) {
+              console.warn('[useNotifications] فشل إرسال الإشعار:', e);
+            }
+          }
+        }
+        // Specific date task - notify on that day morning
+        if (t.recurrence === 'موعد محدد' && t.date && t.date === todayISO()) {
+          const dateKey = `date_${t.id}_${t.date}`;
+          if (!notifiedRefs.current[dateKey] && hhmm === '08:00') {
+            try {
+              new Notification('مهمة مجدولة 📅', {
+                body: t.title,
+                icon: '/favicon.ico',
+                tag: dateKey,
+              });
+              notifiedRefs.current[dateKey] = true;
+            } catch (e) {
+              console.warn('[useNotifications] فشل إرسال إشعار التاريخ:', e);
+            }
+          }
         }
       });
 

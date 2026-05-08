@@ -1,6 +1,11 @@
 import { useTaskCardContext } from './TaskCardContext';
 import { PrayerRing, SubRing, AccessibleCheckbox } from '@/shared/components';
 
+const formatDate = (dateStr: string): string => {
+  const date = new Date(dateStr + 'T00:00:00');
+  return date.toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' });
+};
+
 export default function Header() {
   const {
     task,
@@ -120,6 +125,22 @@ export default function Header() {
           >
             {task.recurrence || 'يومي'}
           </span>
+          {task.date && (
+            <span
+              style={{
+                flexShrink: 0,
+                fontSize: 'var(--font-sm)',
+                color: 'var(--gold)',
+                background: 'rgba(var(--gold-rgb),.1)',
+                border: '1px solid rgba(var(--gold-rgb),.3)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              📅 {formatDate(task.date)}
+            </span>
+          )}
         </div>
 
         {/* Row 2: full width of content column — alert · قائمة/صلوات · بريف · edit · delete */}
