@@ -23,102 +23,135 @@ export default function Header() {
   return (
     <div
       style={{
-        padding: 'var(--space-lg) var(--space-lg)',
+        padding: 'var(--space-md) var(--space-lg)',
         display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--space-md)',
+        flexDirection: 'column',
+        gap: 'var(--space-sm)',
       }}
     >
-      {/* مؤشر التقدّم / مربع الاختيار */}
-      {task.isPrayerTask ? (
-        <PrayerRing done={prayersDone} total={prayerTotal} />
-      ) : hasSubs ? (
-        <SubRing done={subsDone} total={task.subtasks.length} color={task.color} />
-      ) : (
-        <AccessibleCheckbox
-          checked={isChecked}
-          color={task.color}
-          onToggle={() => setChecked((p) => ({ ...p, [task.id]: !p[task.id] }))}
-          label={`تأشير مهمة: ${task.title}`}
-        />
-      )}
-
-      <span style={{ fontSize: 'var(--font-lg)' }} aria-hidden="true">
-        {task.icon}
-      </span>
-
-      {/* عنوان المهمة ومعلوماتها */}
+      {/* ── Row 1: Progress indicator · Icon · Title · Edit/Delete ── */}
       <div
         style={{
-          flex: '1 1 auto',
-          minWidth: 0,
           display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-xs)',
+          alignItems: 'center',
+          gap: 'var(--space-md)',
         }}
       >
-        {/* Line 1: Title and Category/Recurrence */}
+        {/* مؤشر التقدّم / مربع الاختيار */}
+        {task.isPrayerTask ? (
+          <PrayerRing done={prayersDone} total={prayerTotal} />
+        ) : hasSubs ? (
+          <SubRing done={subsDone} total={task.subtasks.length} color={task.color} />
+        ) : (
+          <AccessibleCheckbox
+            checked={isChecked}
+            color={task.color}
+            onToggle={() => setChecked((p) => ({ ...p, [task.id]: !p[task.id] }))}
+            label={`تأشير مهمة: ${task.title}`}
+          />
+        )}
+
+        {/* أيقونة المهمة */}
+        <span style={{ fontSize: 'var(--font-lg)', flexShrink: 0 }} aria-hidden="true">
+          {task.icon}
+        </span>
+
+        {/* عنوان المهمة */}
+        <div
+          style={{
+            flex: '1 1 auto',
+            minWidth: 0,
+            color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
+            fontSize: 'var(--font-md)',
+            fontWeight: 700,
+            textDecoration: done ? 'line-through' : 'none',
+            transition: 'color .3s, text-decoration .3s',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {task.title}
+        </div>
+
+        {/* أزرار التعديل والحذف */}
         <div
           style={{
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 'var(--space-sm)',
+            gap: 'var(--space-xs)',
+            flexShrink: 0,
           }}
         >
-          <div
-            style={{
-              color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
-              fontSize: 'var(--font-md)',
-              fontWeight: 700,
-              textDecoration: done ? 'line-through' : 'none',
-              transition: 'all .3s',
+          <button
+            className="icon-btn icon-btn--edit"
+            aria-label={`تعديل مهمة: ${task.title}`}
+            onClick={(e) => tm.openEdit(task, e)}
+          >
+            ✏️
+          </button>
+          <button
+            className="icon-btn icon-btn--delete"
+            aria-label={`حذف مهمة: ${task.title}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              tm.setDeleteConfirm(task.id);
             }}
           >
-            {task.title}
-          </div>
+            🗑️
+          </button>
+        </div>
+      </div>
 
-          <div
+      {/* ── Row 2: Meta chips (right) · Toggle buttons (left) ── */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--space-sm)',
+          paddingRight:
+            'calc(var(--space-md) + var(--font-lg) + var(--space-md))' /* align under title */,
+        }}
+      >
+        {/* الشرائح: فئة + تكرار + تنبيه */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-xs)',
+            flexWrap: 'wrap',
+            flex: '1 1 auto',
+            minWidth: 0,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 'var(--font-sm)',
+              background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
+              color: task.color,
+              border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-sm)',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {task.category}
+          </span>
+
+          <span
             style={{
               fontSize: 'var(--font-sm)',
               color: 'rgba(var(--gold-rgb),.48)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 'var(--space-xs)',
+              background: 'rgba(255,255,255,0.05)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-sm)',
+              whiteSpace: 'nowrap',
             }}
           >
-            <span
-              style={{
-                background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
-                color: task.color,
-                border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              {task.category}
-            </span>
-            <span
-              style={{
-                background: 'rgba(255,255,255,0.05)',
-                padding: '2px 8px',
-                borderRadius: 'var(--radius-sm)',
-              }}
-            >
-              {task.recurrence || 'يومي'}
-            </span>
-          </div>
-        </div>
+            {task.recurrence || 'يومي'}
+          </span>
 
-        {/* Line 2: Other chips and toggle buttons */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-sm)',
-            flexWrap: 'wrap',
-          }}
-        >
           {task.alertTime && (
             <span
               style={{
@@ -127,12 +160,23 @@ export default function Header() {
                 background: 'rgba(217,126,106,.08)',
                 padding: '2px 8px',
                 borderRadius: 'var(--radius-sm)',
+                whiteSpace: 'nowrap',
               }}
             >
               🔔 {task.alertTime}
             </span>
           )}
+        </div>
 
+        {/* أزرار التبديل */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-xs)',
+            flexShrink: 0,
+          }}
+        >
           {/* زر القائمة الفرعية */}
           {!task.isPrayerTask && (
             <button
@@ -185,34 +229,6 @@ export default function Header() {
             بريف
           </button>
         </div>
-      </div>
-
-      {/* أزرار الجانب (تعديل وحذف فقط) */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--space-sm)',
-          flexShrink: 0,
-        }}
-      >
-        <button
-          className="icon-btn icon-btn--edit"
-          aria-label={`تعديل مهمة: ${task.title}`}
-          onClick={(e) => tm.openEdit(task, e)}
-        >
-          ✏️
-        </button>
-        <button
-          className="icon-btn icon-btn--delete"
-          aria-label={`حذف مهمة: ${task.title}`}
-          onClick={(e) => {
-            e.stopPropagation();
-            tm.setDeleteConfirm(task.id);
-          }}
-        >
-          🗑️
-        </button>
       </div>
     </div>
   );
