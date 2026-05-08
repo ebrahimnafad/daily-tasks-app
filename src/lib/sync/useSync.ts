@@ -3,11 +3,13 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task, CheckedMap, SubCheckedMap, SyncStatus } from '@/types';
 import {
+  type ShiftConfig,
   type ShiftType,
   computeShift,
   getMostRecentFriday,
   DEFAULT_EPOCH_KEY,
   LEGACY_TIME_TO_BLOCK,
+  DEFAULT_SHIFTS,
 } from '@/features/tasks/data/scheduleConfig';
 
 export const todayISO = (): string => new Date().toISOString().split('T')[0];
@@ -41,7 +43,7 @@ function lsSet(key: string, value: unknown, onQuota?: () => void): void {
 const migrateTasks = (tasks: Task[]): Task[] =>
   tasks.map((t) => ({
     ...t,
-    shifts: t.shifts ?? (['morning', 'evening'] as ShiftType[]),
+    shifts: t.shifts ?? ['morning', 'evening'],
     timeBlock: t.timeBlock ?? (t.time ? (LEGACY_TIME_TO_BLOCK[t.time] ?? 'anytime') : 'anytime'),
   }));
 
@@ -81,6 +83,17 @@ const fetchDaily = async (): Promise<DailyState> => {
   return { checked: {}, subChecked: {} };
 };
 
+const fetchSchedule = async (): Promise<ShiftConfig[]> => {
+  const res = await fetch('/api/db?resource=schedule');
+  if (!res.ok) throw new Error('Network error');
+  const data = (await res.json()) as { schedule?: ShiftConfig[] };
+  if (data.schedule && Array.isArray(data.schedule)) {
+    lsSet('mhm_schedule', data.schedule);
+    return data.schedule;
+  }
+  return lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS);
+};
+
 // ── Hook ──────────────────────────────────────────────────────────────────
 export interface UseSyncReturn {
   tasks: Task[];
@@ -89,6 +102,8 @@ export interface UseSyncReturn {
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   subChecked: SubCheckedMap;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  schedule: ShiftConfig[];
+  setSchedule: Dispatch<SetStateAction<ShiftConfig[]>>;
   shift: ShiftType;
   /** Override the auto-computed shift (updates epoch so the change persists) */
   setShift: (v: ShiftType) => void;
@@ -116,6 +131,7 @@ export default function useSync(
       // Re-fetch both queries to sync any missed writes
       if (didMountRef.current) {
         void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+        void queryClient.invalidateQueries({ queryKey: ['schedule'] });
         void queryClient.invalidateQueries({ queryKey: ['daily', todayISO()] });
       }
     };
@@ -144,14 +160,25 @@ export default function useSync(
     return defaultEpoch;
   });
 
-  const [shift, setShiftState] = useState<ShiftType>(() => computeShift(shiftEpoch));
+  // ── Queries ───────────────────────────────────────────────────────────
+  const { data: schedule = DEFAULT_SHIFTS, isFetching: fetchingSchedule } = useQuery<ShiftConfig[]>(
+    {
+      queryKey: ['schedule'],
+      queryFn: fetchSchedule,
+      initialData: () => lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
+      enabled: isOnline,
+      retry: isOnline ? 3 : false,
+    }
+  );
+
+  const [shift, setShiftState] = useState<string>(() => computeShift(shiftEpoch, schedule));
 
   // Re-compute shift every minute (catches the Friday transition at midnight)
   useEffect(() => {
-    const tick = () => setShiftState(computeShift(shiftEpoch));
+    const tick = () => setShiftState(computeShift(shiftEpoch, schedule));
     const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
-  }, [shiftEpoch]);
+  }, [shiftEpoch, schedule]);
 
   /**
    * Manual override: user toggles shift → we adjust the epoch so the
@@ -161,22 +188,24 @@ export default function useSync(
     (v: ShiftType) => {
       // Find the current week's Friday
       const thisFriday = getMostRecentFriday();
-      // If user wants 'evening', set epoch = this Friday (even weeks = evening)
-      // If user wants 'morning', set epoch = one week ago (odd weeks = morning)
+
+      // Determine index difference between target shift and current epoch assumption (which aligns with shifts[0]).
+      // For simplicity in a dynamic system, if they pick a different shift,
+      // we offset the epoch back by N weeks where N is the index of the chosen shift in the schedule array.
+      const shiftIndex = schedule.findIndex((s) => s.id === v);
+      const N = shiftIndex >= 0 ? shiftIndex : 0;
+
       const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
       const fridayDate = new Date(thisFriday + 'T00:00:00');
-      const newEpoch =
-        v === 'evening'
-          ? thisFriday
-          : new Date(fridayDate.getTime() - oneWeekMs).toISOString().split('T')[0];
+      const newEpoch = new Date(fridayDate.getTime() - N * oneWeekMs).toISOString().split('T')[0];
+
       setShiftEpoch(newEpoch);
       setShiftState(v);
       lsSet(DEFAULT_EPOCH_KEY, newEpoch, onQuota);
     },
-    [onQuota]
+    [onQuota, schedule]
   );
 
-  // ── Queries ───────────────────────────────────────────────────────────
   const { data: tasks = initialTasks, isFetching: fetchingTasks } = useQuery<Task[]>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
@@ -233,6 +262,32 @@ export default function useSync(
     },
   });
 
+  const { mutate: updateScheduleMut } = useMutation<void, Error, ShiftConfig[]>({
+    mutationFn: async (newSchedule) => {
+      await fetch('/api/db?resource=schedule', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ schedule: newSchedule }),
+      });
+    },
+    onMutate: async (newSchedule) => {
+      await queryClient.cancelQueries({ queryKey: ['schedule'] });
+      const prevSchedule = queryClient.getQueryData<ShiftConfig[]>(['schedule']);
+      queryClient.setQueryData(['schedule'], newSchedule);
+      lsSet('mhm_schedule', newSchedule, onQuota);
+      return { prevSchedule };
+    },
+    onSuccess: () => setHasError(false),
+    onError: (_err, _newSchedule, context) => {
+      setHasError(true);
+      const ctx = context as { prevSchedule?: ShiftConfig[] } | undefined;
+      if (ctx?.prevSchedule) {
+        queryClient.setQueryData(['schedule'], ctx.prevSchedule);
+        lsSet('mhm_schedule', ctx.prevSchedule, onQuota);
+      }
+    },
+  });
+
   const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
     mutationFn: async ({ checked: c, subChecked: sc }) => {
       const today = todayISO();
@@ -270,6 +325,15 @@ export default function useSync(
       updateTasksMut(next);
     },
     [queryClient, updateTasksMut, initialTasks]
+  );
+
+  const setSchedule = useCallback<Dispatch<SetStateAction<ShiftConfig[]>>>(
+    (updater) => {
+      const current = queryClient.getQueryData<ShiftConfig[]>(['schedule']) ?? DEFAULT_SHIFTS;
+      const next = typeof updater === 'function' ? updater(current) : updater;
+      updateScheduleMut(next);
+    },
+    [queryClient, updateScheduleMut]
   );
 
   const setChecked = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
@@ -318,7 +382,7 @@ export default function useSync(
     ? 'offline'
     : hasError
       ? 'error'
-      : fetchingTasks || fetchingDaily
+      : fetchingTasks || fetchingDaily || fetchingSchedule
         ? 'syncing'
         : 'synced';
 
@@ -329,6 +393,8 @@ export default function useSync(
     setChecked,
     subChecked,
     setSubChecked,
+    schedule,
+    setSchedule,
     shift,
     setShift,
     syncStatus,

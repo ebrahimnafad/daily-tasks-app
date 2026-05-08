@@ -1,5 +1,5 @@
 import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
-import type { TimeBlock } from '@/features/tasks/data/scheduleConfig';
+import type { TimeBlock, ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 
 // ── Primitive domain types ────────────────────────────────────────────────
 
@@ -20,7 +20,7 @@ export interface Task {
   category: string;
   color: string;
   /** Which shift(s) this task belongs to */
-  shifts: ('morning' | 'evening')[];
+  shifts: string[];
   /** Time block ID from scheduleConfig.ts (e.g. 'work-early', 'family') */
   timeBlock: string;
   isWarning: boolean;
@@ -46,7 +46,7 @@ export interface TaskForm {
   title: string;
   category: string;
   color: string;
-  shifts: ('morning' | 'evening')[];
+  shifts: string[];
   timeBlock: string;
   isWarning: boolean;
   recurrence: string;
@@ -144,6 +144,8 @@ export interface TaskContextValue {
   tm: TaskManagerReturn;
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  scheduleConfig: ShiftConfig[];
+  setScheduleConfig: Dispatch<SetStateAction<ShiftConfig[]>>;
   prayersDone: number;
   prayerTotal: number;
   notifPerm: NotifPerm;

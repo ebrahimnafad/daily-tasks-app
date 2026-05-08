@@ -13,25 +13,25 @@
  * يتطلب Environment Variable: DATABASE_URL
  */
 
-import { neon } from "@neondatabase/serverless";
+import { neon } from '@neondatabase/serverless';
 
 // ── CORS: تقييد الوصول ──────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   process.env.FRONTEND_URL,
-  "http://localhost:5173",
-  "http://localhost:4173",
-  "http://localhost:3000",
+  'http://localhost:5173',
+  'http://localhost:4173',
+  'http://localhost:3000',
 ].filter(Boolean);
 
 function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || "*";
-  
-  res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-  res.setHeader("Vary", "Origin");
+  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
+
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Vary', 'Origin');
 }
 
 // ── Regex للتحقق من صيغة التاريخ YYYY-MM-DD ──────────────────────────────
@@ -59,6 +59,14 @@ async function ensureSchema(sql) {
       checked     JSONB DEFAULT '{}',
       sub_checked JSONB DEFAULT '{}',
       updated_at  TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS schedule_config (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_schedule CHECK (id = 1)
     )
   `;
   // ── Finance tables ──
@@ -98,24 +106,24 @@ async function ensureSchema(sql) {
 
 // ── Generic JSONB single-row handler (DRY) ──
 const FINANCE_TABLES = {
-  income:      { table: "finance_income",      field: "income" },
-  obligations: { table: "finance_obligations", field: "obligations" },
-  payments:    { table: "finance_payments",    field: "payments" },
-  goals:       { table: "finance_goals",       field: "goals" },
+  income: { table: 'finance_income', field: 'income' },
+  obligations: { table: 'finance_obligations', field: 'obligations' },
+  payments: { table: 'finance_payments', field: 'payments' },
+  goals: { table: 'finance_goals', field: 'goals' },
 };
 
 export default async function handler(req, res) {
   setCorsHeaders(req, res);
 
   /* ── Preflight CORS ── */
-  if (req.method === "OPTIONS") {
+  if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
   /* ── التحقق من DATABASE_URL ── */
   if (!process.env.DATABASE_URL) {
     return res.status(503).json({
-      error: "DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.",
+      error: 'DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.',
     });
   }
 
@@ -124,7 +132,7 @@ export default async function handler(req, res) {
   const method = req.method;
 
   // ── رفض الطلبات غير المدعومة مبكراً ────────────────────────────────────
-  if (method !== "GET" && method !== "POST") {
+  if (method !== 'GET' && method !== 'POST') {
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
   }
 
@@ -132,26 +140,26 @@ export default async function handler(req, res) {
     await ensureSchema(sql);
 
     /* ─── Tasks Definition ─── */
-    if (resource === "tasks") {
-      if (method === "GET") {
+    if (resource === 'tasks') {
+      if (method === 'GET') {
         const rows = await sql`SELECT data, updated_at FROM tasks_definition WHERE id = 1`;
         return res.status(200).json({
-          tasks:     rows[0]?.data ?? null,
+          tasks: rows[0]?.data ?? null,
           updatedAt: rows[0]?.updated_at ?? null,
         });
       }
 
-      if (method === "POST") {
+      if (method === 'POST') {
         // Vercel parses JSON bodies automatically if Content-Type is application/json
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
         const { tasks } = body;
 
         if (!Array.isArray(tasks)) {
-          return res.status(400).json({ error: "tasks يجب أن يكون مصفوفة" });
+          return res.status(400).json({ error: 'tasks يجب أن يكون مصفوفة' });
         }
 
         if (tasks.length > 500) {
-          return res.status(400).json({ error: "عدد المهام تجاوز الحد المسموح (500)" });
+          return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
         }
 
         await sql`
@@ -164,42 +172,75 @@ export default async function handler(req, res) {
       }
     }
 
+    /* ─── Schedule Config ─── */
+    if (resource === 'schedule') {
+      if (method === 'GET') {
+        const rows = await sql`SELECT data, updated_at FROM schedule_config WHERE id = 1`;
+        return res.status(200).json({
+          schedule: rows[0]?.data ?? null,
+          updatedAt: rows[0]?.updated_at ?? null,
+        });
+      }
+
+      if (method === 'POST') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+        const { schedule } = body;
+
+        if (!Array.isArray(schedule)) {
+          return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
+        }
+
+        await sql`
+          INSERT INTO schedule_config (id, data, updated_at)
+          VALUES (1, ${JSON.stringify(schedule)}, NOW())
+          ON CONFLICT (id) DO UPDATE
+            SET data = EXCLUDED.data, updated_at = NOW()
+        `;
+        return res.status(200).json({ ok: true });
+      }
+    }
+
     /* ─── Daily State ─── */
-    if (resource === "daily") {
-      if (method === "GET") {
+    if (resource === 'daily') {
+      if (method === 'GET') {
         const date = req.query.date;
-        if (!date) return res.status(400).json({ error: "date مطلوب" });
-        if (!isValidDate(date)) return res.status(400).json({ error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" });
+        if (!date) return res.status(400).json({ error: 'date مطلوب' });
+        if (!isValidDate(date))
+          return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
 
         const rows = await sql`
           SELECT checked, sub_checked, updated_at FROM daily_state WHERE date = ${date}
         `;
         return res.status(200).json({
-          checked:    rows[0]?.checked    ?? {},
+          checked: rows[0]?.checked ?? {},
           subChecked: rows[0]?.sub_checked ?? {},
-          updatedAt:  rows[0]?.updated_at  ?? null,
+          updatedAt: rows[0]?.updated_at ?? null,
         });
       }
 
-      if (method === "POST") {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (method === 'POST') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
         const { date, checked, subChecked } = body;
-        
-        if (!date) return res.status(400).json({ error: "date مطلوب" });
-        if (!isValidDate(date)) return res.status(400).json({ error: "صيغة التاريخ غير صحيحة (YYYY-MM-DD)" });
 
-        if (checked !== undefined && (typeof checked !== "object" || Array.isArray(checked))) {
-          return res.status(400).json({ error: "checked يجب أن يكون object" });
+        if (!date) return res.status(400).json({ error: 'date مطلوب' });
+        if (!isValidDate(date))
+          return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
+
+        if (checked !== undefined && (typeof checked !== 'object' || Array.isArray(checked))) {
+          return res.status(400).json({ error: 'checked يجب أن يكون object' });
         }
-        if (subChecked !== undefined && (typeof subChecked !== "object" || Array.isArray(subChecked))) {
-          return res.status(400).json({ error: "subChecked يجب أن يكون object" });
+        if (
+          subChecked !== undefined &&
+          (typeof subChecked !== 'object' || Array.isArray(subChecked))
+        ) {
+          return res.status(400).json({ error: 'subChecked يجب أن يكون object' });
         }
 
         await sql`
           INSERT INTO daily_state (date, checked, sub_checked, updated_at)
           VALUES (
             ${date},
-            ${JSON.stringify(checked  ?? {})},
+            ${JSON.stringify(checked ?? {})},
             ${JSON.stringify(subChecked ?? {})},
             NOW()
           )
@@ -215,39 +256,41 @@ export default async function handler(req, res) {
     /* ─── Finance Resources (generic JSONB handler) ─── */
     const finRes = FINANCE_TABLES[resource];
     if (finRes) {
-      if (method === "GET") {
+      if (method === 'GET') {
         const rows = await sql(`SELECT data, updated_at FROM ${finRes.table} WHERE id = 1`);
         return res.status(200).json({
           [finRes.field]: rows[0]?.data ?? [],
           updatedAt: rows[0]?.updated_at ?? null,
         });
       }
-      if (method === "POST") {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
+      if (method === 'POST') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
         const data = body[finRes.field];
         if (!Array.isArray(data)) {
           return res.status(400).json({ error: `${finRes.field} يجب أن يكون مصفوفة` });
         }
         if (data.length > 1000) {
-          return res.status(400).json({ error: "تجاوز الحد المسموح (1000 عنصر)" });
+          return res.status(400).json({ error: 'تجاوز الحد المسموح (1000 عنصر)' });
         }
-        await sql(`
+        await sql(
+          `
           INSERT INTO ${finRes.table} (id, data, updated_at)
           VALUES (1, $1::jsonb, NOW())
           ON CONFLICT (id) DO UPDATE
             SET data = EXCLUDED.data, updated_at = NOW()
-        `, [JSON.stringify(data)]);
+        `,
+          [JSON.stringify(data)]
+        );
         return res.status(200).json({ ok: true });
       }
     }
 
     return res.status(400).json({ error: `resource غير معروف: ${resource}` });
-
   } catch (err) {
-    const isDev = process.env.NODE_ENV === "development";
-    console.error("[db function error]", err);
+    const isDev = process.env.NODE_ENV === 'development';
+    console.error('[db function error]', err);
     return res.status(500).json({
-      error: "خطأ داخلي في الخادم",
+      error: 'خطأ داخلي في الخادم',
       ...(isDev && { detail: err.message }),
     });
   }

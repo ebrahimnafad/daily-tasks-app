@@ -3,10 +3,11 @@ import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
 import { CATEGORIES } from '@/features/tasks';
 import { sendProgressToSheets } from '@/api/googleSheets';
 import {
-  SHIFTS,
+  DEFAULT_SHIFTS,
   getCurrentBlockId,
   isWorkday,
   type ShiftType,
+  type ShiftConfig,
 } from '@/features/tasks/data/scheduleConfig';
 import type {
   Task,
@@ -42,7 +43,8 @@ export default function useTaskManager(
   setChecked: Dispatch<SetStateAction<CheckedMap>>,
   subChecked: SubCheckedMap,
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>,
-  shift: ShiftType
+  shift: ShiftType,
+  scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS
 ): TaskManagerReturn {
   const [newItemText, setNewItemText] = useState<Record<number, string>>({});
   const [editingSubId, setEditingSubId] = useState<string | number | null>(null);
@@ -50,7 +52,6 @@ export default function useTaskManager(
   const [modal, setModal] = useState<ModalState | null>(null);
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
-  const [nextId, setNextId] = useState(200);
 
   // ── Subtask CRUD ──────────────────────────────────────────────────────────
   const addSubItem = useCallback(
@@ -113,9 +114,14 @@ export default function useTaskManager(
   // ── Task CRUD ─────────────────────────────────────────────────────────────
   const openAdd = useCallback(() => {
     const now = new Date();
-    const currentBlockId = getCurrentBlockId(shift, now.getHours() + now.getMinutes() / 60);
+    const currentBlockId = getCurrentBlockId(
+      shift,
+      scheduleConfig,
+      now.getHours() + now.getMinutes() / 60
+    );
     // Don't pre-select optional (walking) or rest (sleep) blocks — user should choose explicitly
-    const currentBlock = SHIFTS[shift].blocks.find((b) => b.id === currentBlockId);
+    const shiftConfig = scheduleConfig.find((s) => s.id === shift);
+    const currentBlock = shiftConfig?.blocks.find((b) => b.id === currentBlockId);
     const defaultBlock =
       currentBlock && !currentBlock.isOptional && !currentBlock.isRest ? currentBlockId : 'anytime';
     setForm({
@@ -124,7 +130,7 @@ export default function useTaskManager(
       timeBlock: defaultBlock ?? 'anytime',
     });
     setModal({ mode: 'add' });
-  }, [shift]);
+  }, [shift, scheduleConfig]);
 
   const openEdit = useCallback((task: Task, e: MouseEvent) => {
     e.stopPropagation();
@@ -179,13 +185,13 @@ export default function useTaskManager(
       },
     };
     if (modal.mode === 'add') {
-      setTasks((p) => [...p, { id: nextId, isPrayerTask: false, subtasks: [], ...patch }]);
-      setNextId((p) => p + 1);
+      const newId = Date.now();
+      setTasks((p) => [...p, { id: newId, isPrayerTask: false, subtasks: [], ...patch }]);
     } else {
       setTasks((p) => p.map((t) => (t.id === modal.taskId ? { ...t, ...patch } : t)));
     }
     setModal(null);
-  }, [form, modal, nextId, setTasks]);
+  }, [form, modal, setTasks]);
 
   const deleteTask = useCallback(
     (id: number) => {
@@ -224,9 +230,9 @@ export default function useTaskManager(
     const now = new Date();
     const dayOfWeek = now.getDay();
     const hourDecimal = now.getHours() + now.getMinutes() / 60;
-    const workday = isWorkday(shift, dayOfWeek);
-    const blockId = getCurrentBlockId(shift, hourDecimal);
-    const shiftConfig = SHIFTS[shift];
+    const workday = isWorkday(shift, scheduleConfig, dayOfWeek);
+    const blockId = getCurrentBlockId(shift, scheduleConfig, hourDecimal);
+    const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
     // Filter tasks applicable to current shift + day
     const shiftFiltered = tasks.filter((t) => {
@@ -291,7 +297,7 @@ export default function useTaskManager(
       currentBlockId: blockId,
       tasksByBlock: [...prayerBlockEntry, ...byBlock],
     };
-  }, [tasks, shift, checked, subChecked]);
+  }, [tasks, shift, scheduleConfig, checked, subChecked]);
 
   // ── Google Sheets Export ──────────────────────────────────────────────────
   const sendToSheets = useCallback(async () => {
@@ -319,7 +325,7 @@ export default function useTaskManager(
   const resetNewDay = useCallback(() => {
     if (!window.confirm('تصفير المهام لبدء يوم جديد؟')) return;
     const day = new Date().getDay();
-    const workday = isWorkday(shift, day);
+    const workday = isWorkday(shift, scheduleConfig, day);
     const isStartOfWeek = day === 5; // Friday starts the new week
 
     const toReset = tasks.filter((t) => {
@@ -342,7 +348,7 @@ export default function useTaskManager(
       toReset.forEach((t) => t.subtasks.forEach((s) => delete n[s.id]));
       return n;
     });
-  }, [tasks, shift, setChecked, setSubChecked]);
+  }, [tasks, shift, scheduleConfig, setChecked, setSubChecked]);
 
   // ── taskSubCheckedMap ─────────────────────────────────────────────────────
   const taskSubCheckedMap = useMemo<TaskSubCheckedMap>(() => {

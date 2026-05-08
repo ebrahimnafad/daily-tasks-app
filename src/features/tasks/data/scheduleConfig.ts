@@ -2,8 +2,6 @@
 //  scheduleConfig.ts — Single source of truth for shift/block/day
 // ══════════════════════════════════════════════════════════════════
 
-export type ShiftType = 'morning' | 'evening';
-
 export interface TimeBlock {
   id: string;
   label: string;
@@ -24,7 +22,10 @@ export interface FridaySchedule {
   label: string;
 }
 
+export type ShiftType = 'morning' | 'evening';
+
 export interface ShiftConfig {
+  id: ShiftType;
   label: string;
   icon: string;
   /** JS day numbers where work tasks are hidden (0=Sun…6=Sat) */
@@ -39,107 +40,27 @@ export interface ShiftConfig {
 // ── Time Blocks ───────────────────────────────────────────────────
 
 const MORNING_BLOCKS: TimeBlock[] = [
-  {
-    id: 'pre-fajr',
-    label: 'قبل الفجر',
-    icon: '🌙',
-    startHour: 4,
-    endHour: 5,
-  },
-  {
-    id: 'work-early',
-    label: 'بداية الدوام',
-    icon: '💼',
-    startHour: 5,
-    endHour: 9,
-  },
-  {
-    id: 'work-main',
-    label: 'الدوام الرئيسي',
-    icon: '🤝',
-    startHour: 9,
-    endHour: 13.5,
-  },
-  {
-    id: 'family',
-    label: 'وقت العائلة',
-    icon: '👨‍👩‍👦',
-    startHour: 14,
-    endHour: 19,
-  },
-  {
-    id: 'walking',
-    label: 'المشي',
-    icon: '🚶',
-    startHour: 19,
-    endHour: 20.5,
-    isOptional: true,
-  },
-  {
-    id: 'rest',
-    label: 'الراحة والنوم',
-    icon: '😴',
-    startHour: 21,
-    endHour: 4,
-    isRest: true,
-  },
+  { id: 'pre-fajr', label: 'قبل الفجر', icon: '🌙', startHour: 4, endHour: 5 },
+  { id: 'work-early', label: 'بداية الدوام', icon: '💼', startHour: 5, endHour: 9 },
+  { id: 'work-main', label: 'الدوام الرئيسي', icon: '🤝', startHour: 9, endHour: 13.5 },
+  { id: 'family', label: 'وقت العائلة', icon: '👨‍👩‍👦', startHour: 14, endHour: 19 },
+  { id: 'walking', label: 'المشي', icon: '🚶', startHour: 19, endHour: 20.5, isOptional: true },
+  { id: 'rest', label: 'الراحة والنوم', icon: '😴', startHour: 21, endHour: 4, isRest: true },
 ];
 
 const EVENING_BLOCKS: TimeBlock[] = [
-  {
-    id: 'sleep',
-    label: 'النوم والراحة',
-    icon: '😴',
-    startHour: 3,
-    endHour: 12,
-    isRest: true,
-  },
-  {
-    id: 'family',
-    label: 'وقت العائلة',
-    icon: '👨‍👩‍👦',
-    startHour: 12,
-    endHour: 18,
-  },
-  {
-    id: 'work-prep',
-    label: 'بداية الدوام',
-    icon: '📧',
-    startHour: 18,
-    endHour: 19,
-  },
-  {
-    id: 'work-coding',
-    label: 'وقت البرمجة',
-    icon: '💻',
-    startHour: 19,
-    endHour: 24, // midnight
-  },
-  {
-    id: 'work-late',
-    label: 'آخر الدوام',
-    icon: '📋',
-    startHour: 0.5,
-    endHour: 2.5,
-  },
+  { id: 'sleep', label: 'النوم والراحة', icon: '😴', startHour: 3, endHour: 12, isRest: true },
+  { id: 'family', label: 'وقت العائلة', icon: '👨‍👩‍👦', startHour: 12, endHour: 18 },
+  { id: 'work-prep', label: 'بداية الدوام', icon: '📧', startHour: 18, endHour: 19 },
+  { id: 'work-coding', label: 'وقت البرمجة', icon: '💻', startHour: 19, endHour: 24 }, // midnight
+  { id: 'work-late', label: 'آخر الدوام', icon: '📋', startHour: 0.5, endHour: 2.5 },
 ];
 
-// ── Shift Configs ─────────────────────────────────────────────────
+// ── Default Shifts ─────────────────────────────────────────────────
 
-export const SHIFTS: Record<ShiftType, ShiftConfig> = {
-  morning: {
-    label: 'الأسبوع الصباحي',
-    icon: '☀️',
-    offDays: [4, 6], // Thursday + Saturday
-    offDayLabel: 'إجازة — الخميس والسبت',
-    fridaySchedule: {
-      start: 18.5, // 6:30 PM
-      end: 3, // 3:00 AM next day
-      label: 'الجمعة (مسائي) ٦:٣٠م — ٣ص',
-    },
-    blocks: MORNING_BLOCKS,
-  },
-  evening: {
+export const DEFAULT_SHIFTS: ShiftConfig[] = [
+  {
+    id: 'evening',
     label: 'الأسبوع المسائي',
     icon: '🌙',
     offDays: [], // No fixed off days
@@ -151,7 +72,20 @@ export const SHIFTS: Record<ShiftType, ShiftConfig> = {
     },
     blocks: EVENING_BLOCKS,
   },
-};
+  {
+    id: 'morning',
+    label: 'الأسبوع الصباحي',
+    icon: '☀️',
+    offDays: [4, 6], // Thursday + Saturday
+    offDayLabel: 'إجازة — الخميس والسبت',
+    fridaySchedule: {
+      start: 18.5, // 6:30 PM
+      end: 3, // 3:00 AM next day
+      label: 'الجمعة (مسائي) ٦:٣٠م — ٣ص',
+    },
+    blocks: MORNING_BLOCKS,
+  },
+];
 
 // ── Auto-shift computation ────────────────────────────────────────
 
@@ -175,32 +109,47 @@ export function getMostRecentFriday(from: Date = new Date()): string {
 
 /**
  * Compute current shift from epoch.
- * Each Friday begins a new week. Weeks alternate evening/morning starting from epoch.
+ * Each Friday begins a new week. Cycles through the provided shifts array.
+ * By default, shifts[0] corresponds to the epoch week (weeksElapsed = 0).
  */
-export function computeShift(epochFridayISO: string, today: Date = new Date()): ShiftType {
+export function computeShift(
+  epochFridayISO: string,
+  shifts: ShiftConfig[],
+  today: Date = new Date()
+): ShiftType {
+  if (!shifts || shifts.length === 0) return 'morning'; // fallback
   const epoch = new Date(epochFridayISO + 'T00:00:00');
   const thisFriday = new Date(getMostRecentFriday(today) + 'T00:00:00');
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const weeksElapsed = Math.round((thisFriday.getTime() - epoch.getTime()) / msPerWeek);
-  // Even weeks from epoch = evening, odd = morning
-  return weeksElapsed % 2 === 0 ? 'evening' : 'morning';
+
+  const cycleIndex = ((weeksElapsed % shifts.length) + shifts.length) % shifts.length;
+  return shifts[cycleIndex].id;
 }
 
 /**
  * Given current shift and today's day-of-week, return whether today is a work day.
  * Friday is always a workday but with special hours.
  */
-export function isWorkday(shift: ShiftType, dayOfWeek: number): boolean {
-  return !SHIFTS[shift].offDays.includes(dayOfWeek);
+export function isWorkday(shiftId: string, shifts: ShiftConfig[], dayOfWeek: number): boolean {
+  const shift = shifts.find((s) => s.id === shiftId);
+  if (!shift) return true;
+  return !shift.offDays.includes(dayOfWeek);
 }
 
 /**
  * Determine which time block is currently active, given shift and current hour.
  * Returns the block ID or null if no block matches.
  */
-export function getCurrentBlockId(shift: ShiftType, hourDecimal: number): string | null {
-  const blocks = SHIFTS[shift].blocks;
-  for (const block of blocks) {
+export function getCurrentBlockId(
+  shiftId: string,
+  shifts: ShiftConfig[],
+  hourDecimal: number
+): string | null {
+  const shift = shifts.find((s) => s.id === shiftId);
+  if (!shift) return null;
+
+  for (const block of shift.blocks) {
     const { startHour, endHour } = block;
     if (endHour > startHour) {
       // Normal range (doesn't cross midnight)

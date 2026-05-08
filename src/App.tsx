@@ -22,6 +22,8 @@ export default function App() {
     setChecked,
     subChecked,
     setSubChecked,
+    schedule,
+    setSchedule,
     shift,
     setShift,
     syncStatus,
@@ -30,7 +32,16 @@ export default function App() {
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 
   // ── UI State ─────────────────────────────────────────────────────────────
-  const tm = useTaskManager(tasks, setTasks, checked, setChecked, subChecked, setSubChecked, shift);
+  const tm = useTaskManager(
+    tasks,
+    setTasks,
+    checked,
+    setChecked,
+    subChecked,
+    setSubChecked,
+    shift,
+    schedule
+  );
   const { prayersDone, prayerTotal } = tm;
 
   // ── Dynamic Theme ─────────────────────────────────────────────────────────
@@ -59,12 +70,24 @@ export default function App() {
       tm,
       setChecked,
       setSubChecked,
+      scheduleConfig: schedule,
+      setScheduleConfig: setSchedule,
       prayersDone,
       prayerTotal,
       notifPerm,
       requestNotifPerm,
     }),
-    [tm, setChecked, setSubChecked, prayersDone, prayerTotal, notifPerm, requestNotifPerm]
+    [
+      tm,
+      setChecked,
+      setSubChecked,
+      schedule,
+      setSchedule,
+      prayersDone,
+      prayerTotal,
+      notifPerm,
+      requestNotifPerm,
+    ]
   );
 
   const today = new Date().toLocaleDateString('ar-EG', {
@@ -112,6 +135,7 @@ export default function App() {
         onFormField={tm.setFormField}
         onSave={tm.saveTask}
         onClose={() => tm.setModal(null)}
+        schedule={schedule}
       />
 
       {/* Delete Confirm */}

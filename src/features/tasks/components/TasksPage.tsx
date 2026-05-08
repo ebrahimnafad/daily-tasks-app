@@ -1,6 +1,5 @@
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard, TasksHeader, TasksProgress } from '@/features/tasks';
-import { SHIFTS } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftType } from '@/features/tasks/data/scheduleConfig';
 
 interface TasksPageProps {
@@ -10,7 +9,15 @@ interface TasksPageProps {
 }
 
 export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
-  const { tm, prayersDone, prayerTotal, notifPerm, requestNotifPerm } = useTaskContext();
+  const {
+    tm,
+    prayersDone,
+    prayerTotal,
+    notifPerm,
+    requestNotifPerm,
+    scheduleConfig,
+    setScheduleConfig,
+  } = useTaskContext();
   const {
     progress,
     countDone,
@@ -24,7 +31,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     prayerTask,
   } = tm;
 
-  const shiftConfig = SHIFTS[shift];
+  const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
   return (
     <div className="tpg-main">
@@ -37,6 +44,8 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         resetNewDay={resetNewDay}
         shift={shift}
         setShift={setShift}
+        scheduleConfig={scheduleConfig}
+        setScheduleConfig={setScheduleConfig}
       />
 
       {/* Progress */}

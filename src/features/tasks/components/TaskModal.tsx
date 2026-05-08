@@ -1,6 +1,6 @@
 import { useEffect, useRef, memo } from 'react';
 import type { TaskForm } from '@/types';
-import { SHIFTS } from '@/features/tasks/data/scheduleConfig';
+import { type ShiftConfig, type TimeBlock } from '@/features/tasks/data/scheduleConfig';
 
 const CATEGORIES = [
   { label: 'عبادة', color: 'var(--gold)' },
@@ -46,15 +46,16 @@ interface TaskModalProps {
   onFormField: <K extends keyof TaskForm>(field: K, value: TaskForm[K]) => void;
   onSave: () => void;
   onClose: () => void;
+  schedule?: ShiftConfig[];
 }
 
-function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps) {
+function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: TaskModalProps) {
   const titleId = 'modal-title';
   const modalRef = useRef<HTMLDivElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
 
   const currentShift = form.shifts?.[0] || 'morning';
-  const availableBlocks = SHIFTS[currentShift]?.blocks || [];
+  const availableBlocks = schedule?.find((s) => s.id === currentShift)?.blocks || [];
 
   useEffect(() => {
     const t = setTimeout(() => titleInput.current?.focus(), 50);
@@ -196,7 +197,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose }: TaskModalProps
               onChange={(e) => onFormField('timeBlock', e.target.value)}
             >
               <option value="anytime">مهام أخرى (بدون وقت محدد)</option>
-              {availableBlocks.map((b) => (
+              {availableBlocks.map((b: TimeBlock) => (
                 <option key={b.id} value={b.id}>
                   {b.label}
                 </option>
