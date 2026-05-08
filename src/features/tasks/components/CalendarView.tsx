@@ -35,6 +35,8 @@ const MONTHS = [
 
 export default function CalendarView({ tasks }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const today = new Date().toISOString().split('T')[0];
+  const [selectedDate, setSelectedDate] = useState<string>(today);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -51,23 +53,7 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
     const map: Record<string, FinanceEvent[]> = {};
     const monthStr = `${y}-${String(m + 1).padStart(2, '0')}`;
 
-    // 1. Paid Transactions
-    transactions.forEach((t) => {
-      if (t.date.startsWith(monthStr) && t.status === 'paid') {
-        if (!map[t.date]) map[t.date] = [];
-        const exp = expenses.find((e) => e.id === t.expenseId);
-        map[t.date].push({
-          id: t.id,
-          title: exp?.title || t.notes || 'دفعة',
-          icon: exp?.icon || '💸',
-          amount: t.amount,
-          isPaid: true,
-          type: 'paid',
-        });
-      }
-    });
-
-    // 2. Due Expenses
+    // Only Due Expenses
     expenses.forEach((e) => {
       if (!e.isActive) return;
       let isDueThisMonth = false;
@@ -100,7 +86,6 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
         if (!paid) {
           const dateStr = `${monthStr}-${String(dueDay).padStart(2, '0')}`;
           if (!map[dateStr]) map[dateStr] = [];
-          // Prevent duplicates if already paid (but shouldn't happen based on above check)
           map[dateStr].push({
             id: e.id,
             title: e.title,
@@ -116,16 +101,34 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
     return map;
   }, [expenses, transactions, currentDate]);
 
+  const isWeekend = (dayOfWeek: number) => dayOfWeek === 5 || dayOfWeek === 6;
+
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
-    tasks.forEach((task) => {
-      if (task.date) {
-        if (!map[task.date]) map[task.date] = [];
-        map[task.date].push(task);
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    const days = new Date(y, m + 1, 0).getDate();
+
+    for (let day = 1; day <= days; day++) {
+      const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dayOfWeek = new Date(y, m, day).getDay();
+      const weekend = isWeekend(dayOfWeek);
+
+      const applicableTasks = tasks.filter((t) => {
+        const rec = t.recurrence || 'يومي';
+        if (rec === 'يومي') return true;
+        if (rec === 'أيام العمل') return !weekend;
+        if (rec === 'عطل') return weekend;
+        if (rec === 'موعد محدد' && t.date === dateStr) return true;
+        return false;
+      });
+
+      if (applicableTasks.length > 0) {
+        map[dateStr] = applicableTasks;
       }
-    });
+    }
     return map;
-  }, [tasks]);
+  }, [tasks, currentDate]);
 
   const goToPrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -136,10 +139,13 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
   };
 
   const goToToday = () => {
-    setCurrentDate(new Date());
+    const now = new Date();
+    setCurrentDate(now);
+    setSelectedDate(now.toISOString().split('T')[0]);
   };
 
-  const today = new Date().toISOString().split('T')[0];
+  const selectedDateTasks = tasksByDate[selectedDate] || [];
+  const selectedDateFinance = financeEventsByDate[selectedDate] || [];
 
   return (
     <div className="cal-view">
@@ -182,12 +188,18 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
           const day = i + 1;
           const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
           const isToday = dateStr === today;
+          const isSelected = dateStr === selectedDate;
           const dayTasks = tasksByDate[dateStr] || [];
           const dayFinance = financeEventsByDate[dateStr] || [];
 
           return (
             <div
               key={day}
+              onClick={() => setSelectedDate(dateStr)}
+              style={{
+                cursor: 'pointer',
+                border: isSelected ? '2px solid var(--primary)' : undefined,
+              }}
               className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${dayTasks.length > 0 || dayFinance.length > 0 ? 'cal-cell--has-tasks' : ''}`}
             >
               <span className="cal-day-num">{day}</span>
@@ -196,7 +208,7 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
                   <div
                     key={fe.id}
                     className="cal-task-dot"
-                    style={{ backgroundColor: fe.isPaid ? 'var(--text-muted)' : 'var(--danger)' }}
+                    style={{ backgroundColor: 'var(--danger)' }}
                     title={fe.title}
                   >
                     💰
@@ -221,66 +233,49 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
 
       {/* Selected day tasks */}
       <div className="cal-selected-tasks">
-        <h3 className="cal-selected-title">المهام والاستحقاقات</h3>
-        {Array.from(new Set([...Object.keys(tasksByDate), ...Object.keys(financeEventsByDate)]))
-          .filter((date) => date.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
-          .sort((a, b) => a.localeCompare(b))
-          .map((date) => {
-            const dateTasks = tasksByDate[date] || [];
-            const dateFinance = financeEventsByDate[date] || [];
-            if (dateTasks.length === 0 && dateFinance.length === 0) return null;
-
-            return (
-              <div key={date} className="cal-date-group">
-                <div className="cal-date-label">
-                  {new Date(date + 'T00:00:00').toLocaleDateString('ar-SA', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                  })}
-                </div>
-                <div className="cal-date-tasks">
-                  {dateFinance.map((fe) => (
-                    <div
-                      key={fe.id}
-                      className="cal-task-item"
-                      style={{
-                        opacity: fe.isPaid ? 0.6 : 1,
-                        borderRight: `3px solid ${fe.isPaid ? 'var(--text-muted)' : 'var(--danger)'}`,
-                        paddingRight: '8px',
-                      }}
-                    >
-                      <span>{fe.icon}</span>
-                      <span
-                        style={{
-                          color: fe.isPaid ? 'var(--text-muted)' : 'var(--danger)',
-                          flex: 1,
-                        }}
-                      >
-                        {fe.title} ({(fe.amount || 0).toLocaleString('ar-SA')} ر.س)
-                      </span>
-                      <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                        {fe.isPaid ? '✅ مدفوع' : '⏳ مستحق'}
-                      </span>
-                    </div>
-                  ))}
-                  {dateTasks.map((task) => (
-                    <div key={task.id} className="cal-task-item">
-                      <span>{task.icon}</span>
-                      <span style={{ color: task.color }}>{task.category}</span>
-                      <span>{task.title}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            );
+        <h3 className="cal-selected-title">
+          المهام والاستحقاقات لـ{' '}
+          {new Date(selectedDate + 'T00:00:00').toLocaleDateString('ar-SA', {
+            weekday: 'long',
+            day: 'numeric',
+            month: 'long',
           })}
-        {Object.keys(tasksByDate).filter((d) =>
-          d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)
-        ).length === 0 &&
-          Object.keys(financeEventsByDate).filter((d) =>
-            d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`)
-          ).length === 0 && <p className="cal-empty">لا توجد مهام أو استحقاقات مجدولة هذا الشهر</p>}
+        </h3>
+
+        {selectedDateTasks.length === 0 && selectedDateFinance.length === 0 ? (
+          <p className="cal-empty">لا توجد مهام أو استحقاقات في هذا اليوم</p>
+        ) : (
+          <div className="cal-date-tasks" style={{ marginTop: '16px' }}>
+            {selectedDateFinance.map((fe) => (
+              <div
+                key={fe.id}
+                className="cal-task-item"
+                style={{
+                  borderRight: `3px solid var(--danger)`,
+                  paddingRight: '8px',
+                }}
+              >
+                <span>{fe.icon}</span>
+                <span
+                  style={{
+                    color: 'var(--danger)',
+                    flex: 1,
+                  }}
+                >
+                  {fe.title} ({(fe.amount || 0).toLocaleString('ar-SA')} ر.س)
+                </span>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>⏳ مستحق</span>
+              </div>
+            ))}
+            {selectedDateTasks.map((task) => (
+              <div key={task.id} className="cal-task-item">
+                <span>{task.icon}</span>
+                <span style={{ color: task.color }}>{task.category}</span>
+                <span>{task.title}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

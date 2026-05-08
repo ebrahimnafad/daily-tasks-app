@@ -5,6 +5,7 @@ import type { Expense, Income, Goal, ExpenseCategory, Transaction } from '@/feat
 const VALID_ICONS = [
   '📋',
   '📧',
+  '📖',
   '🕌',
   '🚶',
   '🚫',
@@ -33,12 +34,12 @@ const TIME_REGEX = /^\d{2}:\d{2}$/;
 
 export const TaskSchema = z.object({
   id: z.number().int().positive(),
-  icon: z.enum(VALID_ICONS),
+  icon: z.enum(VALID_ICONS, { errorMap: () => ({ message: 'أيقونة غير صالحة' }) }),
   title: z.string().min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
   category: z.string().min(1).max(50),
   color: z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح').or(z.string().regex(VAR_COLOR_REGEX)),
-  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردنة واحدة على الأقل'),
-  timeBlock: z.string().min(1).max(50),
+  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل'),
+  timeBlock: z.string().max(50).optional().or(z.literal('')),
   isWarning: z.boolean(),
   recurrence: z.string().min(1).max(50),
   date: z.string().regex(DATE_REGEX).optional(),
@@ -57,12 +58,12 @@ export const TaskSchema = z.object({
 });
 
 export const TaskFormSchema = z.object({
-  icon: z.enum(VALID_ICONS),
+  icon: z.enum(VALID_ICONS, { errorMap: () => ({ message: 'أيقونة غير صالحة' }) }),
   title: z.string().min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
   category: z.string().min(1).max(50),
   color: z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح').or(z.string().regex(VAR_COLOR_REGEX)),
-  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردنة واحدة على الأقل'),
-  timeBlock: z.string().min(1).max(50),
+  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل'),
+  timeBlock: z.string().max(50).optional().or(z.literal('')),
   isWarning: z.boolean(),
   recurrence: z.string().min(1).max(50),
   date: z.string().regex(DATE_REGEX).or(z.literal('')).optional(),
