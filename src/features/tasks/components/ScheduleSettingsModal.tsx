@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ShiftConfig, TimeBlock } from '@/features/tasks/data/scheduleConfig';
 import '../tasks.css';
-import './schedule-settings.css';
+import '../schedule-settings.css';
 
 interface ScheduleSettingsModalProps {
   isOpen: boolean;
