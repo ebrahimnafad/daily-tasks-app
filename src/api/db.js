@@ -14,6 +14,7 @@
  */
 
 import { neon } from '@neondatabase/serverless';
+import { applyRateLimit } from './middleware/rateLimit.js';
 
 // ── CORS: تقييد الوصول ──────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
@@ -26,11 +27,20 @@ const ALLOWED_ORIGINS = [
 
 function setCorsHeaders(req, res) {
   const origin = req.headers.origin;
-  const allowedOrigin = ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0] || '*';
 
-  res.setHeader('Access-Control-Allow-Origin', allowedOrigin);
+  if (!origin) {
+    return;
+  }
+
+  if (!ALLOWED_ORIGINS.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', 'null');
+    return;
+  }
+
+  res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
 }
 
@@ -49,59 +59,81 @@ async function ensureSchema(sql) {
     CREATE TABLE IF NOT EXISTS tasks_definition (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row CHECK (id = 1)
     )
   `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS daily_state (
       date        DATE PRIMARY KEY,
       checked     JSONB DEFAULT '{}',
       sub_checked JSONB DEFAULT '{}',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at  TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS schedule_config (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row_schedule CHECK (id = 1)
     )
   `;
+
   // ── Finance tables ──
   await sql`
     CREATE TABLE IF NOT EXISTS finance_income (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row_income CHECK (id = 1)
     )
   `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS finance_obligations (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row_obligations CHECK (id = 1)
     )
   `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS finance_payments (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row_payments CHECK (id = 1)
     )
   `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS finance_goals (
       id         INTEGER PRIMARY KEY DEFAULT 1,
       data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       CONSTRAINT single_row_goals CHECK (id = 1)
     )
   `;
+
+  // ── Add indexes on updated_at for time-based queries ──
+  await sql`CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON tasks_definition(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_daily_state_updated_at ON daily_state(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_schedule_updated_at ON schedule_config(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_finance_updated_at ON finance_income(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_finance_obligations_updated_at ON finance_obligations(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_finance_payments_updated_at ON finance_payments(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_finance_goals_updated_at ON finance_goals(updated_at)`;
 }
 
 // ── Generic JSONB single-row handler (DRY) ──
@@ -120,6 +152,15 @@ export default async function handler(req, res) {
     return res.status(204).end();
   }
 
+  /* ── Rate Limiting ── */
+  const resource = req.query.resource;
+  const limiterKey = resource === 'daily' || resource === 'tasks' ? 'sync' : 'general';
+  const rateLimit = applyRateLimit(req, resource || 'unknown', limiterKey);
+
+  if (!rateLimit.allowed) {
+    return res.status(429).json({ error: rateLimit.message });
+  }
+
   /* ── التحقق من DATABASE_URL ── */
   if (!process.env.DATABASE_URL) {
     return res.status(503).json({
@@ -128,7 +169,6 @@ export default async function handler(req, res) {
   }
 
   const sql = neon(process.env.DATABASE_URL);
-  const resource = req.query.resource;
   const method = req.method;
 
   // ── رفض الطلبات غير المدعومة مبكراً ────────────────────────────────────

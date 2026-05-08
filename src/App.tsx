@@ -2,8 +2,13 @@ import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import './app.css';
 import { useSync } from '@/lib/sync';
 import { useNotifications, useToasts } from '@/shared/hooks';
-import { AppShell } from '@/shared/components';
+import { AppShell, ErrorBoundary } from '@/shared/components';
 import { TaskContext, useTaskManager, INITIAL_TASKS, TaskModal } from '@/features/tasks';
+import {
+  TasksErrorFallback,
+  FinanceErrorFallback,
+  CalendarErrorFallback,
+} from '@/shared/components/FeatureErrorFallback';
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
@@ -100,116 +105,126 @@ export default function App() {
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <AppShell
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      shift={shift}
-      syncStatus={syncStatus}
-      toasts={toasts}
-    >
-      <Suspense
-        fallback={
-          <div
-            style={{
-              textAlign: 'center',
-              padding: 'var(--space-xl)',
-              color: 'var(--gold)',
-              fontSize: 'var(--font-lg)',
-            }}
-          >
-            جاري التحميل...
-          </div>
-        }
+    <ErrorBoundary level="global">
+      <AppShell
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        shift={shift}
+        syncStatus={syncStatus}
+        toasts={toasts}
       >
-        {activeTab === 'tasks' && (
-          <TaskContext.Provider value={taskContextValue}>
-            <TasksPage today={today} shift={shift} setShift={setShift} />
-          </TaskContext.Provider>
-        )}
-        {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
-        {activeTab === 'finance' && <FinancePage />}
-      </Suspense>
-
-      {/* Add/Edit Modal */}
-      <TaskModal
-        modal={tm.modal}
-        form={tm.form}
-        onFormField={tm.setFormField}
-        onSave={tm.saveTask}
-        onClose={() => tm.setModal(null)}
-        schedule={schedule}
-      />
-
-      {/* Delete Confirm */}
-      {tm.deleteConfirm !== null && (
-        <div
-          className="confirm-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="del-title"
-        >
-          <div className="confirm-box">
-            <div style={{ fontSize: '36px', marginBottom: 'var(--space-md)' }} aria-hidden="true">
-              🗑️
-            </div>
+        <Suspense
+          fallback={
             <div
-              id="del-title"
               style={{
-                color: 'var(--text-gold)',
+                textAlign: 'center',
+                padding: 'var(--space-xl)',
+                color: 'var(--gold)',
                 fontSize: 'var(--font-lg)',
-                fontWeight: 700,
-                marginBottom: 'var(--space-sm)',
               }}
             >
-              حذف المهمة؟
+              جاري التحميل...
             </div>
-            <div
-              style={{
-                color: 'rgba(var(--gold-rgb),.6)',
-                fontSize: 'var(--font-base)',
-                marginBottom: 'var(--space-xl)',
-              }}
-            >
-              &quot;{tasks.find((t) => t.id === tm.deleteConfirm)?.title}&quot;
-            </div>
-            <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
-              <button
-                onClick={() => tm.deleteTask(tm.deleteConfirm!)}
+          }
+        >
+          <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
+            {activeTab === 'tasks' && (
+              <TaskContext.Provider value={taskContextValue}>
+                <TasksPage today={today} shift={shift} setShift={setShift} />
+              </TaskContext.Provider>
+            )}
+          </ErrorBoundary>
+
+          <ErrorBoundary level="feature" fallback={<CalendarErrorFallback />}>
+            {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
+          </ErrorBoundary>
+
+          <ErrorBoundary level="feature" fallback={<FinanceErrorFallback />}>
+            {activeTab === 'finance' && <FinancePage />}
+          </ErrorBoundary>
+        </Suspense>
+
+        {/* Add/Edit Modal */}
+        <TaskModal
+          modal={tm.modal}
+          form={tm.form}
+          onFormField={tm.setFormField}
+          onSave={tm.saveTask}
+          onClose={() => tm.setModal(null)}
+          schedule={schedule}
+        />
+
+        {/* Delete Confirm */}
+        {tm.deleteConfirm !== null && (
+          <div
+            className="confirm-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="del-title"
+          >
+            <div className="confirm-box">
+              <div style={{ fontSize: '36px', marginBottom: 'var(--space-md)' }} aria-hidden="true">
+                🗑️
+              </div>
+              <div
+                id="del-title"
                 style={{
-                  flex: 1,
-                  padding: 'var(--space-md)',
-                  borderRadius: 'var(--radius-md)',
-                  border: 'none',
-                  background: '#d97e6a',
-                  color: 'white',
-                  fontFamily: "'Amiri',serif",
-                  fontSize: 'var(--font-md)',
-                  cursor: 'pointer',
+                  color: 'var(--text-gold)',
+                  fontSize: 'var(--font-lg)',
                   fontWeight: 700,
+                  marginBottom: 'var(--space-sm)',
                 }}
               >
-                نعم، احذف
-              </button>
-              <button
-                onClick={() => tm.setDeleteConfirm(null)}
+                حذف المهمة؟
+              </div>
+              <div
                 style={{
-                  flex: 1,
-                  padding: 'var(--space-md)',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'transparent',
-                  border: '1px solid rgba(var(--gold-rgb),.25)',
-                  color: 'rgba(var(--gold-rgb),.7)',
-                  fontFamily: "'Amiri',serif",
-                  fontSize: 'var(--font-md)',
-                  cursor: 'pointer',
+                  color: 'rgba(var(--gold-rgb),.6)',
+                  fontSize: 'var(--font-base)',
+                  marginBottom: 'var(--space-xl)',
                 }}
               >
-                إلغاء
-              </button>
+                &quot;{tasks.find((t) => t.id === tm.deleteConfirm)?.title}&quot;
+              </div>
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <button
+                  onClick={() => tm.deleteTask(tm.deleteConfirm!)}
+                  style={{
+                    flex: 1,
+                    padding: 'var(--space-md)',
+                    borderRadius: 'var(--radius-md)',
+                    border: 'none',
+                    background: '#d97e6a',
+                    color: 'white',
+                    fontFamily: "'Amiri',serif",
+                    fontSize: 'var(--font-md)',
+                    cursor: 'pointer',
+                    fontWeight: 700,
+                  }}
+                >
+                  نعم، احذف
+                </button>
+                <button
+                  onClick={() => tm.setDeleteConfirm(null)}
+                  style={{
+                    flex: 1,
+                    padding: 'var(--space-md)',
+                    borderRadius: 'var(--radius-md)',
+                    background: 'transparent',
+                    border: '1px solid rgba(var(--gold-rgb),.25)',
+                    color: 'rgba(var(--gold-rgb),.7)',
+                    fontFamily: "'Amiri',serif",
+                    fontSize: 'var(--font-md)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  إلغاء
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-    </AppShell>
+        )}
+      </AppShell>
+    </ErrorBoundary>
   );
 }

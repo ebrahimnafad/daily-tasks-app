@@ -16,5 +16,6 @@
     "exactOptionalPropertyTypes": false,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["src", "vite.config.ts"]
+  "include": ["src", "vite.config.ts"],
+  "exclude": ["src/test", "src/**/__tests__", "e2e"]
 }

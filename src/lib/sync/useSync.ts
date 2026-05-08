@@ -48,50 +48,79 @@ const migrateTasks = (tasks: Task[]): Task[] =>
   }));
 
 // ── Fetchers ──────────────────────────────────────────────────────────────
-const fetchTasks = async (): Promise<Task[]> => {
+interface TasksResponse {
+  tasks: Task[];
+  updatedAt: string | null;
+}
+
+interface DailyResponse {
+  checked: CheckedMap;
+  subChecked: SubCheckedMap;
+  updatedAt: string | null;
+}
+
+interface ScheduleResponse {
+  schedule: ShiftConfig[];
+  updatedAt: string | null;
+}
+
+const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
   const res = await fetch('/api/db?resource=tasks');
   if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as { tasks?: Task[] };
+  const data = (await res.json()) as TasksResponse;
+  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
   if (data.tasks) {
     const migrated = migrateTasks(data.tasks);
     lsSet('mhm_tasks', migrated);
-    return migrated;
+    lsSet('mhm_tasks_timestamp', timestamp);
+    return { tasks: migrated, timestamp };
   }
-  return migrateTasks(lsGet<Task[]>('mhm_tasks', []));
+  const localTasks = migrateTasks(lsGet<Task[]>('mhm_tasks', []));
+  return { tasks: localTasks, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
 };
 
-const fetchDaily = async (): Promise<DailyState> => {
+const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> => {
   const today = todayISO();
   const res = await fetch(`/api/db?resource=daily&date=${today}`);
   if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as Partial<DailyState>;
+  const data = (await res.json()) as DailyResponse;
+  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
   if (data.checked || data.subChecked) {
     const checked = data.checked ?? {};
     const subChecked = data.subChecked ?? {};
     lsSet('mhm_checked', checked);
     lsSet('mhm_sub_checked', subChecked);
     lsSet('mhm_date', today);
-    return { checked, subChecked };
+    lsSet('mhm_daily_timestamp', timestamp);
+    return { daily: { checked, subChecked }, timestamp };
   }
   const savedDate = lsGet<string | null>('mhm_date', null);
   if (savedDate === today) {
     return {
-      checked: lsGet<CheckedMap>('mhm_checked', {}),
-      subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
+      daily: {
+        checked: lsGet<CheckedMap>('mhm_checked', {}),
+        subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
+      },
+      timestamp: lsGet<number>('mhm_daily_timestamp', 0),
     };
   }
-  return { checked: {}, subChecked: {} };
+  return { daily: { checked: {}, subChecked: {} }, timestamp: 0 };
 };
 
-const fetchSchedule = async (): Promise<ShiftConfig[]> => {
+const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
   const res = await fetch('/api/db?resource=schedule');
   if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as { schedule?: ShiftConfig[] };
+  const data = (await res.json()) as ScheduleResponse;
+  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
   if (data.schedule && Array.isArray(data.schedule)) {
     lsSet('mhm_schedule', data.schedule);
-    return data.schedule;
+    lsSet('mhm_schedule_timestamp', timestamp);
+    return { schedule: data.schedule, timestamp };
   }
-  return lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS);
+  return {
+    schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
+    timestamp: lsGet<number>('mhm_schedule_timestamp', 0),
+  };
 };
 
 // ── Hook ──────────────────────────────────────────────────────────────────
@@ -161,15 +190,20 @@ export default function useSync(
   });
 
   // ── Queries ───────────────────────────────────────────────────────────
-  const { data: schedule = DEFAULT_SHIFTS, isFetching: fetchingSchedule } = useQuery<ShiftConfig[]>(
-    {
-      queryKey: ['schedule'],
-      queryFn: fetchSchedule,
-      initialData: () => lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
-      enabled: isOnline,
-      retry: isOnline ? 3 : false,
-    }
-  );
+  const { data: scheduleResp, isFetching: fetchingSchedule } = useQuery<{
+    schedule: ShiftConfig[];
+    timestamp: number;
+  }>({
+    queryKey: ['schedule'],
+    queryFn: fetchSchedule,
+    initialData: () => ({
+      schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
+      timestamp: 0,
+    }),
+    enabled: isOnline,
+    retry: isOnline ? 3 : false,
+  });
+  const schedule = scheduleResp?.schedule ?? DEFAULT_SHIFTS;
 
   const [shift, setShiftState] = useState<string>(() => computeShift(shiftEpoch, schedule));
 
@@ -206,34 +240,42 @@ export default function useSync(
     [onQuota, schedule]
   );
 
-  const { data: tasks = initialTasks, isFetching: fetchingTasks } = useQuery<Task[]>({
+  const { data: tasksResp, isFetching: fetchingTasks } = useQuery<{
+    tasks: Task[];
+    timestamp: number;
+  }>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: () => lsGet<Task[]>('mhm_tasks', initialTasks),
-    // Don't refetch while offline — avoids failed network requests piling up
+    initialData: () => ({ tasks: initialTasks, timestamp: 0 }),
+    enabled: isOnline,
+    retry: isOnline ? 3 : false,
+  });
+  const tasks = tasksResp?.tasks ?? initialTasks;
+
+  const { data: dailyResp, isFetching: fetchingDaily } = useQuery<{
+    daily: DailyState;
+    timestamp: number;
+  }>({
+    queryKey: ['daily', todayISO()],
+    queryFn: fetchDaily,
+    initialData: () => {
+      const savedDate = lsGet<string | null>('mhm_date', null);
+      if (savedDate === todayISO()) {
+        return {
+          daily: {
+            checked: lsGet<CheckedMap>('mhm_checked', {}),
+            subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
+          },
+          timestamp: 0,
+        };
+      }
+      return { daily: { checked: {}, subChecked: {} }, timestamp: 0 };
+    },
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
 
-  const { data: daily = { checked: {}, subChecked: {} }, isFetching: fetchingDaily } =
-    useQuery<DailyState>({
-      queryKey: ['daily', todayISO()],
-      queryFn: fetchDaily,
-      initialData: () => {
-        const savedDate = lsGet<string | null>('mhm_date', null);
-        if (savedDate === todayISO()) {
-          return {
-            checked: lsGet<CheckedMap>('mhm_checked', {}),
-            subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
-          };
-        }
-        return { checked: {}, subChecked: {} };
-      },
-      enabled: isOnline,
-      retry: isOnline ? 3 : false,
-    });
-
-  const { checked, subChecked } = daily;
+  const { checked, subChecked } = dailyResp?.daily ?? { checked: {}, subChecked: {} };
 
   // ── Mutations ─────────────────────────────────────────────────────────
   const { mutate: updateTasksMut } = useMutation<void, Error, Task[]>({
@@ -246,18 +288,18 @@ export default function useSync(
     },
     onMutate: async (newTasks) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
-      const prevTasks = queryClient.getQueryData<Task[]>(['tasks']);
-      queryClient.setQueryData(['tasks'], newTasks);
+      const prevTasks = queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks']);
+      queryClient.setQueryData(['tasks'], { tasks: newTasks, timestamp: Date.now() });
       lsSet('mhm_tasks', newTasks, onQuota);
       return { prevTasks };
     },
     onSuccess: () => setHasError(false),
     onError: (_err, _newTasks, context) => {
       setHasError(true);
-      const ctx = context as { prevTasks?: Task[] } | undefined;
+      const ctx = context as { prevTasks?: { tasks: Task[]; timestamp: number } } | undefined;
       if (ctx?.prevTasks) {
         queryClient.setQueryData(['tasks'], ctx.prevTasks);
-        lsSet('mhm_tasks', ctx.prevTasks, onQuota);
+        lsSet('mhm_tasks', ctx.prevTasks.tasks, onQuota);
       }
     },
   });
@@ -272,18 +314,22 @@ export default function useSync(
     },
     onMutate: async (newSchedule) => {
       await queryClient.cancelQueries({ queryKey: ['schedule'] });
-      const prevSchedule = queryClient.getQueryData<ShiftConfig[]>(['schedule']);
-      queryClient.setQueryData(['schedule'], newSchedule);
+      const prevSchedule = queryClient.getQueryData<{ schedule: ShiftConfig[]; timestamp: number }>(
+        ['schedule']
+      );
+      queryClient.setQueryData(['schedule'], { schedule: newSchedule, timestamp: Date.now() });
       lsSet('mhm_schedule', newSchedule, onQuota);
       return { prevSchedule };
     },
     onSuccess: () => setHasError(false),
     onError: (_err, _newSchedule, context) => {
       setHasError(true);
-      const ctx = context as { prevSchedule?: ShiftConfig[] } | undefined;
+      const ctx = context as
+        | { prevSchedule?: { schedule: ShiftConfig[]; timestamp: number } }
+        | undefined;
       if (ctx?.prevSchedule) {
         queryClient.setQueryData(['schedule'], ctx.prevSchedule);
-        lsSet('mhm_schedule', ctx.prevSchedule, onQuota);
+        lsSet('mhm_schedule', ctx.prevSchedule.schedule, onQuota);
       }
     },
   });
@@ -300,8 +346,14 @@ export default function useSync(
     onMutate: async ({ checked: c, subChecked: sc }) => {
       const today = todayISO();
       await queryClient.cancelQueries({ queryKey: ['daily', today] });
-      const prevDaily = queryClient.getQueryData<DailyState>(['daily', today]);
-      queryClient.setQueryData(['daily', today], { checked: c, subChecked: sc });
+      const prevDaily = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+        'daily',
+        today,
+      ]);
+      queryClient.setQueryData(['daily', today], {
+        daily: { checked: c, subChecked: sc },
+        timestamp: Date.now(),
+      });
       lsSet('mhm_checked', c, onQuota);
       lsSet('mhm_sub_checked', sc, onQuota);
       lsSet('mhm_date', today, onQuota);
@@ -310,7 +362,7 @@ export default function useSync(
     onSuccess: () => setHasError(false),
     onError: (_err, _vars, context) => {
       setHasError(true);
-      const ctx = context as { prevDaily?: DailyState } | undefined;
+      const ctx = context as { prevDaily?: { daily: DailyState; timestamp: number } } | undefined;
       if (ctx?.prevDaily) {
         queryClient.setQueryData(['daily', todayISO()], ctx.prevDaily);
       }
@@ -320,7 +372,9 @@ export default function useSync(
   // ── Setters ───────────────────────────────────────────────────────────
   const setTasks = useCallback<Dispatch<SetStateAction<Task[]>>>(
     (updater) => {
-      const current = queryClient.getQueryData<Task[]>(['tasks']) ?? initialTasks;
+      const current =
+        queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ??
+        initialTasks;
       const next = typeof updater === 'function' ? updater(current) : updater;
       updateTasksMut(next);
     },
@@ -329,7 +383,9 @@ export default function useSync(
 
   const setSchedule = useCallback<Dispatch<SetStateAction<ShiftConfig[]>>>(
     (updater) => {
-      const current = queryClient.getQueryData<ShiftConfig[]>(['schedule']) ?? DEFAULT_SHIFTS;
+      const current =
+        queryClient.getQueryData<{ schedule: ShiftConfig[]; timestamp: number }>(['schedule'])
+          ?.schedule ?? DEFAULT_SHIFTS;
       const next = typeof updater === 'function' ? updater(current) : updater;
       updateScheduleMut(next);
     },
@@ -338,7 +394,10 @@ export default function useSync(
 
   const setChecked = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
     (updater) => {
-      const cur = queryClient.getQueryData<DailyState>(['daily', todayISO()]) ?? {
+      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+        'daily',
+        todayISO(),
+      ])?.daily ?? {
         checked: {},
         subChecked: {},
       };
@@ -350,7 +409,10 @@ export default function useSync(
 
   const setSubChecked = useCallback<Dispatch<SetStateAction<SubCheckedMap>>>(
     (updater) => {
-      const cur = queryClient.getQueryData<DailyState>(['daily', todayISO()]) ?? {
+      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+        'daily',
+        todayISO(),
+      ])?.daily ?? {
         checked: {},
         subChecked: {},
       };

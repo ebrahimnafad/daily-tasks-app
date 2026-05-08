@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
 import { CATEGORIES } from '@/features/tasks';
 import { sendProgressToSheets } from '@/api/googleSheets';
+import { parseTaskFormSafe } from '@/validation/schemas';
 import {
   DEFAULT_SHIFTS,
   getCurrentBlockId,
@@ -169,9 +170,17 @@ export default function useTaskManager(
   }, []);
 
   const saveTask = useCallback(() => {
-    if (!form.title.trim() || !modal) return;
-    const catObj = CATEGORIES.find((c) => c.label === form.category);
-    const color = catObj ? catObj.color : '#aaaaaa';
+    if (!modal) return;
+    const validation = parseTaskFormSafe(form);
+    if (!validation.success) {
+      alert(`خطأ في البيانات:\n${validation.errors.join('\n')}`);
+      return;
+    }
+    const color = form.color.startsWith('#')
+      ? form.color
+      : form.color.startsWith('var(')
+        ? form.color
+        : '#aaaaaa';
     const patch = {
       icon: form.icon,
       title: form.title.trim(),
@@ -194,7 +203,11 @@ export default function useTaskManager(
       const newId = Date.now();
       setTasks((p) => [...p, { id: newId, isPrayerTask: false, subtasks: [], ...patch }]);
     } else {
-      setTasks((p) => p.map((t) => (t.id === modal.taskId ? { ...t, ...patch } : t)));
+      setTasks((p) =>
+        p.map((t) =>
+          t.id === (modal as { mode: string; taskId: number }).taskId ? { ...t, ...patch } : t
+        )
+      );
     }
     setModal(null);
   }, [form, modal, setTasks]);
@@ -312,13 +325,8 @@ export default function useTaskManager(
 
   // ── Google Sheets Export ──────────────────────────────────────────────────
   const sendToSheets = useCallback(async () => {
-    const url =
-      localStorage.getItem('sheet_webhook_url') ||
-      window.prompt('أدخل رابط Google Apps Script (Web App URL):');
-    if (!url) return;
-    localStorage.setItem('sheet_webhook_url', url);
     try {
-      await sendProgressToSheets(url, {
+      await sendProgressToSheets({
         date: new Date().toLocaleDateString('en-GB'),
         progress,
         prayersDone,
