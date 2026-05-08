@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard, TasksHeader, TasksProgress } from '@/features/tasks';
 import type { ShiftType } from '@/features/tasks/data/scheduleConfig';
@@ -29,7 +30,23 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     tasksByBlock,
     currentBlockId,
     prayerTask,
+    setForm,
+    setModal,
   } = tm;
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({});
+
+  const toggleBlock = (blockId: string) => {
+    setCollapsedBlocks((prev) => ({ ...prev, [blockId]: !prev[blockId] }));
+  };
+
+  const addTaskToBlock = (blockId: string) => {
+    setForm({
+      ...tm.form,
+      shifts: [shift],
+      timeBlock: blockId,
+    });
+    setModal({ mode: 'add' });
+  };
 
   const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
@@ -92,10 +109,25 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
               {/* Block header — don't show for prayer (rendered separately above via TasksProgress) */}
               {block.id !== 'prayer' && (
                 <div className="tpg-block__header">
+                  <button
+                    className="tpg-block__toggle"
+                    onClick={() => toggleBlock(block.id)}
+                    aria-expanded={!collapsedBlocks[block.id]}
+                    aria-label={`${collapsedBlocks[block.id] ? '展开' : 'collapse'} ${block.label}`}
+                  >
+                    {collapsedBlocks[block.id] ? '▶' : '▼'}
+                  </button>
                   <span className="tpg-block__icon">{block.icon}</span>
                   <span className="tpg-block__label">{block.label}</span>
                   {isCurrent && <span className="tpg-block__now-badge">الآن ✨</span>}
                   {block.isOptional && <span className="tpg-block__optional">اختياري</span>}
+                  <button
+                    className="tpg-block__add-btn"
+                    onClick={() => addTaskToBlock(block.id)}
+                    aria-label={`إضافة مهمة لـ ${block.label}`}
+                  >
+                    +
+                  </button>
                 </div>
               )}
 
@@ -108,16 +140,19 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                 />
               )}
 
-              {/* Other task cards */}
-              {block.id !== 'prayer' &&
-                blockTasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    isChecked={!!checked[task.id]}
-                    taskSubChecked={taskSubCheckedMap[task.id]}
-                  />
-                ))}
+              {/* Other task cards - collapsible */}
+              {block.id !== 'prayer' && !collapsedBlocks[block.id] && (
+                <div className="tpg-block__tasks">
+                  {blockTasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      isChecked={!!checked[task.id]}
+                      taskSubChecked={taskSubCheckedMap[task.id]}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           ))
         )}
