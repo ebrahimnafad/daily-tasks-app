@@ -27,13 +27,15 @@ export default function Header() {
         display: 'flex',
         alignItems: 'stretch',
         gap: 'var(--space-md)',
+        direction: 'rtl',
       }}
     >
-      {/* ── Side column: progress indicator spans all rows ── */}
+      {/* ── Right column: progress indicator spans both rows ── */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'center',
           flexShrink: 0,
         }}
       >
@@ -51,7 +53,7 @@ export default function Header() {
         )}
       </div>
 
-      {/* ── Content column: 3 rows ── */}
+      {/* ── Content column: 2 rows ── */}
       <div
         style={{
           flex: '1 1 auto',
@@ -61,7 +63,7 @@ export default function Header() {
           gap: 'var(--space-xs)',
         }}
       >
-        {/* Row 1: icon + title */}
+        {/* Row 1: icon · title · category chip · recurrence chip */}
         <div
           style={{
             display: 'flex',
@@ -72,6 +74,7 @@ export default function Header() {
           <span style={{ fontSize: 'var(--font-lg)', flexShrink: 0 }} aria-hidden="true">
             {task.icon}
           </span>
+
           <span
             style={{
               flex: '1 1 auto',
@@ -88,19 +91,10 @@ export default function Header() {
           >
             {task.title}
           </span>
-        </div>
 
-        {/* Row 2: chips — spans full width from icon to يومي */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-xs)',
-            flexWrap: 'wrap',
-          }}
-        >
           <span
             style={{
+              flexShrink: 0,
               fontSize: 'var(--font-sm)',
               background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
               color: task.color,
@@ -115,6 +109,7 @@ export default function Header() {
 
           <span
             style={{
+              flexShrink: 0,
               fontSize: 'var(--font-sm)',
               color: 'rgba(var(--gold-rgb),.48)',
               background: 'rgba(255,255,255,0.05)',
@@ -125,7 +120,16 @@ export default function Header() {
           >
             {task.recurrence || 'يومي'}
           </span>
+        </div>
 
+        {/* Row 2: alert chip · قائمة/صلوات · بريف · edit · delete */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-xs)',
+          }}
+        >
           {task.alertTime && (
             <span
               style={{
@@ -140,16 +144,7 @@ export default function Header() {
               🔔 {task.alertTime}
             </span>
           )}
-        </div>
 
-        {/* Row 3: toggle buttons + edit/delete */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--space-xs)',
-          }}
-        >
           {!task.isPrayerTask && (
             <button
               className={`toggle-btn--list ${isSubtaskOpen ? 'on' : ''}`}
