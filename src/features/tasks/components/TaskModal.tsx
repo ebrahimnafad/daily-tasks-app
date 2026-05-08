@@ -101,15 +101,28 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
   }, []);
 
   const handleBlockerChange = (i: number, val: string) => {
-    const arr = [...form.blockers] as [string, string, string];
+    const arr = [...form.blockers];
     arr[i] = val;
     onFormField('blockers', arr);
   };
+  const addBlocker = () => onFormField('blockers', [...form.blockers, '']);
+  const removeBlocker = (i: number) =>
+    onFormField(
+      'blockers',
+      form.blockers.filter((_, idx) => idx !== i)
+    );
+
   const handleHelperChange = (i: number, val: string) => {
-    const arr = [...form.helpers] as [string, string, string];
+    const arr = [...form.helpers];
     arr[i] = val;
     onFormField('helpers', arr);
   };
+  const addHelper = () => onFormField('helpers', [...form.helpers, '']);
+  const removeHelper = (i: number) =>
+    onFormField(
+      'helpers',
+      form.helpers.filter((_, idx) => idx !== i)
+    );
 
   if (!modal) return null;
 
@@ -283,29 +296,61 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
         <div className="form-group">
           <label className="form-label">⚠️ العوائق المحتملة</label>
           {form.blockers.map((b, i) => (
-            <input
-              key={i}
-              className="form-input tm-input-mb"
-              placeholder={`عائق ${i + 1}...`}
-              value={b}
-              aria-label={`عائق ${i + 1}`}
-              onChange={(e) => handleBlockerChange(i, e.target.value)}
-            />
+            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                className="form-input"
+                placeholder={`عائق ${i + 1}...`}
+                value={b}
+                aria-label={`عائق ${i + 1}`}
+                onChange={(e) => handleBlockerChange(i, e.target.value)}
+              />
+              <button
+                className="icon-btn icon-btn--delete"
+                aria-label="حذف العائق"
+                onClick={() => removeBlocker(i)}
+                style={{ flexShrink: 0 }}
+              >
+                🗑️
+              </button>
+            </div>
           ))}
+          <button
+            className="add-sub-btn"
+            onClick={addBlocker}
+            style={{ width: '100%', marginTop: '4px' }}
+          >
+            + إضافة عائق آخر
+          </button>
         </div>
 
         <div className="form-group">
           <label className="form-label">✅ المساعدات</label>
           {form.helpers.map((h, i) => (
-            <input
-              key={i}
-              className="form-input tm-input-mb"
-              placeholder={`مساعدة ${i + 1}...`}
-              value={h}
-              aria-label={`مساعدة ${i + 1}`}
-              onChange={(e) => handleHelperChange(i, e.target.value)}
-            />
+            <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+              <input
+                className="form-input"
+                placeholder={`مساعدة ${i + 1}...`}
+                value={h}
+                aria-label={`مساعدة ${i + 1}`}
+                onChange={(e) => handleHelperChange(i, e.target.value)}
+              />
+              <button
+                className="icon-btn icon-btn--delete"
+                aria-label="حذف المساعدة"
+                onClick={() => removeHelper(i)}
+                style={{ flexShrink: 0 }}
+              >
+                🗑️
+              </button>
+            </div>
           ))}
+          <button
+            className="add-sub-btn"
+            onClick={addHelper}
+            style={{ width: '100%', marginTop: '4px' }}
+          >
+            + إضافة مساعدة أخرى
+          </button>
         </div>
 
         <button className="btn-save" disabled={!form.title.trim()} onClick={onSave}>

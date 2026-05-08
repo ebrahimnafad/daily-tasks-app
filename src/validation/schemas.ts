@@ -67,8 +67,8 @@ export const TaskFormSchema = z.object({
   recurrence: z.string().min(1).max(50),
   date: z.string().regex(DATE_REGEX).or(z.literal('')).optional(),
   alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).optional(),
-  blockers: z.tuple([z.string().max(200), z.string().max(200), z.string().max(200)]),
-  helpers: z.tuple([z.string().max(200), z.string().max(200), z.string().max(200)]),
+  blockers: z.array(z.string().max(200)),
+  helpers: z.array(z.string().max(200)),
 });
 
 export type TaskFormInput = z.infer<typeof TaskFormSchema>;

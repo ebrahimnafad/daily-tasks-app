@@ -35,8 +35,8 @@ const EMPTY_FORM: TaskForm = {
   recurrence: 'يومي',
   date: '',
   alertTime: '',
-  blockers: ['', '', ''],
-  helpers: ['', '', ''],
+  blockers: [''],
+  helpers: [''],
 };
 
 const uid = (): string => crypto.randomUUID();
@@ -150,12 +150,8 @@ export default function useTaskManager(
       recurrence: task.recurrence || 'يومي',
       date: task.date ?? '',
       alertTime: task.alertTime || '',
-      blockers: [...(task.brief?.blockers ?? []), '', '', ''].slice(0, 3) as [
-        string,
-        string,
-        string,
-      ],
-      helpers: [...(task.brief?.helpers ?? []), '', '', ''].slice(0, 3) as [string, string, string],
+      blockers: task.brief?.blockers?.length ? [...task.brief.blockers] : [''],
+      helpers: task.brief?.helpers?.length ? [...task.brief.helpers] : [''],
     });
     setModal({ mode: 'edit', taskId: task.id });
   }, []);

@@ -54,8 +54,8 @@ export interface TaskForm {
   recurrence: string;
   date: string;
   alertTime: string;
-  blockers: [string, string, string];
-  helpers: [string, string, string];
+  blockers: string[];
+  helpers: string[];
 }
 
 // ── Checked maps ──────────────────────────────────────────────────────────
