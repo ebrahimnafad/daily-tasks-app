@@ -48,8 +48,17 @@ export default function Header() {
       </span>
 
       {/* عنوان المهمة ومعلوماتها */}
-      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-        {/* Line 1: Title */}
+      <div
+        style={{
+          flex: '1 1 auto',
+          minWidth: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 'var(--space-sm)',
+        }}
+      >
+        {/* Title on left */}
         <div
           style={{
             color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
@@ -61,32 +70,19 @@ export default function Header() {
         >
           {task.title}
         </div>
-        {/* Line 2: Info chips */}
+        {/* Chips on right */}
         <div
           style={{
             fontSize: 'var(--font-sm)',
             color: 'rgba(var(--gold-rgb),.48)',
-            marginTop: 'var(--space-xs)',
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-sm)',
+            gap: 'var(--space-xs)',
             flexWrap: 'wrap',
           }}
         >
-          {task.time && <span>{task.time}</span>}
           <span
             style={{
-              fontSize: 'var(--font-sm)',
-              background: 'rgba(255,255,255,0.05)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {task.recurrence || 'يومي'}
-          </span>
-          <span
-            style={{
-              fontSize: 'var(--font-sm)',
               background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
               color: task.color,
               border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
@@ -95,6 +91,15 @@ export default function Header() {
             }}
           >
             {task.category}
+          </span>
+          <span
+            style={{
+              background: 'rgba(255,255,255,0.05)',
+              padding: '2px 8px',
+              borderRadius: 'var(--radius-sm)',
+            }}
+          >
+            {task.recurrence || 'يومي'}
           </span>
           {task.alertTime && (
             <span
