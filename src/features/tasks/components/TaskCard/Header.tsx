@@ -127,7 +127,7 @@ export default function Header() {
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-xs)',
+            justifyContent: 'space-between',
             width: '100%',
           }}
         >
