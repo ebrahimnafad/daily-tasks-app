@@ -48,7 +48,7 @@ export default function Header() {
       </span>
 
       {/* عنوان المهمة ومعلوماتها */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ flex: 1, minWidth: '50px' }}>
         <div
           style={{
             color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
