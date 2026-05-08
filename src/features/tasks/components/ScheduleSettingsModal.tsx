@@ -135,8 +135,11 @@ export default function ScheduleSettingsModal({
           <div className="ss-section-title">🕌 جدول يوم الجمعة الخاص</div>
           <div className="ss-grid-2">
             <div className="ss-input-group">
-              <label className="ss-label">وقت البداية</label>
+              <label className="ss-label" htmlFor="friday-start">
+                وقت البداية
+              </label>
               <input
+                id="friday-start"
                 type="time"
                 className="form-input"
                 value={
@@ -154,8 +157,11 @@ export default function ScheduleSettingsModal({
               />
             </div>
             <div className="ss-input-group">
-              <label className="ss-label">وقت النهاية</label>
+              <label className="ss-label" htmlFor="friday-end">
+                وقت النهاية
+              </label>
               <input
+                id="friday-end"
                 type="time"
                 className="form-input"
                 value={
@@ -174,8 +180,11 @@ export default function ScheduleSettingsModal({
             </div>
           </div>
           <div className="ss-input-group" style={{ marginTop: 'var(--space-md)' }}>
-            <label className="ss-label">وصف فترة الجمعة</label>
+            <label className="ss-label" htmlFor="friday-label">
+              وصف فترة الجمعة
+            </label>
             <input
+              id="friday-label"
               type="text"
               className="form-input"
               value={selectedShift.fridaySchedule.label}
@@ -215,8 +224,11 @@ export default function ScheduleSettingsModal({
 
                 <div className="ss-grid-icon-name">
                   <div className="ss-input-group">
-                    <label className="ss-label">رمز</label>
+                    <label className="ss-label" htmlFor={`block-icon-${block.id}`}>
+                      رمز
+                    </label>
                     <input
+                      id={`block-icon-${block.id}`}
                       type="text"
                       className="form-input"
                       style={{ textAlign: 'center' }}
@@ -226,8 +238,11 @@ export default function ScheduleSettingsModal({
                     />
                   </div>
                   <div className="ss-input-group">
-                    <label className="ss-label">اسم الكتلة</label>
+                    <label className="ss-label" htmlFor={`block-label-${block.id}`}>
+                      اسم الكتلة
+                    </label>
                     <input
+                      id={`block-label-${block.id}`}
                       type="text"
                       className="form-input"
                       value={block.label}
@@ -238,8 +253,11 @@ export default function ScheduleSettingsModal({
 
                 <div className="ss-grid-2">
                   <div className="ss-input-group">
-                    <label className="ss-label">من الساعة</label>
+                    <label className="ss-label" htmlFor={`block-start-${block.id}`}>
+                      من الساعة
+                    </label>
                     <input
+                      id={`block-start-${block.id}`}
                       type="time"
                       className="form-input"
                       value={block.startHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
@@ -250,8 +268,11 @@ export default function ScheduleSettingsModal({
                     />
                   </div>
                   <div className="ss-input-group">
-                    <label className="ss-label">إلى الساعة</label>
+                    <label className="ss-label" htmlFor={`block-end-${block.id}`}>
+                      إلى الساعة
+                    </label>
                     <input
+                      id={`block-end-${block.id}`}
                       type="time"
                       className="form-input"
                       value={block.endHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
@@ -264,8 +285,9 @@ export default function ScheduleSettingsModal({
                 </div>
 
                 <div className="ss-toggles">
-                  <label className="ss-toggle-label">
+                  <label className="ss-toggle-label" htmlFor={`block-opt-${block.id}`}>
                     <input
+                      id={`block-opt-${block.id}`}
                       type="checkbox"
                       className="ss-toggle-checkbox"
                       checked={block.isOptional || false}
@@ -275,8 +297,9 @@ export default function ScheduleSettingsModal({
                     />
                     وقت اختياري
                   </label>
-                  <label className="ss-toggle-label">
+                  <label className="ss-toggle-label" htmlFor={`block-rest-${block.id}`}>
                     <input
+                      id={`block-rest-${block.id}`}
                       type="checkbox"
                       className="ss-toggle-checkbox"
                       checked={block.isRest || false}
