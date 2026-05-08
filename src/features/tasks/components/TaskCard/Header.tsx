@@ -48,7 +48,7 @@ export default function Header() {
       </span>
 
       {/* عنوان المهمة ومعلوماتها */}
-      <div style={{ flex: 1, minWidth: '50px' }}>
+      <div style={{ flex: '1 1 auto', minWidth: 0 }}>
         <div
           style={{
             color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
@@ -61,7 +61,7 @@ export default function Header() {
             textOverflow: 'ellipsis',
           }}
         >
-          {task.title}
+          {task.title.length > 50 ? task.title.slice(0, 50) + '...' : task.title}
         </div>
         <div
           style={{
