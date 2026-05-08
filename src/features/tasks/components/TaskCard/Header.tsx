@@ -53,54 +53,72 @@ export default function Header() {
           flex: '1 1 auto',
           minWidth: 0,
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: 'var(--space-sm)',
+          flexDirection: 'column',
+          gap: 'var(--space-xs)',
         }}
       >
-        {/* Title on left */}
+        {/* Line 1: Title and Category/Recurrence */}
         <div
           style={{
-            color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
-            fontSize: 'var(--font-md)',
-            fontWeight: 700,
-            textDecoration: done ? 'line-through' : 'none',
-            transition: 'all .3s',
-          }}
-        >
-          {task.title}
-        </div>
-        {/* Chips on right */}
-        <div
-          style={{
-            fontSize: 'var(--font-sm)',
-            color: 'rgba(var(--gold-rgb),.48)',
             display: 'flex',
             alignItems: 'center',
-            gap: 'var(--space-xs)',
+            justifyContent: 'space-between',
+            gap: 'var(--space-sm)',
+          }}
+        >
+          <div
+            style={{
+              color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
+              fontSize: 'var(--font-md)',
+              fontWeight: 700,
+              textDecoration: done ? 'line-through' : 'none',
+              transition: 'all .3s',
+            }}
+          >
+            {task.title}
+          </div>
+
+          <div
+            style={{
+              fontSize: 'var(--font-sm)',
+              color: 'rgba(var(--gold-rgb),.48)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-xs)',
+            }}
+          >
+            <span
+              style={{
+                background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
+                color: task.color,
+                border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              {task.category}
+            </span>
+            <span
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                padding: '2px 8px',
+                borderRadius: 'var(--radius-sm)',
+              }}
+            >
+              {task.recurrence || 'يومي'}
+            </span>
+          </div>
+        </div>
+
+        {/* Line 2: Other chips and toggle buttons */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 'var(--space-sm)',
             flexWrap: 'wrap',
           }}
         >
-          <span
-            style={{
-              background: `color-mix(in srgb, ${task.color} 11%, transparent)`,
-              color: task.color,
-              border: `1px solid color-mix(in srgb, ${task.color} 22%, transparent)`,
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {task.category}
-          </span>
-          <span
-            style={{
-              background: 'rgba(255,255,255,0.05)',
-              padding: '2px 8px',
-              borderRadius: 'var(--radius-sm)',
-            }}
-          >
-            {task.recurrence || 'يومي'}
-          </span>
           {task.alertTime && (
             <span
               style={{
@@ -114,20 +132,7 @@ export default function Header() {
               🔔 {task.alertTime}
             </span>
           )}
-        </div>
-      </div>
 
-      {/* أزرار الجانب */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-end',
-          gap: 'var(--space-sm)',
-          flexShrink: 0,
-        }}
-      >
-        <div style={{ display: 'flex', gap: 'var(--space-sm)', alignItems: 'center' }}>
           {/* زر القائمة الفرعية */}
           {!task.isPrayerTask && (
             <button
@@ -145,6 +150,7 @@ export default function Header() {
               قائمة
             </button>
           )}
+
           {/* زر الصلوات */}
           {task.isPrayerTask && (
             <button
@@ -162,6 +168,7 @@ export default function Header() {
               صلوات
             </button>
           )}
+
           {/* زر البريف */}
           <button
             className={`toggle-btn ${isBriefOpen ? 'on' : ''}`}
@@ -177,26 +184,35 @@ export default function Header() {
             </span>
             بريف
           </button>
-          {/* زر التعديل */}
-          <button
-            className="icon-btn icon-btn--edit"
-            aria-label={`تعديل مهمة: ${task.title}`}
-            onClick={(e) => tm.openEdit(task, e)}
-          >
-            ✏️
-          </button>
-          {/* زر الحذف */}
-          <button
-            className="icon-btn icon-btn--delete"
-            aria-label={`حذف مهمة: ${task.title}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              tm.setDeleteConfirm(task.id);
-            }}
-          >
-            🗑️
-          </button>
         </div>
+      </div>
+
+      {/* أزرار الجانب (تعديل وحذف فقط) */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--space-sm)',
+          flexShrink: 0,
+        }}
+      >
+        <button
+          className="icon-btn icon-btn--edit"
+          aria-label={`تعديل مهمة: ${task.title}`}
+          onClick={(e) => tm.openEdit(task, e)}
+        >
+          ✏️
+        </button>
+        <button
+          className="icon-btn icon-btn--delete"
+          aria-label={`حذف مهمة: ${task.title}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            tm.setDeleteConfirm(task.id);
+          }}
+        >
+          🗑️
+        </button>
       </div>
     </div>
   );
