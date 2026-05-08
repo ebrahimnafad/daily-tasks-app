@@ -98,11 +98,6 @@ export default function Header() {
               🔔 {task.alertTime}
             </span>
           )}
-          {hasSubs && (
-            <span className="sub-progress">
-              {subsDone}/{task.subtasks.length}
-            </span>
-          )}
         </div>
       </div>
 
