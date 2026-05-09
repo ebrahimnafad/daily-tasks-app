@@ -3,6 +3,7 @@ import type { Transaction, TransactionDrawerState, FinanceSettings } from '../ty
 
 interface TransactionDrawerProps {
   state: TransactionDrawerState;
+  transactions: Transaction[];
   settings: FinanceSettings;
   onSave: (tx: Transaction) => void;
   onDelete: (id: string) => void;

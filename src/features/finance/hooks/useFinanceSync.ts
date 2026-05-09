@@ -43,7 +43,7 @@ export default function useFinanceSync(onQuota?: () => void) {
       delete s.currency;
     }
     if (s.showExchangeRate !== undefined) {
-      s.showSecondaryCurrency = s.showExchangeRate;
+      s.showSecondaryCurrency = Boolean(s.showExchangeRate);
       s.secondaryCurrencySymbol = 'ج.م'; // Previous secondary was always EGP
       delete s.showExchangeRate;
     }

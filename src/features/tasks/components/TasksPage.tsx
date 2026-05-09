@@ -125,7 +125,11 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                       right: 0,
                       bottom: 0,
                       width: `${getBlockProgress(block.startHour, block.endHour)}%`,
-                      background: 'rgba(var(--gold-rgb), 0.08)',
+                      background: 'rgba(var(--gold-rgb), 0.15)',
+                      borderLeft:
+                        getBlockProgress(block.startHour, block.endHour) > 0
+                          ? '2px solid rgba(var(--gold-rgb), 0.8)'
+                          : 'none',
                       zIndex: 0,
                       transition: 'width 60s linear',
                     }}
@@ -161,8 +165,10 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                         marginInline: '4px',
                       }}
                     >
-                      {block.startHour.toString().padStart(2, '0')}:00 -{' '}
-                      {block.endHour.toString().padStart(2, '0')}:00
+                      {(() => {
+                        const formatH = (h: number) => `${h % 12 || 12}:00 ${h >= 12 ? 'م' : 'ص'}`;
+                        return `${formatH(block.startHour)} - ${formatH(block.endHour)}`;
+                      })()}
                     </span>
 
                     {isCurrent && <span className="tpg-block__now-badge">الآن ✨</span>}
@@ -205,7 +211,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                       style={{
                         textAlign: 'center',
                         fontSize: '13px',
-                        color: 'var(--text-muted)',
+                        color: 'rgba(var(--gold-rgb), 0.5)',
                         margin: '10px 0',
                       }}
                     >
