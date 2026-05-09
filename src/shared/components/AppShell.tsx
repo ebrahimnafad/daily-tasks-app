@@ -14,8 +14,21 @@ interface AppShellProps {
 
 function SyncBadge({ status }: { status: SyncStatus }) {
   const { icon, text, cls } = getSyncBadgeInfo(status);
+
+  // Hide if synced or offline, but using CSS opacity for a smooth fade out
+  const isHidden = status === 'synced' || status === 'offline';
+
   return (
-    <div className={`sync-badge ${cls}`} role="status" aria-live="polite">
+    <div
+      className={`sync-badge ${cls}`}
+      role="status"
+      aria-live="polite"
+      style={{
+        opacity: isHidden ? 0 : 1,
+        pointerEvents: 'none',
+        transition: isHidden ? 'opacity 0.5s ease 1.5s' : 'opacity 0.2s ease',
+      }}
+    >
       <span aria-hidden="true">{icon}</span>
       <span>{text}</span>
     </div>

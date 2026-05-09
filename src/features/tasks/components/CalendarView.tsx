@@ -101,8 +101,6 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
     return map;
   }, [expenses, transactions, currentDate]);
 
-  const isWeekend = (dayOfWeek: number) => dayOfWeek === 5 || dayOfWeek === 6;
-
   const tasksByDate = useMemo(() => {
     const map: Record<string, Task[]> = {};
     const y = currentDate.getFullYear();
@@ -111,16 +109,10 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
 
     for (let day = 1; day <= days; day++) {
       const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const dayOfWeek = new Date(y, m, day).getDay();
-      const weekend = isWeekend(dayOfWeek);
 
+      // Only include tasks explicitly scheduled for this specific date
       const applicableTasks = tasks.filter((t) => {
-        const rec = t.recurrence || 'يومي';
-        if (rec === 'يومي') return true;
-        if (rec === 'أيام العمل') return !weekend;
-        if (rec === 'عطل') return weekend;
-        if (rec === 'موعد محدد' && t.date === dateStr) return true;
-        return false;
+        return t.recurrence === 'موعد محدد' && t.date === dateStr;
       });
 
       if (applicableTasks.length > 0) {
@@ -129,6 +121,16 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
     }
     return map;
   }, [tasks, currentDate]);
+
+  // Calculate max expense amount in the current month to scale the heatmap opacity
+  const maxExpenseAmount = useMemo(() => {
+    let max = 0;
+    Object.values(financeEventsByDate).forEach((events) => {
+      const dayTotal = events.reduce((sum, e) => sum + (e.amount || 0), 0);
+      if (dayTotal > max) max = dayTotal;
+    });
+    return max;
+  }, [financeEventsByDate]);
 
   const goToPrevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
@@ -192,15 +194,22 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
           const dayTasks = tasksByDate[dateStr] || [];
           const dayFinance = financeEventsByDate[dateStr] || [];
 
+          // Heatmap calculations
+          const dayTotalExpense = dayFinance.reduce((sum, e) => sum + (e.amount || 0), 0);
+          const intensity = maxExpenseAmount > 0 ? dayTotalExpense / maxExpenseAmount : 0;
+          const heatmapOpacity = Math.max(0.08, intensity * 0.75); // scales from 0.08 (baseline) up to 0.75 max
+          const hasExpenses = dayFinance.length > 0;
+
           return (
             <div
               key={day}
               onClick={() => setSelectedDate(dateStr)}
               style={{
                 cursor: 'pointer',
-                border: isSelected ? '2px solid var(--primary)' : undefined,
+                border: isSelected ? '2px solid var(--gold)' : undefined,
+                background: hasExpenses ? `rgba(var(--gold-rgb), ${heatmapOpacity})` : undefined,
               }}
-              className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${dayTasks.length > 0 || dayFinance.length > 0 ? 'cal-cell--has-tasks' : ''}`}
+              className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${dayTasks.length > 0 || hasExpenses ? 'cal-cell--has-tasks' : ''}`}
             >
               <span className="cal-day-num">{day}</span>
               <div className="cal-tasks">

@@ -25,16 +25,20 @@ export default function Subtasks() {
         task={task}
         taskSubChecked={taskSubChecked}
         newItemText={tm.newItemText[task.id] ?? ''}
+        newItemAlertTime={tm.newItemAlertTime[task.id] ?? ''}
         editingSubId={tm.editingSubId}
         editingSubText={tm.editingSubText}
+        editingSubAlertTime={tm.editingSubAlertTime}
         onToggleSub={(subId) => setSubChecked((p) => ({ ...p, [subId]: !p[subId] }))}
         onNewItemTextChange={(v) => tm.setNewItemText((p) => ({ ...p, [task.id]: v }))}
+        onNewItemAlertTimeChange={(v) => tm.setNewItemAlertTime((p) => ({ ...p, [task.id]: v }))}
         onAddSubItem={handleAddSubItem}
         onDeleteSubItem={(subId) => tm.deleteSubItem(task.id, subId)}
         onStartEditSub={tm.startEditSub}
         onSaveEditSub={() => tm.saveEditSub(task.id)}
         onCancelEditSub={tm.cancelEditSub}
         onEditingSubTextChange={tm.setEditingSubText}
+        onEditingSubAlertTimeChange={tm.setEditingSubAlertTime}
         inputRef={inputRef}
       />
     );

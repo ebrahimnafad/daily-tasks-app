@@ -50,6 +50,9 @@ export interface Transaction {
   date: string; // YYYY-MM-DD
   status: 'paid' | 'pending';
   notes?: string;
+  currencySymbol?: string;
+  exchangeRate?: number;
+  originalAmount?: number;
 }
 
 // ── مصدر دخل ─────────────────────────────────────────────────────────────────
@@ -77,11 +80,11 @@ export interface Goal {
   notes?: string;
 }
 
-// ── إعدادات المالية ──────────────────────────────────────────────────────────
 export interface FinanceSettings {
-  currency: 'SAR' | 'EGP';
-  exchangeRate?: number; // سعر التحويل الاختياري SAR → EGP
-  showExchangeRate: boolean;
+  currencySymbol: string;
+  showSecondaryCurrency: boolean;
+  secondaryCurrencySymbol: string;
+  exchangeRate?: number;
 }
 
 // ── حالات الواجهة ────────────────────────────────────────────────────────────

@@ -22,7 +22,7 @@ import type {
   TransactionDrawerState,
   FinanceSettings,
 } from '../types';
-import { CURRENCY_SYMBOLS } from '../constants';
+
 import {
   calcMonthlySummary,
   getCurrentMonth,
@@ -210,15 +210,13 @@ export default function FinancePage({ syncStatus }: FinancePageProps) {
           <div className="fin-settings">
             <div className="fin-row">
               <label className="fin-label" style={{ flex: 1 }}>
-                العملة الأساسية
-                <select
+                العملة الأساسية (الرمز)
+                <input
                   className="fin-input"
-                  value={settings.currency}
-                  onChange={(e) => updateSettings({ currency: e.target.value as 'SAR' | 'EGP' })}
-                >
-                  <option value="SAR">ريال سعودي (ر.س)</option>
-                  <option value="EGP">جنيه مصري (ج.م)</option>
-                </select>
+                  value={settings.currencySymbol || ''}
+                  onChange={(e) => updateSettings({ currencySymbol: e.target.value })}
+                  placeholder="مثال: ر.س، $، ج.م"
+                />
               </label>
             </div>
             <label
@@ -227,32 +225,43 @@ export default function FinancePage({ syncStatus }: FinancePageProps) {
             >
               <input
                 type="checkbox"
-                checked={settings.showExchangeRate}
-                onChange={(e) => updateSettings({ showExchangeRate: e.target.checked })}
+                checked={settings.showSecondaryCurrency}
+                onChange={(e) => updateSettings({ showSecondaryCurrency: e.target.checked })}
               />
-              إظهار تحويل العملة
+              إظهار عملة ثانوية للتحويل
             </label>
-            {settings.showExchangeRate && (
-              <label className="fin-label">
-                سعر التحويل (1 ر.س = ؟ ج.م)
-                <input
-                  className="fin-input"
-                  type="number"
-                  min="0"
-                  step="0.1"
-                  value={settings.exchangeRate || ''}
-                  onChange={(e) =>
-                    updateSettings({ exchangeRate: Number(e.target.value) || undefined })
-                  }
-                  placeholder="مثل: 13.2"
-                />
-              </label>
+            {settings.showSecondaryCurrency && (
+              <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+                <label className="fin-label" style={{ flex: 1 }}>
+                  رمز العملة الثانوية
+                  <input
+                    className="fin-input"
+                    value={settings.secondaryCurrencySymbol || ''}
+                    onChange={(e) => updateSettings({ secondaryCurrencySymbol: e.target.value })}
+                    placeholder="مثال: ج.م، USD"
+                  />
+                </label>
+                <label className="fin-label" style={{ flex: 2 }}>
+                  سعر التحويل (1 {settings.currencySymbol || 'أساسي'} = ؟)
+                  <input
+                    className="fin-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={settings.exchangeRate || ''}
+                    onChange={(e) =>
+                      updateSettings({ exchangeRate: Number(e.target.value) || undefined })
+                    }
+                    placeholder="مثل: 13.2"
+                  />
+                </label>
+              </div>
             )}
-            {settings.showExchangeRate && settings.exchangeRate && summary.totalIncome > 0 && (
+            {settings.showSecondaryCurrency && settings.exchangeRate && summary.totalIncome > 0 && (
               <div className="fin-calc-hint">
-                💱 الدخل بالجنيه:{' '}
+                💱 الدخل بـ ({settings.secondaryCurrencySymbol || 'الثانوية'}):{' '}
                 {Math.round(summary.totalIncome * settings.exchangeRate).toLocaleString('ar-SA')}{' '}
-                {CURRENCY_SYMBOLS.EGP}
+                {settings.secondaryCurrencySymbol}
               </div>
             )}
           </div>
@@ -367,6 +376,7 @@ export default function FinancePage({ syncStatus }: FinancePageProps) {
         <TransactionDrawer
           state={txDrawer}
           transactions={transactions}
+          settings={settings}
           onSave={saveTransaction}
           onDelete={deleteTransaction}
           onClose={() => setTxDrawer(null)}

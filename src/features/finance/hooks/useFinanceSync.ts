@@ -34,9 +34,22 @@ export default function useFinanceSync(onQuota?: () => void) {
     lsGet(KEYS.transactions, [])
   );
   const [goals, setGoalsState] = useState<Goal[]>(() => lsGet(KEYS.goals, []));
-  const [settings, setSettingsState] = useState<FinanceSettings>(() =>
-    lsGet(KEYS.settings, DEFAULT_SETTINGS)
-  );
+  const [settings, setSettingsState] = useState<FinanceSettings>(() => {
+    const s = lsGet(KEYS.settings, DEFAULT_SETTINGS) as FinanceSettings & Record<string, unknown>;
+    // Migration from old settings
+    if (s.currency) {
+      if (s.currency === 'SAR') s.currencySymbol = 'ر.س';
+      if (s.currency === 'EGP') s.currencySymbol = 'ج.م';
+      delete s.currency;
+    }
+    if (s.showExchangeRate !== undefined) {
+      s.showSecondaryCurrency = s.showExchangeRate;
+      s.secondaryCurrencySymbol = 'ج.م'; // Previous secondary was always EGP
+      delete s.showExchangeRate;
+    }
+    if (!s.currencySymbol) s.currencySymbol = 'ر.س';
+    return s as FinanceSettings;
+  });
   const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'offline' | 'error'>(
     'syncing'
   );

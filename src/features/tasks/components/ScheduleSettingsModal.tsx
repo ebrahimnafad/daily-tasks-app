@@ -227,15 +227,68 @@ export default function ScheduleSettingsModal({
                     <label className="ss-label" htmlFor={`block-icon-${block.id}`}>
                       رمز
                     </label>
-                    <input
+                    <select
                       id={`block-icon-${block.id}`}
-                      type="text"
-                      className="form-input"
-                      style={{ textAlign: 'center' }}
+                      className="form-select"
+                      style={{ textAlign: 'center', padding: '12px 4px' }}
                       value={block.icon}
                       onChange={(e) => handleUpdateBlock(block.id, { icon: e.target.value })}
-                      maxLength={2}
-                    />
+                    >
+                      {![
+                        '📌',
+                        '🌅',
+                        '☕',
+                        '🏢',
+                        '💻',
+                        '🍽️',
+                        '🏃',
+                        '📚',
+                        '🕌',
+                        '🚗',
+                        '🛒',
+                        '🎮',
+                        '🌙',
+                        '💤',
+                        '🗓️',
+                        '🏋️',
+                        '🧠',
+                        '💡',
+                        '🎧',
+                        '🧹',
+                        '🛠️',
+                        '👨‍👩‍👧‍👦',
+                        '💼',
+                      ].includes(block.icon) && <option value={block.icon}>{block.icon}</option>}
+                      {[
+                        '📌',
+                        '🌅',
+                        '☕',
+                        '🏢',
+                        '💻',
+                        '🍽️',
+                        '🏃',
+                        '📚',
+                        '🕌',
+                        '🚗',
+                        '🛒',
+                        '🎮',
+                        '🌙',
+                        '💤',
+                        '🗓️',
+                        '🏋️',
+                        '🧠',
+                        '💡',
+                        '🎧',
+                        '🧹',
+                        '🛠️',
+                        '👨‍👩‍👧‍👦',
+                        '💼',
+                      ].map((icon) => (
+                        <option key={icon} value={icon}>
+                          {icon}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="ss-input-group">
                     <label className="ss-label" htmlFor={`block-label-${block.id}`}>
@@ -315,7 +368,7 @@ export default function ScheduleSettingsModal({
 
         {/* Action Buttons */}
         <div className="ss-actions">
-          <button className="btn-secondary" onClick={onClose}>
+          <button className="btn-cancel" onClick={onClose}>
             إلغاء
           </button>
           <button className="btn-save" onClick={handleSave}>

@@ -226,11 +226,7 @@ export const CATEGORY_COLORS = [
 
 // ── إعدادات افتراضية ─────────────────────────────────────────────────────────
 export const DEFAULT_SETTINGS: FinanceSettings = {
-  currency: 'SAR',
-  showExchangeRate: false,
-};
-
-export const CURRENCY_SYMBOLS: Record<string, string> = {
-  SAR: 'ر.س',
-  EGP: 'ج.م',
+  currencySymbol: 'ر.س',
+  showSecondaryCurrency: false,
+  secondaryCurrencySymbol: 'ج.م',
 };

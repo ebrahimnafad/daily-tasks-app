@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
-import type { Transaction, TransactionDrawerState } from '../types';
+import type { Transaction, TransactionDrawerState, FinanceSettings } from '../types';
 
 interface TransactionDrawerProps {
   state: TransactionDrawerState;
-  transactions: Transaction[];
+  settings: FinanceSettings;
   onSave: (tx: Transaction) => void;
   onDelete: (id: string) => void;
   onClose: () => void;
@@ -12,6 +12,7 @@ interface TransactionDrawerProps {
 export default function TransactionDrawer({
   state,
   transactions,
+  settings,
   onSave,
   onDelete,
   onClose,
@@ -33,15 +34,69 @@ export default function TransactionDrawer({
     amount: !('category' in state) && state.expense.amount ? String(state.expense.amount) : '',
     date: new Date().toISOString().split('T')[0],
     notes: '',
+    useForeignCurrency: false,
+    originalAmount: '',
+    currencySymbol: settings.secondaryCurrencySymbol || '',
+    exchangeRate: settings.exchangeRate ? String(settings.exchangeRate) : '',
   });
+
+  // form state update helper
+  const handleFormChange = (updates: Partial<typeof form>) => {
+    setForm((prev) => {
+      const next = { ...prev, ...updates };
+      if (next.useForeignCurrency) {
+        const orig = Number(next.originalAmount);
+        const rate = Number(next.exchangeRate);
+        if (!isNaN(orig) && orig > 0 && !isNaN(rate) && rate > 0) {
+          next.amount = String(Math.round((orig / rate) * 100) / 100);
+        }
+      }
+      return next;
+    });
+  };
 
   // تعديل فاتورة قائمة
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ amount: '', date: '', notes: '' });
+  const [editForm, setEditForm] = useState({
+    amount: '',
+    date: '',
+    notes: '',
+    useForeignCurrency: false,
+    originalAmount: '',
+    currencySymbol: '',
+    exchangeRate: '',
+  });
+
+  // editForm state update helper
+  const handleEditFormChange = (updates: Partial<typeof editForm>) => {
+    setEditForm((prev) => {
+      const next = { ...prev, ...updates };
+      if (next.useForeignCurrency) {
+        const orig = Number(next.originalAmount);
+        const rate = Number(next.exchangeRate);
+        if (!isNaN(orig) && orig > 0 && !isNaN(rate) && rate > 0) {
+          next.amount = String(Math.round((orig / rate) * 100) / 100);
+        }
+      }
+      return next;
+    });
+  };
 
   const startEdit = (tx: Transaction) => {
     setEditingId(tx.id);
-    setEditForm({ amount: String(tx.amount), date: tx.date, notes: tx.notes || '' });
+    setEditForm({
+      amount: String(tx.amount),
+      date: tx.date,
+      notes: tx.notes || '',
+      useForeignCurrency: !!tx.originalAmount,
+      originalAmount: tx.originalAmount ? String(tx.originalAmount) : '',
+      currencySymbol: tx.currencySymbol || settings.secondaryCurrencySymbol || '',
+      exchangeRate: tx.exchangeRate
+        ? String(tx.exchangeRate)
+        : settings.exchangeRate
+          ? String(settings.exchangeRate)
+          : '',
+    });
   };
 
   const cancelEdit = () => setEditingId(null);
@@ -56,6 +111,15 @@ export default function TransactionDrawer({
         amount: Number(editForm.amount),
         date: editForm.date,
         notes: editForm.notes.trim() || undefined,
+        originalAmount: editForm.useForeignCurrency
+          ? Number(editForm.originalAmount) || undefined
+          : undefined,
+        currencySymbol: editForm.useForeignCurrency
+          ? editForm.currencySymbol || undefined
+          : undefined,
+        exchangeRate: editForm.useForeignCurrency
+          ? Number(editForm.exchangeRate) || undefined
+          : undefined,
       });
       setEditingId(null);
     },
@@ -75,6 +139,11 @@ export default function TransactionDrawer({
       date: form.date,
       status: 'paid',
       notes: form.notes.trim() || undefined,
+      originalAmount: form.useForeignCurrency
+        ? Number(form.originalAmount) || undefined
+        : undefined,
+      currencySymbol: form.useForeignCurrency ? form.currencySymbol || undefined : undefined,
+      exchangeRate: form.useForeignCurrency ? Number(form.exchangeRate) || undefined : undefined,
     });
     onClose();
   }, [form, isCategoryMode, targetId, targetCategoryId, onSave, onClose, saving]);
@@ -98,14 +167,63 @@ export default function TransactionDrawer({
               {targetIcon} {targetTitle}
             </h3>
 
+            <label
+              className="fin-label"
+              style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}
+            >
+              <input
+                type="checkbox"
+                checked={form.useForeignCurrency}
+                onChange={(e) => handleFormChange({ useForeignCurrency: e.target.checked })}
+              />
+              استخدام عملة مختلفة؟
+            </label>
+
+            {form.useForeignCurrency && (
+              <div style={{ display: 'flex', gap: 'var(--space-sm)', flexWrap: 'wrap' }}>
+                <label className="fin-label" style={{ flex: 1, minWidth: '100px' }}>
+                  المبلغ (أجنبي)
+                  <input
+                    className="fin-input"
+                    type="number"
+                    min="0"
+                    value={form.originalAmount}
+                    onChange={(e) => handleFormChange({ originalAmount: e.target.value })}
+                  />
+                </label>
+                <label className="fin-label" style={{ flex: 1, minWidth: '80px' }}>
+                  رمز العملة
+                  <input
+                    className="fin-input"
+                    value={form.currencySymbol}
+                    onChange={(e) => handleFormChange({ currencySymbol: e.target.value })}
+                    placeholder="مثال: ج.م"
+                  />
+                </label>
+                <label className="fin-label" style={{ flex: 2, minWidth: '150px' }}>
+                  سعر الصرف (1 {settings.currencySymbol} = ؟)
+                  <input
+                    className="fin-input"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={form.exchangeRate}
+                    onChange={(e) => handleFormChange({ exchangeRate: e.target.value })}
+                  />
+                </label>
+              </div>
+            )}
+
             <label className="fin-label">
-              المبلغ (ر.س)
+              المبلغ ({settings.currencySymbol})
               <input
                 className="fin-input"
                 type="number"
                 min="0"
                 value={form.amount}
-                onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))}
+                onChange={(e) => handleFormChange({ amount: e.target.value })}
+                readOnly={form.useForeignCurrency}
+                style={{ background: form.useForeignCurrency ? 'var(--bg-card)' : undefined }}
               />
             </label>
 
@@ -115,7 +233,7 @@ export default function TransactionDrawer({
                 className="fin-input"
                 type="date"
                 value={form.date}
-                onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))}
+                onChange={(e) => handleFormChange({ date: e.target.value })}
               />
             </label>
 
@@ -124,7 +242,7 @@ export default function TransactionDrawer({
               <input
                 className="fin-input"
                 value={form.notes}
-                onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
+                onChange={(e) => handleFormChange({ notes: e.target.value })}
                 placeholder="اختياري"
               />
             </label>
@@ -157,20 +275,90 @@ export default function TransactionDrawer({
                         className="fin-row"
                         style={{ gap: 'var(--space-xs)', marginBottom: 'var(--space-xs)' }}
                       >
-                        <input
-                          className="fin-input"
-                          type="number"
-                          min="0"
-                          value={editForm.amount}
-                          onChange={(e) => setEditForm((p) => ({ ...p, amount: e.target.value }))}
-                          placeholder="المبلغ"
-                          style={{ flex: 1 }}
-                        />
+                        <div
+                          style={{
+                            flex: 1,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 'var(--space-xs)',
+                          }}
+                        >
+                          <label
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: 'var(--space-xs)',
+                              fontSize: '0.85em',
+                              color: 'var(--text-color)',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={editForm.useForeignCurrency}
+                              onChange={(e) =>
+                                handleEditFormChange({ useForeignCurrency: e.target.checked })
+                              }
+                            />
+                            عملة مختلفة
+                          </label>
+
+                          {editForm.useForeignCurrency && (
+                            <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
+                              <input
+                                className="fin-input"
+                                type="number"
+                                min="0"
+                                value={editForm.originalAmount}
+                                onChange={(e) =>
+                                  handleEditFormChange({ originalAmount: e.target.value })
+                                }
+                                placeholder="المبلغ أجنبي"
+                                style={{ flex: 1, padding: '4px 6px' }}
+                              />
+                              <input
+                                className="fin-input"
+                                value={editForm.currencySymbol}
+                                onChange={(e) =>
+                                  handleEditFormChange({ currencySymbol: e.target.value })
+                                }
+                                placeholder="الرمز"
+                                style={{ flex: 0.8, padding: '4px 6px' }}
+                              />
+                              <input
+                                className="fin-input"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editForm.exchangeRate}
+                                onChange={(e) =>
+                                  handleEditFormChange({ exchangeRate: e.target.value })
+                                }
+                                placeholder="السعر"
+                                style={{ flex: 1, padding: '4px 6px' }}
+                              />
+                            </div>
+                          )}
+
+                          <input
+                            className="fin-input"
+                            type="number"
+                            min="0"
+                            value={editForm.amount}
+                            onChange={(e) => handleEditFormChange({ amount: e.target.value })}
+                            placeholder={`المبلغ (${settings.currencySymbol})`}
+                            readOnly={editForm.useForeignCurrency}
+                            style={{
+                              background: editForm.useForeignCurrency
+                                ? 'var(--bg-card)'
+                                : undefined,
+                            }}
+                          />
+                        </div>
                         <input
                           className="fin-input"
                           type="date"
                           value={editForm.date}
-                          onChange={(e) => setEditForm((p) => ({ ...p, date: e.target.value }))}
+                          onChange={(e) => handleEditFormChange({ date: e.target.value })}
                           aria-label="تاريخ الفاتورة"
                           style={{ flex: 1 }}
                         />
@@ -178,7 +366,7 @@ export default function TransactionDrawer({
                       <input
                         className="fin-input"
                         value={editForm.notes}
-                        onChange={(e) => setEditForm((p) => ({ ...p, notes: e.target.value }))}
+                        onChange={(e) => handleEditFormChange({ notes: e.target.value })}
                         placeholder="ملاحظة (اختياري)"
                         style={{ marginBottom: 'var(--space-xs)' }}
                       />
@@ -198,7 +386,12 @@ export default function TransactionDrawer({
                         <div>
                           <div className="fin-drawer__item-date">{tx.date}</div>
                           <div className="fin-drawer__item-amount">
-                            {(tx.amount || 0).toLocaleString('ar-SA')} ر.س
+                            {(tx.amount || 0).toLocaleString('ar-SA')} {settings.currencySymbol}
+                            {tx.originalAmount && tx.currencySymbol && (
+                              <span style={{ fontSize: '0.8em', opacity: 0.7, marginRight: '6px' }}>
+                                ({tx.originalAmount.toLocaleString('ar-SA')} {tx.currencySymbol})
+                              </span>
+                            )}
                           </div>
                           {tx.notes && <div className="fin-drawer__item-notes">{tx.notes}</div>}
                         </div>

@@ -9,7 +9,6 @@ import type {
   QuarterlyFinanceSummary,
   FinanceSettings,
 } from './types';
-import { CURRENCY_SYMBOLS } from './constants';
 
 // ── تحويل التردد لمكافئ شهري ─────────────────────────────────────────────────
 export function toMonthlyAmount(amount: number, frequency: string): number {
@@ -132,10 +131,8 @@ export function calcMonthlySummary(
 
 // ── تنسيق المبلغ ─────────────────────────────────────────────────────────────
 export function formatAmount(amount: number, settings: FinanceSettings): string {
-  const symbol = CURRENCY_SYMBOLS[settings.currency] || 'ر.س';
-  const displayAmount =
-    settings.currency === 'EGP' && settings.exchangeRate ? amount * settings.exchangeRate : amount;
-  return `${Math.round(displayAmount).toLocaleString('ar-SA')} ${symbol}`;
+  const symbol = settings.currencySymbol || 'ر.س';
+  return `${Math.round(amount).toLocaleString('ar-SA')} ${symbol}`;
 }
 
 // ── حساب الاقتطاع الشهري لهدف ────────────────────────────────────────────────

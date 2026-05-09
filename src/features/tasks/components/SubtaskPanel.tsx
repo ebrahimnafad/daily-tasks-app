@@ -7,16 +7,20 @@ interface SubtaskPanelProps {
   task: Task;
   taskSubChecked: SubCheckedMap;
   newItemText: string;
+  newItemAlertTime: string;
   editingSubId: string | number | null;
   editingSubText: string;
+  editingSubAlertTime: string;
   onToggleSub: (subId: string | number) => void;
   onNewItemTextChange: (val: string) => void;
+  onNewItemAlertTimeChange: (val: string) => void;
   onAddSubItem: () => void;
   onDeleteSubItem: (subId: string | number) => void;
   onStartEditSub: (sub: Subtask) => void;
   onSaveEditSub: () => void;
   onCancelEditSub: () => void;
   onEditingSubTextChange: (val: string) => void;
+  onEditingSubAlertTimeChange: (val: string) => void;
   inputRef: RefObject<HTMLInputElement | null>;
 }
 
@@ -24,16 +28,20 @@ export function SubtaskPanel({
   task,
   taskSubChecked,
   newItemText,
+  newItemAlertTime,
   editingSubId,
   editingSubText,
+  editingSubAlertTime,
   onToggleSub,
   onNewItemTextChange,
+  onNewItemAlertTimeChange,
   onAddSubItem,
   onDeleteSubItem,
   onStartEditSub,
   onSaveEditSub,
   onCancelEditSub,
   onEditingSubTextChange,
+  onEditingSubAlertTimeChange,
   inputRef,
 }: SubtaskPanelProps) {
   const handleKeyDown = useAccessibleClick();
@@ -93,26 +101,58 @@ export function SubtaskPanel({
             </div>
 
             {isEditing ? (
-              <input
-                className="sub-edit-inp"
-                value={editingSubText}
-                autoFocus
-                aria-label="تعديل العنصر"
-                onChange={(e) => onEditingSubTextChange(e.target.value)}
-                onBlur={onSaveEditSub}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') onSaveEditSub();
-                  if (e.key === 'Escape') onCancelEditSub();
-                }}
-              />
+              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
+                <input
+                  className="sub-edit-inp"
+                  style={{ flex: 1 }}
+                  value={editingSubText}
+                  autoFocus
+                  aria-label="تعديل العنصر"
+                  onChange={(e) => onEditingSubTextChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveEditSub();
+                    if (e.key === 'Escape') onCancelEditSub();
+                  }}
+                />
+                <input
+                  type="time"
+                  className="sub-edit-inp"
+                  style={{ width: 'auto', padding: '0 4px' }}
+                  value={editingSubAlertTime}
+                  aria-label="تعديل وقت التذكير"
+                  onChange={(e) => onEditingSubAlertTimeChange(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') onSaveEditSub();
+                    if (e.key === 'Escape') onCancelEditSub();
+                  }}
+                />
+              </div>
             ) : (
-              <span
-                className={`sub-text ${sdone ? 'done' : ''}`}
-                onDoubleClick={() => onStartEditSub(s)}
-                title="اضغط مرتين لتعديل العنصر"
-              >
-                {s.text}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                <span
+                  className={`sub-text ${sdone ? 'done' : ''}`}
+                  onDoubleClick={() => onStartEditSub(s)}
+                  title="اضغط مرتين لتعديل العنصر"
+                  style={{ flex: 1 }}
+                >
+                  {s.text}
+                </span>
+                {s.alertTime && (
+                  <span
+                    style={{
+                      fontSize: '0.8em',
+                      color: 'var(--text-color)',
+                      opacity: 0.7,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    title="تذكير"
+                  >
+                    ⏰ {s.alertTime}
+                  </span>
+                )}
+              </div>
             )}
 
             {!isEditing && (
@@ -149,14 +189,24 @@ export function SubtaskPanel({
         );
       })}
 
-      <div className="add-sub-row">
+      <div className="add-sub-row" style={{ display: 'flex', gap: '8px' }}>
         <input
           ref={inputRef}
           className="add-sub-inp"
+          style={{ flex: 1 }}
           placeholder="أضف عنصر جديد للقائمة..."
           value={newItemText}
           aria-label="إضافة عنصر جديد للقائمة الفرعية"
           onChange={(e) => onNewItemTextChange(e.target.value)}
+          onKeyDown={handleAddKeyDown}
+        />
+        <input
+          type="time"
+          className="add-sub-inp"
+          style={{ width: 'auto', padding: '0 8px' }}
+          value={newItemAlertTime}
+          aria-label="وقت تذكير العنصر الجديد"
+          onChange={(e) => onNewItemAlertTimeChange(e.target.value)}
           onKeyDown={handleAddKeyDown}
         />
         <button className="add-sub-btn" onClick={onAddSubItem}>

@@ -6,6 +6,7 @@ import type { TimeBlock, ShiftConfig } from '@/features/tasks/data/scheduleConfi
 export interface Subtask {
   id: string | number;
   text: string;
+  alertTime?: string;
 }
 
 export interface Brief {
@@ -87,10 +88,14 @@ export interface TaskManagerReturn {
   // Sub-item editing
   newItemText: Record<number, string>;
   setNewItemText: Dispatch<SetStateAction<Record<number, string>>>;
+  newItemAlertTime: Record<number, string>;
+  setNewItemAlertTime: Dispatch<SetStateAction<Record<number, string>>>;
   editingSubId: string | number | null;
   setEditingSubId: Dispatch<SetStateAction<string | number | null>>;
   editingSubText: string;
   setEditingSubText: Dispatch<SetStateAction<string>>;
+  editingSubAlertTime: string;
+  setEditingSubAlertTime: Dispatch<SetStateAction<string>>;
 
   // Modal
   modal: ModalState | null;

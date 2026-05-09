@@ -91,6 +91,24 @@ export default function useNotifications(tasks: Task[]): UseNotificationsReturn 
             }
           }
         }
+        // Subtask alert time notification
+        t.subtasks.forEach((s) => {
+          if (s.alertTime && s.alertTime === hhmm) {
+            const key = `subtask_${t.id}_${s.id}_${hhmm}`;
+            if (!notifiedRefs.current[key]) {
+              try {
+                new Notification('تذكير بمهمة فرعية 🔔', {
+                  body: `${t.title} - ${s.text}`,
+                  icon: '/favicon.ico',
+                  tag: key,
+                });
+                notifiedRefs.current[key] = true;
+              } catch (e) {
+                console.warn('[useNotifications] فشل إرسال الإشعار للمهمة الفرعية:', e);
+              }
+            }
+          }
+        });
         // Specific date task - notify on that day morning
         if (t.recurrence === 'موعد محدد' && t.date && t.date === todayISO()) {
           const dateKey = `date_${t.id}_${t.date}`;

@@ -52,8 +52,10 @@ export default function useTaskManager(
   scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS
 ): TaskManagerReturn {
   const [newItemText, setNewItemText] = useState<Record<number, string>>({});
+  const [newItemAlertTime, setNewItemAlertTime] = useState<Record<number, string>>({});
   const [editingSubId, setEditingSubId] = useState<string | number | null>(null);
   const [editingSubText, setEditingSubText] = useState('');
+  const [editingSubAlertTime, setEditingSubAlertTime] = useState('');
   const [modal, setModal] = useState<ModalState | null>(null);
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
@@ -62,16 +64,18 @@ export default function useTaskManager(
   const addSubItem = useCallback(
     (taskId: number, inputRef: RefObject<HTMLInputElement | null>) => {
       const text = (newItemText[taskId] ?? '').trim();
+      const alertTime = newItemAlertTime[taskId] ?? '';
       if (!text) return;
       setTasks((p) =>
         p.map((t) =>
-          t.id === taskId ? { ...t, subtasks: [...t.subtasks, { id: uid(), text }] } : t
+          t.id === taskId ? { ...t, subtasks: [...t.subtasks, { id: uid(), text, alertTime }] } : t
         )
       );
       setNewItemText((p) => ({ ...p, [taskId]: '' }));
+      setNewItemAlertTime((p) => ({ ...p, [taskId]: '' }));
       setTimeout(() => inputRef?.current?.focus(), 0);
     },
-    [newItemText, setTasks]
+    [newItemText, newItemAlertTime, setTasks]
   );
 
   const deleteSubItem = useCallback(
@@ -93,25 +97,29 @@ export default function useTaskManager(
   const startEditSub = useCallback((sub: Subtask) => {
     setEditingSubId(sub.id);
     setEditingSubText(sub.text);
+    setEditingSubAlertTime(sub.alertTime ?? '');
   }, []);
 
   const saveEditSub = useCallback(
     (taskId: number) => {
       const text = editingSubText.trim();
+      const alertTime = editingSubAlertTime;
       if (text)
         setTasks((p) =>
           p.map((t) =>
             t.id === taskId
               ? {
                   ...t,
-                  subtasks: t.subtasks.map((s) => (s.id === editingSubId ? { ...s, text } : s)),
+                  subtasks: t.subtasks.map((s) =>
+                    s.id === editingSubId ? { ...s, text, alertTime } : s
+                  ),
                 }
               : t
           )
         );
       setEditingSubId(null);
     },
-    [editingSubText, editingSubId, setTasks]
+    [editingSubText, editingSubAlertTime, editingSubId, setTasks]
   );
 
   const cancelEditSub = useCallback(() => setEditingSubId(null), []);
@@ -275,12 +283,11 @@ export default function useTaskManager(
     const prog = pTotal + total === 0 ? 0 : Math.round(((pd + done) / (pTotal + total)) * 100);
 
     // Group by time block (ordered by shiftConfig.blocks definition)
-    const byBlock = shiftConfig.blocks
-      .map((block) => ({
-        block,
-        tasks: others.filter((t) => (t.timeBlock ?? 'anytime') === block.id),
-        isCurrent: block.id === blockId,
-      }));
+    const byBlock = shiftConfig.blocks.map((block) => ({
+      block,
+      tasks: others.filter((t) => (t.timeBlock ?? 'anytime') === block.id),
+      isCurrent: block.id === blockId,
+    }));
 
     // Catch-all: tasks with 'anytime' or unrecognized timeBlock always appear
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
@@ -386,10 +393,14 @@ export default function useTaskManager(
     setSubChecked,
     newItemText,
     setNewItemText,
+    newItemAlertTime,
+    setNewItemAlertTime,
     editingSubId,
     setEditingSubId,
     editingSubText,
     setEditingSubText,
+    editingSubAlertTime,
+    setEditingSubAlertTime,
     modal,
     setModal,
     form,
