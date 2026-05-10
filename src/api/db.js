@@ -329,12 +329,8 @@ export default async function handler(req, res) {
     }
 
     return res.status(400).json({ error: `resource غير معروف: ${resource}` });
-  } catch (err) {
-    const isDev = process.env.NODE_ENV === 'development';
-    console.error('[db function error]', err);
-    return res.status(500).json({
-      error: 'خطأ داخلي في الخادم',
-      ...(isDev && { detail: err.message }),
-    });
+  } catch (error) {
+    console.error(`DB Error (${resource}):`, error);
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
   }
 }

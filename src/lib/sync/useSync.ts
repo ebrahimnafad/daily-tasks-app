@@ -293,7 +293,10 @@ export default function useSync(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: newTasks }),
       });
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Tasks Sync API error ${res.status}: ${text}`);
+      }
     },
     onMutate: async (newTasks) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
@@ -303,7 +306,9 @@ export default function useSync(
       return { prevTasks };
     },
     onSuccess: () => setHasError(false),
-    onError: (_err, _newTasks, context) => {
+    onError: (err, _newTasks, context) => {
+      console.error('Tasks sync error:', err);
+      alert(err.message);
       setHasError(true);
       const ctx = context as { prevTasks?: { tasks: Task[]; timestamp: number } } | undefined;
       if (ctx?.prevTasks) {
@@ -320,7 +325,10 @@ export default function useSync(
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schedule: newSchedule }),
       });
-      if (!res.ok) throw new Error('API error');
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Schedule Sync API error ${res.status}: ${text}`);
+      }
     },
     onMutate: async (newSchedule) => {
       await queryClient.cancelQueries({ queryKey: ['schedule'] });
@@ -332,7 +340,9 @@ export default function useSync(
       return { prevSchedule };
     },
     onSuccess: () => setHasError(false),
-    onError: (_err, _newSchedule, context) => {
+    onError: (err, _newSchedule, context) => {
+      console.error('Schedule sync error:', err);
+      alert(err.message);
       setHasError(true);
       const ctx = context as
         | { prevSchedule?: { schedule: ShiftConfig[]; timestamp: number } }
@@ -347,11 +357,15 @@ export default function useSync(
   const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
     mutationFn: async ({ checked: c, subChecked: sc }) => {
       const today = todayISO();
-      await fetch('/api/db?resource=daily', {
+      const res = await fetch('/api/db?resource=daily', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: today, checked: c, subChecked: sc }),
       });
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        throw new Error(`Daily Sync API error ${res.status}: ${text}`);
+      }
     },
     onMutate: async ({ checked: c, subChecked: sc }) => {
       const today = todayISO();
@@ -370,7 +384,9 @@ export default function useSync(
       return { prevDaily };
     },
     onSuccess: () => setHasError(false),
-    onError: (_err, _vars, context) => {
+    onError: (err, _vars, context) => {
+      console.error('Daily sync error:', err);
+      alert(err.message);
       setHasError(true);
       const ctx = context as { prevDaily?: { daily: DailyState; timestamp: number } } | undefined;
       if (ctx?.prevDaily) {
