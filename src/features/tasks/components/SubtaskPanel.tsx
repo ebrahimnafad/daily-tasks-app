@@ -133,10 +133,14 @@ export function SubtaskPanel({
               ) : (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <span
-                    className={`sub-text ${sdone ? 'done' : ''}`}
+                    className={`sub-text`}
                     onDoubleClick={() => onStartEditSub(s)}
                     title="اضغط مرتين لتعديل العنصر"
-                    style={{ flex: 1 }}
+                    style={{
+                      flex: 1,
+                      textDecoration: sdone ? 'line-through' : 'none',
+                      color: sdone ? 'rgba(var(--gold-rgb), 0.75)' : 'inherit',
+                    }}
                   >
                     {s.text}
                   </span>

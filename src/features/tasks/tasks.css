@@ -27,7 +27,7 @@
 }
 .th-date {
   font-size: var(--font-base);
-  color: rgba(var(--gold-rgb), 0.55);
+  color: rgba(var(--gold-rgb), 0.75);
   flex: 1;
   text-align: center;
 }
@@ -41,7 +41,7 @@
 .th-subtitle {
   margin-top: var(--space-xs);
   font-size: var(--font-base);
-  color: rgba(var(--gold-rgb), 0.45);
+  color: rgba(var(--gold-rgb), 0.75);
 }
 /* Header Dropdown Menu */
 .th-gear-btn {

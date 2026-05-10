@@ -8,7 +8,7 @@
   --gold: #c8a96e;
   --gold-light: #e8c980;
   --gold-rgb: 200, 169, 110;
-  --text-gold: #e8d5a8;
+  --text-gold: #fdf5e0;
   --bg-gradient: linear-gradient(160deg, #1a1209 0%, #2c1f0e 50%, #1a1209 100%);
   --bg-card: #231806;
   --bg-input: #1e1508;
@@ -39,7 +39,7 @@
   --gold: #dca7a5;
   --gold-light: #ebd1d0;
   --gold-rgb: 220, 167, 165;
-  --text-gold: #f5ebeb;
+  --text-gold: #ffffff;
   --bg-gradient: linear-gradient(160deg, #1f1315 0%, #331e22 50%, #1f1315 100%);
   --bg-card: #26171a;
   --bg-input: #1a0f12;
@@ -49,7 +49,7 @@
   --gold: #e6c27a;
   --gold-light: #f5dfaa;
   --gold-rgb: 230, 194, 122;
-  --text-gold: #fdf6e3;
+  --text-gold: #ffffff;
   --bg-gradient: linear-gradient(160deg, #1a1710 0%, #2c2514 50%, #1a1710 100%);
   --bg-card: #211d12;
   --bg-input: #17140b;
@@ -59,7 +59,7 @@
   --gold: #cc7a52;
   --gold-light: #e69f7a;
   --gold-rgb: 204, 122, 82;
-  --text-gold: #f0d9cc;
+  --text-gold: #ffffff;
   --bg-gradient: linear-gradient(160deg, #1f100a 0%, #331a10 50%, #1f100a 100%);
   --bg-card: #26130c;
   --bg-input: #1a0d08;
@@ -69,7 +69,7 @@
   --gold: #998561;
   --gold-light: #bda782;
   --gold-rgb: 153, 133, 97;
-  --text-gold: #cfc4b0;
+  --text-gold: #fdf6e3;
   --bg-gradient: linear-gradient(160deg, #0d0905 0%, #1a1209 50%, #0d0905 100%);
   --bg-card: #140d07;
   --bg-input: #0d0905;
@@ -80,7 +80,7 @@
   --gold: #7ca8d9 !important;
   --gold-light: #a6c8e8 !important;
   --gold-rgb: 124, 168, 217 !important;
-  --text-gold: #dbe9f5 !important;
+  --text-gold: #ffffff !important;
   --bg-gradient: linear-gradient(160deg, #09121a 0%, #0e1f2c 50%, #09121a 100%) !important;
   --bg-card: #061826 !important;
   --bg-input: #05101a !important;

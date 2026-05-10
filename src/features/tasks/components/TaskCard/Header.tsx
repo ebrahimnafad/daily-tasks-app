@@ -88,7 +88,7 @@ export default function Header() {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              color: done ? 'rgba(var(--gold-rgb),.38)' : 'var(--text-gold)',
+              color: done ? 'rgba(var(--gold-rgb),.75)' : 'var(--text-gold)',
               fontSize: 'var(--font-md)',
               fontWeight: 700,
               textDecoration: done ? 'line-through' : 'none',
@@ -118,7 +118,7 @@ export default function Header() {
             style={{
               flexShrink: 0,
               fontSize: 'var(--font-sm)',
-              color: 'rgba(var(--gold-rgb),.48)',
+              color: 'rgba(var(--gold-rgb),.75)',
               background: 'rgba(255,255,255,0.05)',
               padding: '2px 8px',
               borderRadius: 'var(--radius-sm)',
