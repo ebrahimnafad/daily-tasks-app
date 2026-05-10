@@ -56,7 +56,7 @@
   transition: all 0.2s ease;
 }
 .th-gear-btn:hover {
-  transform: rotate(15deg);
+  background: rgba(var(--gold-rgb), 0.1);
 }
 .th-dropdown-menu {
   position: absolute;

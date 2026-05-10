@@ -47,6 +47,10 @@ export default function TasksHeader({
       <header className="th-header" style={{ position: 'relative' }}>
         {/* Date and Settings */}
         <div className="th-date-row">
+          <div className="th-shift-icon" style={{ fontSize: '18px' }}>
+            {shift === 'morning' ? '☀️' : '🌙'}
+          </div>
+          <div className="th-date">{today}</div>
           <div className="th-menu-container" ref={menuRef}>
             <button
               className="icon-btn th-gear-btn"
@@ -57,7 +61,7 @@ export default function TasksHeader({
             </button>
 
             {isMenuOpen && (
-              <div className="th-dropdown-menu">
+              <div className="th-dropdown-menu" style={{ left: 'auto', right: 0 }}>
                 {notifPerm !== 'granted' && (
                   <button
                     className="th-menu-item th-menu-item--notif"
@@ -124,8 +128,6 @@ export default function TasksHeader({
               </div>
             )}
           </div>
-          <div className="th-date">{today}</div>
-          <div className="th-shift-icon">{shift === 'morning' ? '🌅' : '🌆'}</div>
         </div>
         <h1 className="th-title">مهام اليوم</h1>
         <div className="th-subtitle">بسم الله الرحمن الرحيم</div>
