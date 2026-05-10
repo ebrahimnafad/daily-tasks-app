@@ -46,15 +46,19 @@ interface ScheduleResponse {
 }
 
 const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
-  const res = await fetch('/api/db?resource=tasks', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as TasksResponse;
-  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-  if (data.tasks) {
-    const migrated = migrateTasks(data.tasks);
-    lsSet('mhm_tasks', migrated);
-    lsSet('mhm_tasks_timestamp', timestamp);
-    return { tasks: migrated, timestamp };
+  try {
+    const res = await fetch('/api/db?resource=tasks', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Network error');
+    const data = (await res.json()) as TasksResponse;
+    const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+    if (data.tasks) {
+      const migrated = migrateTasks(data.tasks);
+      lsSet('mhm_tasks', migrated);
+      lsSet('mhm_tasks_timestamp', timestamp);
+      return { tasks: migrated, timestamp };
+    }
+  } catch (err) {
+    console.error('Fetch tasks failed, using local fallback:', err);
   }
   const localTasks = migrateTasks(lsGet<Task[]>('mhm_tasks', []));
   return { tasks: localTasks, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
@@ -62,18 +66,22 @@ const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
 
 const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> => {
   const today = todayISO();
-  const res = await fetch(`/api/db?resource=daily&date=${today}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as DailyResponse;
-  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-  if (data.checked || data.subChecked) {
-    const checked = data.checked ?? {};
-    const subChecked = data.subChecked ?? {};
-    lsSet('mhm_checked', checked);
-    lsSet('mhm_sub_checked', subChecked);
-    lsSet('mhm_date', today);
-    lsSet('mhm_daily_timestamp', timestamp);
-    return { daily: { checked, subChecked }, timestamp };
+  try {
+    const res = await fetch(`/api/db?resource=daily&date=${today}`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Network error');
+    const data = (await res.json()) as DailyResponse;
+    const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+    if (data.checked || data.subChecked) {
+      const checked = data.checked ?? {};
+      const subChecked = data.subChecked ?? {};
+      lsSet('mhm_checked', checked);
+      lsSet('mhm_sub_checked', subChecked);
+      lsSet('mhm_date', today);
+      lsSet('mhm_daily_timestamp', timestamp);
+      return { daily: { checked, subChecked }, timestamp };
+    }
+  } catch (err) {
+    console.error('Fetch daily failed, using local fallback:', err);
   }
   const savedDate = lsGet<string | null>('mhm_date', null);
   if (savedDate === today) {
@@ -89,14 +97,18 @@ const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> =
 };
 
 const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
-  const res = await fetch('/api/db?resource=schedule', { cache: 'no-store' });
-  if (!res.ok) throw new Error('Network error');
-  const data = (await res.json()) as ScheduleResponse;
-  const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-  if (data.schedule && Array.isArray(data.schedule)) {
-    lsSet('mhm_schedule', data.schedule);
-    lsSet('mhm_schedule_timestamp', timestamp);
-    return { schedule: data.schedule, timestamp };
+  try {
+    const res = await fetch('/api/db?resource=schedule', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Network error');
+    const data = (await res.json()) as ScheduleResponse;
+    const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+    if (data.schedule && Array.isArray(data.schedule)) {
+      lsSet('mhm_schedule', data.schedule);
+      lsSet('mhm_schedule_timestamp', timestamp);
+      return { schedule: data.schedule, timestamp };
+    }
+  } catch (err) {
+    console.error('Fetch schedule failed, using local fallback:', err);
   }
   return {
     schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
@@ -238,7 +250,11 @@ export default function useSync(
   }>({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
-    initialData: () => ({ tasks: initialTasks, timestamp: 0 }),
+    initialData: () => {
+      const local = lsGet<Task[]>('mhm_tasks', []);
+      const localMigrated = local.length > 0 ? migrateTasks(local) : initialTasks;
+      return { tasks: localMigrated, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
+    },
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
@@ -272,11 +288,12 @@ export default function useSync(
   // ── Mutations ─────────────────────────────────────────────────────────
   const { mutate: updateTasksMut } = useMutation<void, Error, Task[]>({
     mutationFn: async (newTasks) => {
-      await fetch('/api/db?resource=tasks', {
+      const res = await fetch('/api/db?resource=tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: newTasks }),
       });
+      if (!res.ok) throw new Error('API error');
     },
     onMutate: async (newTasks) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
@@ -298,11 +315,12 @@ export default function useSync(
 
   const { mutate: updateScheduleMut } = useMutation<void, Error, ShiftConfig[]>({
     mutationFn: async (newSchedule) => {
-      await fetch('/api/db?resource=schedule', {
+      const res = await fetch('/api/db?resource=schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schedule: newSchedule }),
       });
+      if (!res.ok) throw new Error('API error');
     },
     onMutate: async (newSchedule) => {
       await queryClient.cancelQueries({ queryKey: ['schedule'] });

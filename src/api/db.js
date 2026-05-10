@@ -207,7 +207,7 @@ export default async function handler(req, res) {
 
         await sql`
           INSERT INTO tasks_definition (id, data, updated_at)
-          VALUES (1, ${JSON.stringify(tasks)}, NOW())
+          VALUES (1, ${JSON.stringify(tasks)}::jsonb, NOW())
           ON CONFLICT (id) DO UPDATE
             SET data = EXCLUDED.data, updated_at = NOW()
         `;
@@ -235,7 +235,7 @@ export default async function handler(req, res) {
 
         await sql`
           INSERT INTO schedule_config (id, data, updated_at)
-          VALUES (1, ${JSON.stringify(schedule)}, NOW())
+          VALUES (1, ${JSON.stringify(schedule)}::jsonb, NOW())
           ON CONFLICT (id) DO UPDATE
             SET data = EXCLUDED.data, updated_at = NOW()
         `;
@@ -283,8 +283,8 @@ export default async function handler(req, res) {
           INSERT INTO daily_state (date, checked, sub_checked, updated_at)
           VALUES (
             ${date},
-            ${JSON.stringify(checked ?? {})},
-            ${JSON.stringify(subChecked ?? {})},
+            ${JSON.stringify(checked ?? {})}::jsonb,
+            ${JSON.stringify(subChecked ?? {})}::jsonb,
             NOW()
           )
           ON CONFLICT (date) DO UPDATE
