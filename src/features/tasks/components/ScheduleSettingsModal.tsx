@@ -18,6 +18,7 @@ export default function ScheduleSettingsModal({
 }: ScheduleSettingsModalProps) {
   const [editingSchedule, setEditingSchedule] = useState<ShiftConfig[]>(schedule);
   const [selectedShiftId, setSelectedShiftId] = useState<string>(schedule[0]?.id || 'morning');
+  const [selectedDay, setSelectedDay] = useState<'default' | number>('default');
 
   if (!isOpen) return null;
 
@@ -38,21 +39,66 @@ export default function ScheduleSettingsModal({
       startHour: 0,
       endHour: 1,
     };
-    handleUpdateShift({
-      blocks: [...selectedShift.blocks, newBlock],
-    });
+    if (selectedDay === 'default') {
+      handleUpdateShift({ blocks: [...selectedShift.blocks, newBlock] });
+    } else {
+      const overrides = selectedShift.dayOverrides?.[selectedDay] || [];
+      handleUpdateShift({
+        dayOverrides: { ...selectedShift.dayOverrides, [selectedDay]: [...overrides, newBlock] },
+      });
+    }
   };
 
   const handleDeleteBlock = (blockId: string) => {
-    handleUpdateShift({
-      blocks: selectedShift.blocks.filter((b) => b.id !== blockId),
-    });
+    if (selectedDay === 'default') {
+      handleUpdateShift({
+        blocks: selectedShift.blocks.filter((b) => b.id !== blockId),
+      });
+    } else {
+      const overrides = selectedShift.dayOverrides?.[selectedDay] || [];
+      handleUpdateShift({
+        dayOverrides: {
+          ...selectedShift.dayOverrides,
+          [selectedDay]: overrides.filter((b) => b.id !== blockId),
+        },
+      });
+    }
   };
 
   const handleUpdateBlock = (blockId: string, updates: Partial<TimeBlock>) => {
+    if (selectedDay === 'default') {
+      handleUpdateShift({
+        blocks: selectedShift.blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b)),
+      });
+    } else {
+      const overrides = selectedShift.dayOverrides?.[selectedDay] || [];
+      handleUpdateShift({
+        dayOverrides: {
+          ...selectedShift.dayOverrides,
+          [selectedDay]: overrides.map((b) => (b.id === blockId ? { ...b, ...updates } : b)),
+        },
+      });
+    }
+  };
+
+  const handleCustomizeDay = () => {
+    if (selectedDay === 'default') return;
     handleUpdateShift({
-      blocks: selectedShift.blocks.map((b) => (b.id === blockId ? { ...b, ...updates } : b)),
+      dayOverrides: {
+        ...selectedShift.dayOverrides,
+        [selectedDay]: selectedShift.blocks.map((b) => ({
+          ...b,
+          id: `block-${Date.now()}-${b.id}`,
+        })),
+      },
     });
+  };
+
+  const handleRemoveCustomization = () => {
+    if (selectedDay === 'default') return;
+    const newOverrides = { ...selectedShift.dayOverrides };
+    delete newOverrides[selectedDay];
+    handleUpdateShift({ dayOverrides: newOverrides });
   };
 
   const handleAddOffDay = (day: number) => {
@@ -202,17 +248,71 @@ export default function ScheduleSettingsModal({
 
         {/* Time Blocks Section */}
         <div>
-          <div className="ss-blocks-header">
+          <div
+            className="ss-blocks-header"
+            style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}
+          >
             <div className="ss-section-title" style={{ marginBottom: 0 }}>
-              ⏱️ الكتل الزمنية (يومياً)
+              ⏱️ الكتل الزمنية
             </div>
-            <button className="ss-add-btn" onClick={handleAddBlock}>
-              + إضافة كتلة
-            </button>
+
+            {/* Day Selector */}
+            <div className="ss-tabs" role="tablist" style={{ marginTop: 0, flexWrap: 'wrap' }}>
+              <button
+                role="tab"
+                aria-selected={selectedDay === 'default'}
+                className={`ss-tab ${selectedDay === 'default' ? 'active' : ''}`}
+                onClick={() => setSelectedDay('default')}
+              >
+                الجدول الافتراضي
+              </button>
+              {days.map((day, idx) => (
+                <button
+                  key={idx}
+                  role="tab"
+                  aria-selected={selectedDay === idx}
+                  className={`ss-tab ${selectedDay === idx ? 'active' : ''}`}
+                  onClick={() => setSelectedDay(idx)}
+                >
+                  {day} {selectedShift.dayOverrides?.[idx] ? '⚙️' : ''}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              {selectedDay !== 'default' && !selectedShift.dayOverrides?.[selectedDay] && (
+                <button className="btn-cancel" onClick={handleCustomizeDay}>
+                  تخصيص هذا اليوم
+                </button>
+              )}
+              {selectedDay !== 'default' && selectedShift.dayOverrides?.[selectedDay] && (
+                <button
+                  className="btn-cancel"
+                  style={{ color: 'var(--red)', borderColor: 'var(--red)' }}
+                  onClick={handleRemoveCustomization}
+                >
+                  إلغاء التخصيص
+                </button>
+              )}
+              {(selectedDay === 'default' || selectedShift.dayOverrides?.[selectedDay]) && (
+                <button className="ss-add-btn" onClick={handleAddBlock}>
+                  + إضافة كتلة
+                </button>
+              )}
+            </div>
           </div>
 
-          <div>
-            {selectedShift.blocks.map((block) => (
+          <div
+            style={
+              selectedDay !== 'default' && !selectedShift.dayOverrides?.[selectedDay]
+                ? { opacity: 0.5, pointerEvents: 'none' }
+                : {}
+            }
+          >
+            {(selectedDay === 'default' || !selectedShift.dayOverrides?.[selectedDay]
+              ? selectedShift.blocks
+              : selectedShift.dayOverrides[selectedDay]
+            ).map((block) => (
               <div key={block.id} className="ss-block-card">
                 <button
                   className="icon-btn icon-btn--delete ss-block-delete"

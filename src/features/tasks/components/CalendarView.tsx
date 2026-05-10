@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Task } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
 import { KEYS } from '@/features/finance/hooks/useFinanceSync';
-import { lsGet } from '@/lib/storage/localStorage';
+import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
 
@@ -49,6 +49,21 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
 
   const [expenses] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
   const [transactions] = useState<Transaction[]>(() => lsGet(KEYS.transactions, []));
+  const [notes, setNotes] = useState<Record<string, string>>(() => lsGet('mhm_calendar_notes', {}));
+
+  const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNotes((prev) => {
+      const newNotes = { ...prev };
+      if (!val.trim()) {
+        delete newNotes[selectedDate];
+      } else {
+        newNotes[selectedDate] = val;
+      }
+      lsSet('mhm_calendar_notes', newNotes);
+      return newNotes;
+    });
+  };
 
   const financeEventsByDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -215,6 +230,9 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
               className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${dayTasks.length > 0 || hasExpenses ? 'cal-cell--has-tasks' : ''}`}
             >
               <span className="cal-day-num">{day}</span>
+              {notes[dateStr] && (
+                <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}>📝</span>
+              )}
               <div className="cal-tasks">
                 {dayFinance.slice(0, 2).map((fe) => (
                   <div
@@ -289,6 +307,36 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
             ))}
           </div>
         )}
+
+        {/* Note Editor */}
+        <div style={{ marginTop: '24px' }}>
+          <label
+            style={{
+              display: 'block',
+              marginBottom: '8px',
+              color: 'var(--text-gold)',
+              fontWeight: 600,
+            }}
+          >
+            📝 ملاحظات اليوم
+          </label>
+          <textarea
+            value={notes[selectedDate] || ''}
+            onChange={handleNoteChange}
+            placeholder="أضف ملاحظة لهذا اليوم..."
+            style={{
+              width: '100%',
+              minHeight: '80px',
+              padding: '12px',
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px solid rgba(var(--gold-rgb), 0.2)',
+              borderRadius: 'var(--radius-sm)',
+              color: 'var(--text)',
+              fontFamily: 'inherit',
+              resize: 'vertical',
+            }}
+          />
+        </div>
       </div>
     </div>
   );

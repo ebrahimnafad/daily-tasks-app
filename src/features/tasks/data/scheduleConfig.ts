@@ -35,6 +35,8 @@ export interface ShiftConfig {
   /** Friday special schedule for this shift */
   fridaySchedule: FridaySchedule;
   blocks: TimeBlock[];
+  /** Custom block schedules per day of week (0=Sun…6=Sat) */
+  dayOverrides?: Partial<Record<number, TimeBlock[]>>;
 }
 
 // ── Time Blocks ───────────────────────────────────────────────────
@@ -144,12 +146,15 @@ export function isWorkday(shiftId: string, shifts: ShiftConfig[], dayOfWeek: num
 export function getCurrentBlockId(
   shiftId: string,
   shifts: ShiftConfig[],
-  hourDecimal: number
+  hourDecimal: number,
+  dayOfWeek?: number
 ): string | null {
   const shift = shifts.find((s) => s.id === shiftId);
   if (!shift) return null;
 
-  for (const block of shift.blocks) {
+  const blocks = (dayOfWeek !== undefined && shift.dayOverrides?.[dayOfWeek]) || shift.blocks;
+
+  for (const block of blocks) {
     const { startHour, endHour } = block;
     if (endHour > startHour) {
       // Normal range (doesn't cross midnight)

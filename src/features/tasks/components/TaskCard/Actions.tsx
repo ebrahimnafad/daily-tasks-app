@@ -1,7 +1,7 @@
 import { useTaskCardContext } from './TaskCardContext';
 
 export default function Actions() {
-  const { isActionsOpen, task, tm } = useTaskCardContext();
+  const { isActionsOpen, task, tm, isSkipped } = useTaskCardContext();
 
   if (!isActionsOpen) return null;
 
@@ -82,13 +82,13 @@ export default function Actions() {
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.2)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')}
-          aria-label={`تخطي مهمة: ${task.title}`}
+          aria-label={isSkipped ? `إلغاء تخطي مهمة: ${task.title}` : `تخطي مهمة: ${task.title}`}
           onClick={(e) => {
             e.stopPropagation();
-            // Skip action placeholder
+            tm.toggleSkipTask(task.id);
           }}
         >
-          ⏭️ تخطي
+          {isSkipped ? '↩️ إلغاء التخطي' : '⏭️ تخطي'}
         </button>
 
         <button
@@ -107,13 +107,15 @@ export default function Actions() {
           }}
           onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.2)')}
           onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')}
-          aria-label={`تثبيت مهمة: ${task.title}`}
+          aria-label={
+            task.isPinned ? `إزالة تثبيت مهمة: ${task.title}` : `تثبيت مهمة: ${task.title}`
+          }
           onClick={(e) => {
             e.stopPropagation();
-            // Pin action placeholder
+            tm.togglePinTask(task.id);
           }}
         >
-          📌 تثبيت
+          {task.isPinned ? '📌 إزالة التثبيت' : '📌 تثبيت'}
         </button>
       </div>
     </div>

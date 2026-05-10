@@ -48,6 +48,8 @@ export default function useTaskManager(
   setChecked: Dispatch<SetStateAction<CheckedMap>>,
   subChecked: SubCheckedMap,
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>,
+  skipped: CheckedMap,
+  setSkipped: Dispatch<SetStateAction<CheckedMap>>,
   shift: ShiftType,
   scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS
 ): TaskManagerReturn {
@@ -130,11 +132,13 @@ export default function useTaskManager(
     const currentBlockId = getCurrentBlockId(
       shift,
       scheduleConfig,
-      now.getHours() + now.getMinutes() / 60
+      now.getHours() + now.getMinutes() / 60,
+      now.getDay()
     );
     // Don't pre-select optional (walking) or rest (sleep) blocks — user should choose explicitly
     const shiftConfig = scheduleConfig.find((s) => s.id === shift);
-    const currentBlock = shiftConfig?.blocks.find((b) => b.id === currentBlockId);
+    const activeBlocks = shiftConfig?.dayOverrides?.[now.getDay()] || shiftConfig?.blocks || [];
+    const currentBlock = activeBlocks.find((b) => b.id === currentBlockId);
     const defaultBlock =
       currentBlock && !currentBlock.isOptional && !currentBlock.isRest ? currentBlockId : 'anytime';
     setForm({
@@ -237,6 +241,25 @@ export default function useTaskManager(
     [tasks, setTasks, setChecked, setSubChecked]
   );
 
+  const togglePinTask = useCallback(
+    (id: number) => {
+      setTasks((p) => p.map((t) => (t.id === id ? { ...t, isPinned: !t.isPinned } : t)));
+    },
+    [setTasks]
+  );
+
+  const toggleSkipTask = useCallback(
+    (id: number) => {
+      setSkipped((p) => {
+        const n = { ...p };
+        if (n[id]) delete n[id];
+        else n[id] = true;
+        return n;
+      });
+    },
+    [setSkipped]
+  );
+
   // ── Shift-aware Derived State ─────────────────────────────────────────────
   const {
     shiftTasks,
@@ -254,7 +277,7 @@ export default function useTaskManager(
     const dayOfWeek = now.getDay();
     const hourDecimal = now.getHours() + now.getMinutes() / 60;
     const workday = isWorkday(shift, scheduleConfig, dayOfWeek);
-    const blockId = getCurrentBlockId(shift, scheduleConfig, hourDecimal);
+    const blockId = getCurrentBlockId(shift, scheduleConfig, hourDecimal, dayOfWeek);
     const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
     // Filter tasks applicable to current shift + day
@@ -279,20 +302,28 @@ export default function useTaskManager(
     const done = others.filter((t) =>
       t.subtasks.length > 0 ? t.subtasks.every((s) => subChecked[s.id]) : checked[t.id]
     ).length;
-    const total = others.length;
-    const prog = pTotal + total === 0 ? 0 : Math.round(((pd + done) / (pTotal + total)) * 100);
+    const total = others.length - others.filter((t) => skipped[t.id]).length;
+    const activeProgTotal = pTotal + total;
+    const prog = activeProgTotal === 0 ? 0 : Math.round(((pd + done) / activeProgTotal) * 100);
 
-    // Group by time block (ordered by shiftConfig.blocks definition)
-    const byBlock = shiftConfig.blocks.map((block) => ({
-      block,
-      tasks: others.filter((t) => (t.timeBlock ?? 'anytime') === block.id),
-      isCurrent: block.id === blockId,
-    }));
+    // Group by time block (ordered by active blocks definition)
+    const activeBlocks = shiftConfig.dayOverrides?.[dayOfWeek] || shiftConfig.blocks;
+    const byBlock = activeBlocks.map((block) => {
+      const blockTasks = others.filter((t) => (t.timeBlock ?? 'anytime') === block.id);
+      // Sort pinned tasks to the top
+      blockTasks.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+      return {
+        block,
+        tasks: blockTasks,
+        isCurrent: block.id === blockId,
+      };
+    });
 
     // Catch-all: tasks with 'anytime' or unrecognized timeBlock always appear
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
     const unassigned = others.filter((t) => !assignedIds.has(t.id));
     if (unassigned.length > 0) {
+      unassigned.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
       byBlock.push({
         block: { id: 'anytime', label: 'مهام أخرى', icon: '📌', startHour: 0, endHour: 24 },
         tasks: unassigned,
@@ -326,7 +357,7 @@ export default function useTaskManager(
       currentBlockId: blockId,
       tasksByBlock: [...prayerBlockEntry, ...byBlock],
     };
-  }, [tasks, shift, scheduleConfig, checked, subChecked]);
+  }, [tasks, shift, scheduleConfig, checked, subChecked, skipped]);
 
   // ── Google Sheets Export ──────────────────────────────────────────────────
   const sendToSheets = useCallback(async () => {
@@ -394,6 +425,8 @@ export default function useTaskManager(
     setTasks,
     setChecked,
     setSubChecked,
+    skipped,
+    setSkipped,
     newItemText,
     setNewItemText,
     newItemAlertTime,
@@ -420,6 +453,8 @@ export default function useTaskManager(
     setFormField,
     saveTask,
     deleteTask,
+    togglePinTask,
+    toggleSkipTask,
     sendToSheets,
     resetNewDay,
     prayerTask,

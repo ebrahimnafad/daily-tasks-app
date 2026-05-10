@@ -95,6 +95,7 @@ export default function Header() {
               transition: 'color .3s',
             }}
           >
+            {task.isPinned && '📌 '}
             {task.title}
           </span>
 

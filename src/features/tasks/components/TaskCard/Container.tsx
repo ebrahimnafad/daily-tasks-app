@@ -19,6 +19,8 @@ function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContaine
   const [isSubtaskOpen, setIsSubtaskOpen] = useState(task.id === 2);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
 
+  const isSkipped = !!tm.skipped[task.id];
+
   const onToggleExpanded = () => setIsExpanded((p) => !p);
   const onToggleBrief = () => setIsBriefOpen((p) => !p);
   const onToggleSubtask = () => setIsSubtaskOpen((p) => !p);
@@ -56,6 +58,7 @@ function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContaine
     prayerTotal,
     setChecked,
     setSubChecked,
+    isSkipped,
   };
 
   return (

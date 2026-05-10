@@ -569,6 +569,7 @@
   margin-bottom: var(--space-lg);
 }
 .cal-cell {
+  position: relative;
   aspect-ratio: 1;
   background: rgba(var(--gold-rgb), 0.03);
   border-radius: var(--radius-sm);

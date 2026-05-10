@@ -28,6 +28,8 @@ export default function App() {
     setChecked,
     subChecked,
     setSubChecked,
+    skipped,
+    setSkipped,
     schedule,
     setSchedule,
     shift,
@@ -45,6 +47,8 @@ export default function App() {
     setChecked,
     subChecked,
     setSubChecked,
+    skipped,
+    setSkipped,
     shift,
     schedule
   );
@@ -76,6 +80,7 @@ export default function App() {
       tm,
       setChecked,
       setSubChecked,
+      setSkipped,
       scheduleConfig: schedule,
       setScheduleConfig: setSchedule,
       prayersDone,
@@ -87,6 +92,7 @@ export default function App() {
       tm,
       setChecked,
       setSubChecked,
+      setSkipped,
       schedule,
       setSchedule,
       prayersDone,

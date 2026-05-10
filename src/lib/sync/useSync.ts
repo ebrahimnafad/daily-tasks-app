@@ -18,6 +18,7 @@ export const todayISO = (): string => new Date().toISOString().split('T')[0];
 interface DailyState {
   checked: CheckedMap;
   subChecked: SubCheckedMap;
+  skipped: CheckedMap;
 }
 
 // ── Task migration — handle old tasks without shifts/timeBlock ────────────
@@ -37,6 +38,7 @@ interface TasksResponse {
 interface DailyResponse {
   checked: CheckedMap;
   subChecked: SubCheckedMap;
+  skipped?: CheckedMap;
   updatedAt: string | null;
 }
 
@@ -71,14 +73,16 @@ const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> =
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as DailyResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-    if (data.checked || data.subChecked) {
+    if (data.checked || data.subChecked || data.skipped) {
       const checked = data.checked ?? {};
       const subChecked = data.subChecked ?? {};
+      const skipped = data.skipped ?? {};
       lsSet('mhm_checked', checked);
       lsSet('mhm_sub_checked', subChecked);
+      lsSet('mhm_skipped', skipped);
       lsSet('mhm_date', today);
       lsSet('mhm_daily_timestamp', timestamp);
-      return { daily: { checked, subChecked }, timestamp };
+      return { daily: { checked, subChecked, skipped }, timestamp };
     }
   } catch (err) {
     console.error('Fetch daily failed, using local fallback:', err);
@@ -89,11 +93,12 @@ const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> =
       daily: {
         checked: lsGet<CheckedMap>('mhm_checked', {}),
         subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
+        skipped: lsGet<CheckedMap>('mhm_skipped', {}),
       },
       timestamp: lsGet<number>('mhm_daily_timestamp', 0),
     };
   }
-  return { daily: { checked: {}, subChecked: {} }, timestamp: 0 };
+  return { daily: { checked: {}, subChecked: {}, skipped: {} }, timestamp: 0 };
 };
 
 const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
@@ -124,6 +129,8 @@ export interface UseSyncReturn {
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   subChecked: SubCheckedMap;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  skipped: CheckedMap;
+  setSkipped: Dispatch<SetStateAction<CheckedMap>>;
   schedule: ShiftConfig[];
   setSchedule: Dispatch<SetStateAction<ShiftConfig[]>>;
   shift: ShiftType;
@@ -207,9 +214,10 @@ export default function useSync(
       const today = todayISO();
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
-        queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {} });
+        queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
         lsSet('mhm_checked', {}, onQuota);
         lsSet('mhm_sub_checked', {}, onQuota);
+        lsSet('mhm_skipped', {}, onQuota);
         lsSet('mhm_date', today, onQuota);
         onNewDay?.();
       }
@@ -273,17 +281,22 @@ export default function useSync(
           daily: {
             checked: lsGet<CheckedMap>('mhm_checked', {}),
             subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
+            skipped: lsGet<CheckedMap>('mhm_skipped', {}),
           },
           timestamp: 0,
         };
       }
-      return { daily: { checked: {}, subChecked: {} }, timestamp: 0 };
+      return { daily: { checked: {}, subChecked: {}, skipped: {} }, timestamp: 0 };
     },
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
 
-  const { checked, subChecked } = dailyResp?.daily ?? { checked: {}, subChecked: {} };
+  const { checked, subChecked, skipped } = dailyResp?.daily ?? {
+    checked: {},
+    subChecked: {},
+    skipped: {},
+  };
 
   // ── Mutations ─────────────────────────────────────────────────────────
   const { mutate: updateTasksMut } = useMutation<void, Error, Task[]>({
@@ -355,19 +368,19 @@ export default function useSync(
   });
 
   const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
-    mutationFn: async ({ checked: c, subChecked: sc }) => {
+    mutationFn: async ({ checked: c, subChecked: sc, skipped: sk }) => {
       const today = todayISO();
       const res = await fetch('/api/db?resource=daily', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ date: today, checked: c, subChecked: sc }),
+        body: JSON.stringify({ date: today, checked: c, subChecked: sc, skipped: sk }),
       });
       if (!res.ok) {
         const text = await res.text().catch(() => '');
         throw new Error(`Daily Sync API error ${res.status}: ${text}`);
       }
     },
-    onMutate: async ({ checked: c, subChecked: sc }) => {
+    onMutate: async ({ checked: c, subChecked: sc, skipped: sk }) => {
       const today = todayISO();
       await queryClient.cancelQueries({ queryKey: ['daily', today] });
       const prevDaily = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
@@ -375,11 +388,12 @@ export default function useSync(
         today,
       ]);
       queryClient.setQueryData(['daily', today], {
-        daily: { checked: c, subChecked: sc },
+        daily: { checked: c, subChecked: sc, skipped: sk },
         timestamp: Date.now(),
       });
       lsSet('mhm_checked', c, onQuota);
       lsSet('mhm_sub_checked', sc, onQuota);
+      lsSet('mhm_skipped', sk, onQuota);
       lsSet('mhm_date', today, onQuota);
       return { prevDaily };
     },
@@ -426,9 +440,10 @@ export default function useSync(
       ])?.daily ?? {
         checked: {},
         subChecked: {},
+        skipped: {},
       };
       const next = typeof updater === 'function' ? updater(cur.checked) : updater;
-      updateDailyMut({ checked: next, subChecked: cur.subChecked });
+      updateDailyMut({ checked: next, subChecked: cur.subChecked, skipped: cur.skipped });
     },
     [queryClient, updateDailyMut]
   );
@@ -441,9 +456,26 @@ export default function useSync(
       ])?.daily ?? {
         checked: {},
         subChecked: {},
+        skipped: {},
       };
       const next = typeof updater === 'function' ? updater(cur.subChecked) : updater;
-      updateDailyMut({ checked: cur.checked, subChecked: next });
+      updateDailyMut({ checked: cur.checked, subChecked: next, skipped: cur.skipped });
+    },
+    [queryClient, updateDailyMut]
+  );
+
+  const setSkipped = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
+    (updater) => {
+      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+        'daily',
+        todayISO(),
+      ])?.daily ?? {
+        checked: {},
+        subChecked: {},
+        skipped: {},
+      };
+      const next = typeof updater === 'function' ? updater(cur.skipped) : updater;
+      updateDailyMut({ checked: cur.checked, subChecked: cur.subChecked, skipped: next });
     },
     [queryClient, updateDailyMut]
   );
@@ -464,6 +496,8 @@ export default function useSync(
     setChecked,
     subChecked,
     setSubChecked,
+    skipped,
+    setSkipped,
     schedule,
     setSchedule,
     shift,

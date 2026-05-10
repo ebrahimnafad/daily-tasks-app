@@ -23,6 +23,7 @@ export interface TaskCardContextValue {
   prayerTotal: number;
   setChecked: React.Dispatch<React.SetStateAction<CheckedMap>>;
   setSubChecked: React.Dispatch<React.SetStateAction<SubCheckedMap>>;
+  isSkipped: boolean;
 }
 
 export const TaskCardContext = createContext<TaskCardContextValue | null>(null);

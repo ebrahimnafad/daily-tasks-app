@@ -30,6 +30,7 @@ export interface Task {
   date?: string;
   alertTime?: string;
   isPrayerTask: boolean;
+  isPinned?: boolean;
   subtasks: Subtask[];
   brief: Brief;
   /** Legacy field — kept for migration only, do not use */
@@ -81,9 +82,11 @@ export interface TaskManagerReturn {
   tasks: Task[];
   checked: CheckedMap;
   subChecked: SubCheckedMap;
+  skipped: CheckedMap;
   setTasks: Dispatch<SetStateAction<Task[]>>;
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  setSkipped: Dispatch<SetStateAction<CheckedMap>>;
 
   // Sub-item editing
   newItemText: Record<number, string>;
@@ -118,6 +121,8 @@ export interface TaskManagerReturn {
   setFormField: <K extends keyof TaskForm>(f: K, v: TaskForm[K]) => void;
   saveTask: () => void;
   deleteTask: (id: number) => void;
+  togglePinTask: (id: number) => void;
+  toggleSkipTask: (id: number) => void;
 
   // Actions
   sendToSheets: () => Promise<void>;
@@ -152,6 +157,7 @@ export interface TaskContextValue {
   tm: TaskManagerReturn;
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  setSkipped: Dispatch<SetStateAction<CheckedMap>>;
   scheduleConfig: ShiftConfig[];
   setScheduleConfig: Dispatch<SetStateAction<ShiftConfig[]>>;
   prayersDone: number;
@@ -169,6 +175,8 @@ export interface UseSyncReturn {
   setChecked: Dispatch<SetStateAction<CheckedMap>>;
   subChecked: SubCheckedMap;
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>;
+  skipped: CheckedMap;
+  setSkipped: Dispatch<SetStateAction<CheckedMap>>;
   shift: string;
   setShift: Dispatch<SetStateAction<string>>;
   syncStatus: SyncStatus;
