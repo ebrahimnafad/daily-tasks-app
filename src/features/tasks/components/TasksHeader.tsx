@@ -61,7 +61,7 @@ export default function TasksHeader({
             </button>
 
             {isMenuOpen && (
-              <div className="th-dropdown-menu" style={{ left: 'auto', right: 0 }}>
+              <div className="th-dropdown-menu" style={{ left: 0, right: 'auto' }}>
                 {notifPerm !== 'granted' && (
                   <button
                     className="th-menu-item th-menu-item--notif"
