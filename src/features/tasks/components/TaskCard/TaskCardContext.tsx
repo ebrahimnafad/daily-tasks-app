@@ -9,9 +9,11 @@ export interface TaskCardContextValue {
   isExpanded: boolean;
   isBriefOpen: boolean;
   isSubtaskOpen: boolean;
+  isActionsOpen: boolean;
   onToggleExpanded: () => void;
   onToggleBrief: () => void;
   onToggleSubtask: () => void;
+  onToggleActions: () => void;
   hasSubs: boolean;
   subsDone: number;
   done: boolean;

@@ -2,6 +2,7 @@ import { useTaskCardContext } from './TaskCardContext';
 import Header from './Header';
 import Subtasks from './Subtasks';
 import Brief from './Brief';
+import Actions from './Actions';
 
 export default function View() {
   const { task, done } = useTaskCardContext();
@@ -14,6 +15,7 @@ export default function View() {
       <Header />
       <Subtasks />
       <Brief />
+      <Actions />
     </article>
   );
 }
@@ -21,3 +23,4 @@ export default function View() {
 View.Header = Header;
 View.Subtasks = Subtasks;
 View.Brief = Brief;
+View.Actions = Actions;

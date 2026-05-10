@@ -17,10 +17,12 @@ function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContaine
   const [isExpanded, setIsExpanded] = useState(task.id === 1);
   const [isBriefOpen, setIsBriefOpen] = useState(false);
   const [isSubtaskOpen, setIsSubtaskOpen] = useState(task.id === 2);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
 
   const onToggleExpanded = () => setIsExpanded((p) => !p);
   const onToggleBrief = () => setIsBriefOpen((p) => !p);
   const onToggleSubtask = () => setIsSubtaskOpen((p) => !p);
+  const onToggleActions = () => setIsActionsOpen((p) => !p);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,9 +42,11 @@ function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContaine
     isExpanded,
     isBriefOpen,
     isSubtaskOpen,
+    isActionsOpen,
     onToggleExpanded,
     onToggleBrief,
     onToggleSubtask,
+    onToggleActions,
     hasSubs,
     subsDone,
     done,

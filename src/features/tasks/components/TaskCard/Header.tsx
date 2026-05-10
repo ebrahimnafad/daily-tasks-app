@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react';
 import { useTaskCardContext } from './TaskCardContext';
 import { PrayerRing, SubRing, AccessibleCheckbox } from '@/shared/components';
 
@@ -21,25 +20,11 @@ export default function Header() {
     onToggleBrief,
     isSubtaskOpen,
     onToggleSubtask,
-    tm,
+    isActionsOpen,
+    onToggleActions,
     prayersDone,
     prayerTotal,
   } = useTaskCardContext();
-
-  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
-  const actionsMenuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (actionsMenuRef.current && !actionsMenuRef.current.contains(event.target as Node)) {
-        setIsActionsMenuOpen(false);
-      }
-    };
-    if (isActionsMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isActionsMenuOpen]);
 
   return (
     <div
@@ -185,7 +170,7 @@ export default function Header() {
 
           {!task.isPrayerTask && (
             <button
-              className={`toggle-btn--list ${isSubtaskOpen ? 'on' : ''}`}
+              className={`toggle-btn ${isSubtaskOpen ? 'on' : ''}`}
               style={{ flex: 1, textAlign: 'center' }}
               aria-expanded={isSubtaskOpen}
               aria-label={isSubtaskOpen ? 'إخفاء القائمة الفرعية' : 'عرض القائمة الفرعية'}
@@ -235,158 +220,21 @@ export default function Header() {
             بريف
           </button>
 
-          {/* Actions Menu */}
-          <div ref={actionsMenuRef} style={{ position: 'relative', flex: 1 }}>
-            <button
-              className={`toggle-btn ${isActionsMenuOpen ? 'on' : ''}`}
-              style={{ width: '100%', textAlign: 'center' }}
-              aria-expanded={isActionsMenuOpen}
-              aria-label={isActionsMenuOpen ? 'إغلاق الإجراءات' : 'فتح الإجراءات'}
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsActionsMenuOpen(!isActionsMenuOpen);
-              }}
-            >
-              <span style={{ fontSize: 'var(--font-sm)' }} aria-hidden="true">
-                {isActionsMenuOpen ? '▲' : '▼'}
-              </span>
-              إجراءات
-            </button>
-
-            {isActionsMenuOpen && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  marginTop: '4px',
-                  background: 'var(--bg-card)',
-                  border: '1px solid rgba(var(--gold-rgb), 0.3)',
-                  borderRadius: 'var(--radius-md)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
-                  padding: 'var(--space-sm)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: 'var(--space-xs)',
-                  animation: 'dropdown-fade-in 0.2s ease-out forwards',
-                  zIndex: 100,
-                }}
-              >
-                <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'right',
-                    padding: 'var(--space-sm) var(--space-md)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-gold)',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--font-base)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  aria-label={`تعديل مهمة: ${task.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tm.openEdit(task, e);
-                    setIsActionsMenuOpen(false);
-                  }}
-                >
-                  ✏️ تعديل
-                </button>
-
-                <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'right',
-                    padding: 'var(--space-sm) var(--space-md)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: '#d97e6a',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--font-base)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  aria-label={`حذف مهمة: ${task.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    tm.setDeleteConfirm(task.id);
-                    setIsActionsMenuOpen(false);
-                  }}
-                >
-                  🗑️ حذف
-                </button>
-
-                <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'right',
-                    padding: 'var(--space-sm) var(--space-md)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-gold)',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--font-base)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  aria-label={`تخطي مهمة: ${task.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Skip action - you may need to implement this based on your task model
-                    setIsActionsMenuOpen(false);
-                  }}
-                >
-                  ⏭️ تخطي
-                </button>
-
-                <button
-                  style={{
-                    width: '100%',
-                    textAlign: 'right',
-                    padding: 'var(--space-sm) var(--space-md)',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--text-gold)',
-                    fontFamily: 'inherit',
-                    fontSize: 'var(--font-base)',
-                    borderRadius: 'var(--radius-sm)',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                  }}
-                  onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = 'rgba(var(--gold-rgb), 0.1)')
-                  }
-                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
-                  aria-label={`تثبيت مهمة: ${task.title}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Pin action - you may need to implement this based on your task model
-                    setIsActionsMenuOpen(false);
-                  }}
-                >
-                  📌 تثبيت
-                </button>
-              </div>
-            )}
-          </div>
+          <button
+            className={`toggle-btn ${isActionsOpen ? 'on' : ''}`}
+            style={{ flex: 1, textAlign: 'center' }}
+            aria-expanded={isActionsOpen}
+            aria-label={isActionsOpen ? 'إغلاق الإجراءات' : 'فتح الإجراءات'}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleActions();
+            }}
+          >
+            <span style={{ fontSize: 'var(--font-sm)' }} aria-hidden="true">
+              {isActionsOpen ? '▲' : '▼'}
+            </span>
+            إجراءات
+          </button>
         </div>
       </div>
     </div>
