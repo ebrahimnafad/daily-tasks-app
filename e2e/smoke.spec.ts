@@ -1,5 +1,20 @@
 import { test, expect } from '@playwright/test';
 
+test.beforeEach(async ({ page }) => {
+  // Mock API requests to prevent optimistic update rollbacks when DB is not configured
+  await page.route('**/api/db**', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }),
+      });
+    } else {
+      await route.fallback();
+    }
+  });
+});
+
 test.describe('Smoke Tests', () => {
   test('app loads', async ({ page }) => {
     await page.goto('/');
