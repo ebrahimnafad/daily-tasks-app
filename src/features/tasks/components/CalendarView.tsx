@@ -3,6 +3,8 @@ import type { Task } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
 import { KEYS } from '@/features/finance/hooks/useFinanceSync';
 import { lsGet } from '@/lib/storage/localStorage';
+import { useTaskContext } from '@/features/tasks/context/TaskContext';
+import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
 
 interface FinanceEvent {
   id: string;
@@ -34,6 +36,7 @@ const MONTHS = [
 ];
 
 export default function CalendarView({ tasks }: CalendarViewProps) {
+  const { tm } = useTaskContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const today = new Date().toISOString().split('T')[0];
   const [selectedDate, setSelectedDate] = useState<string>(today);
@@ -277,11 +280,12 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
               </div>
             ))}
             {selectedDateTasks.map((task) => (
-              <div key={task.id} className="cal-task-item">
-                <span>{task.icon}</span>
-                <span style={{ color: task.color }}>{task.category}</span>
-                <span>{task.title}</span>
-              </div>
+              <TaskCard
+                key={task.id}
+                task={task}
+                isChecked={!!tm.checked[task.id]}
+                taskSubChecked={tm.taskSubCheckedMap[task.id]}
+              />
             ))}
           </div>
         )}

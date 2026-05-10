@@ -46,7 +46,7 @@ interface ScheduleResponse {
 }
 
 const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
-  const res = await fetch('/api/db?resource=tasks');
+  const res = await fetch('/api/db?resource=tasks', { cache: 'no-store' });
   if (!res.ok) throw new Error('Network error');
   const data = (await res.json()) as TasksResponse;
   const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -62,7 +62,7 @@ const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
 
 const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> => {
   const today = todayISO();
-  const res = await fetch(`/api/db?resource=daily&date=${today}`);
+  const res = await fetch(`/api/db?resource=daily&date=${today}`, { cache: 'no-store' });
   if (!res.ok) throw new Error('Network error');
   const data = (await res.json()) as DailyResponse;
   const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -89,7 +89,7 @@ const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> =
 };
 
 const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
-  const res = await fetch('/api/db?resource=schedule');
+  const res = await fetch('/api/db?resource=schedule', { cache: 'no-store' });
   if (!res.ok) throw new Error('Network error');
   const data = (await res.json()) as ScheduleResponse;
   const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;

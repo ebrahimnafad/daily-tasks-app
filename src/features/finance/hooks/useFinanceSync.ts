@@ -169,7 +169,9 @@ export default function useFinanceSync(onQuota?: () => void) {
   const loadFromServer = useCallback(async () => {
     try {
       const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
-      const responses = await Promise.all(resources.map((r) => fetch(`/api/db?resource=${r}`)));
+      const responses = await Promise.all(
+        resources.map((r) => fetch(`/api/db?resource=${r}`, { cache: 'no-store' }))
+      );
       if (responses.some((r) => !r.ok)) {
         setSyncStatus('offline');
         return;

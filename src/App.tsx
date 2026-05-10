@@ -127,17 +127,17 @@ export default function App() {
             </div>
           }
         >
-          <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
-            {activeTab === 'tasks' && (
-              <TaskContext.Provider value={taskContextValue}>
+          <TaskContext.Provider value={taskContextValue}>
+            <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
+              {activeTab === 'tasks' && (
                 <TasksPage today={today} shift={shift} setShift={setShift} />
-              </TaskContext.Provider>
-            )}
-          </ErrorBoundary>
+              )}
+            </ErrorBoundary>
 
-          <ErrorBoundary level="feature" fallback={<CalendarErrorFallback />}>
-            {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
-          </ErrorBoundary>
+            <ErrorBoundary level="feature" fallback={<CalendarErrorFallback />}>
+              {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
+            </ErrorBoundary>
+          </TaskContext.Provider>
 
           <ErrorBoundary level="feature" fallback={<FinanceErrorFallback />}>
             {activeTab === 'finance' && <FinancePage syncStatus={syncStatus} />}
