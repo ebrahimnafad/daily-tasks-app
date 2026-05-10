@@ -100,91 +100,100 @@ export function SubtaskPanel({
               {sdone && <Tick size={10} />}
             </div>
 
-            {isEditing ? (
-              <div style={{ display: 'flex', gap: '8px', flex: 1 }}>
-                <input
-                  className="sub-edit-inp"
-                  style={{ flex: 1 }}
-                  value={editingSubText}
-                  autoFocus
-                  aria-label="تعديل العنصر"
-                  onChange={(e) => onEditingSubTextChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') onSaveEditSub();
-                    if (e.key === 'Escape') onCancelEditSub();
-                  }}
-                />
-                <input
-                  type="time"
-                  className="sub-edit-inp"
-                  style={{ width: 'auto', padding: '0 4px' }}
-                  value={editingSubAlertTime}
-                  aria-label="تعديل وقت التذكير"
-                  onChange={(e) => onEditingSubAlertTimeChange(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') onSaveEditSub();
-                    if (e.key === 'Escape') onCancelEditSub();
-                  }}
-                />
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
-                <span
-                  className={`sub-text ${sdone ? 'done' : ''}`}
-                  onDoubleClick={() => onStartEditSub(s)}
-                  title="اضغط مرتين لتعديل العنصر"
-                  style={{ flex: 1 }}
-                >
-                  {s.text}
-                </span>
-                {s.alertTime && (
-                  <span
-                    style={{
-                      fontSize: '0.8em',
-                      color: 'var(--text-color)',
-                      opacity: 0.7,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+              {isEditing ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input
+                    className="sub-edit-inp"
+                    style={{ flex: 1 }}
+                    value={editingSubText}
+                    autoFocus
+                    aria-label="تعديل العنصر"
+                    onChange={(e) => onEditingSubTextChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') onSaveEditSub();
+                      if (e.key === 'Escape') onCancelEditSub();
                     }}
-                    title="تذكير"
+                  />
+                  <input
+                    type="time"
+                    className="sub-edit-inp"
+                    style={{ width: 'auto', padding: '0 4px' }}
+                    value={editingSubAlertTime}
+                    aria-label="تعديل وقت التذكير"
+                    onChange={(e) => onEditingSubAlertTimeChange(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') onSaveEditSub();
+                      if (e.key === 'Escape') onCancelEditSub();
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    className={`sub-text ${sdone ? 'done' : ''}`}
+                    onDoubleClick={() => onStartEditSub(s)}
+                    title="اضغط مرتين لتعديل العنصر"
+                    style={{ flex: 1 }}
                   >
-                    ⏰ {s.alertTime}
+                    {s.text}
                   </span>
-                )}
-              </div>
-            )}
+                  {s.alertTime && (
+                    <span
+                      style={{
+                        fontSize: '0.8em',
+                        color: 'var(--text-color)',
+                        opacity: 0.7,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        flexShrink: 0,
+                      }}
+                      title="تذكير"
+                    >
+                      ⏰ {s.alertTime}
+                    </span>
+                  )}
+                </div>
+              )}
 
-            {!isEditing && (
-              <div
-                className="sub-actions"
-                style={{
-                  display: 'flex',
-                  gap: 'var(--space-xs)',
-                  opacity: 0,
-                  transition: 'opacity .15s',
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
-              >
-                <button
-                  className="icon-btn icon-btn--edit"
-                  aria-label={`تعديل ${s.text}`}
-                  style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
-                  onClick={() => onStartEditSub(s)}
+              {!isEditing && (
+                <div
+                  className="sub-actions"
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--space-xs)',
+                    opacity: 0,
+                    transition: 'opacity .15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = '0')}
                 >
-                  ✏️
-                </button>
-                <button
-                  className="icon-btn icon-btn--delete"
-                  aria-label={`حذف ${s.text}`}
-                  style={{ padding: 'var(--space-xs) var(--space-sm)', fontSize: 'var(--font-sm)' }}
-                  onClick={() => onDeleteSubItem(s.id)}
-                >
-                  ✕
-                </button>
-              </div>
-            )}
+                  <button
+                    className="icon-btn icon-btn--edit"
+                    aria-label={`تعديل ${s.text}`}
+                    style={{
+                      padding: 'var(--space-xs) var(--space-sm)',
+                      fontSize: 'var(--font-sm)',
+                    }}
+                    onClick={() => onStartEditSub(s)}
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    className="icon-btn icon-btn--delete"
+                    aria-label={`حذف ${s.text}`}
+                    style={{
+                      padding: 'var(--space-xs) var(--space-sm)',
+                      fontSize: 'var(--font-sm)',
+                    }}
+                    onClick={() => onDeleteSubItem(s.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

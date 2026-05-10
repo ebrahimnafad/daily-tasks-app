@@ -300,6 +300,9 @@ export default function useTaskManager(
       });
     }
 
+    // Sort to show current block first for better focus
+    byBlock.sort((a, b) => (b.isCurrent ? 1 : 0) - (a.isCurrent ? 1 : 0));
+
     // Prayer task gets its own virtual block
     const prayerBlockEntry = pt
       ? [

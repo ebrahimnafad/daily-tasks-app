@@ -45,92 +45,91 @@ export default function TasksHeader({
   return (
     <>
       <header className="th-header" style={{ position: 'relative' }}>
-        {/* Settings Menu Dropdown */}
-        <div className="th-menu-container" ref={menuRef}>
-          <button
-            className="icon-btn th-gear-btn"
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            aria-label="إعدادات المهام"
-          >
-            ⚙️
-          </button>
+        {/* Date and Settings */}
+        <div className="th-date-row">
+          <div className="th-shift-icon">{shift === 'morning' ? '🌅' : '🌆'}</div>
+          <div className="th-date">{today}</div>
+          <div className="th-menu-container" ref={menuRef}>
+            <button
+              className="icon-btn th-gear-btn"
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-label="إعدادات المهام"
+            >
+              ⚙️
+            </button>
 
-          {isMenuOpen && (
-            <div className="th-dropdown-menu">
-              {notifPerm !== 'granted' && (
+            {isMenuOpen && (
+              <div className="th-dropdown-menu">
+                {notifPerm !== 'granted' && (
+                  <button
+                    className="th-menu-item th-menu-item--notif"
+                    onClick={() => {
+                      requestNotifPerm();
+                      setIsMenuOpen(false);
+                    }}
+                  >
+                    🔔 تفعيل الإشعارات
+                  </button>
+                )}
                 <button
-                  className="th-menu-item th-menu-item--notif"
+                  className="th-menu-item th-menu-item--sheets"
                   onClick={() => {
-                    requestNotifPerm();
+                    sendToSheets();
                     setIsMenuOpen(false);
                   }}
                 >
-                  🔔 تفعيل الإشعارات
+                  📊 إرسال التقرير لـ Sheets
                 </button>
-              )}
-              <button
-                className="th-menu-item th-menu-item--sheets"
-                onClick={() => {
-                  sendToSheets();
-                  setIsMenuOpen(false);
-                }}
-              >
-                📊 إرسال التقرير لـ Sheets
-              </button>
-              <button
-                className="th-menu-item"
-                onClick={() => {
-                  resetNewDay();
-                  setIsMenuOpen(false);
-                }}
-              >
-                🔄 بدء يوم جديد
-              </button>
-              <button
-                className="th-menu-item"
-                onClick={() => {
-                  setShowScheduleModal(true);
-                  setIsMenuOpen(false);
-                }}
-              >
-                ⚙️ إعدادات الجدول
-              </button>
+                <button
+                  className="th-menu-item"
+                  onClick={() => {
+                    resetNewDay();
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  🔄 بدء يوم جديد
+                </button>
+                <button
+                  className="th-menu-item"
+                  onClick={() => {
+                    setShowScheduleModal(true);
+                    setIsMenuOpen(false);
+                  }}
+                >
+                  ⚙️ إعدادات الجدول
+                </button>
 
-              <div className="th-menu-divider"></div>
-              <div className="th-menu-label">فترة الدوام:</div>
-              <div className="th-shift-group-menu">
-                <button
-                  className={`toggle-btn th-btn-shift ${shift === 'morning' ? 'on' : ''}`}
-                  onClick={() => {
-                    setShift('morning');
-                    setIsMenuOpen(false);
-                  }}
-                  aria-pressed={shift === 'morning' ? 'true' : 'false'}
-                >
-                  ☀️ صباحي
-                </button>
-                <button
-                  className={`toggle-btn th-btn-shift ${shift === 'evening' ? 'on' : ''}`}
-                  onClick={() => {
-                    setShift('evening');
-                    setIsMenuOpen(false);
-                  }}
-                  aria-pressed={shift === 'evening' ? 'true' : 'false'}
-                >
-                  🌙 مسائي
-                </button>
+                <div className="th-menu-divider"></div>
+                <div className="th-menu-label">فترة الدوام:</div>
+                <div className="th-shift-group-menu">
+                  <button
+                    className={`toggle-btn th-btn-shift ${shift === 'morning' ? 'on' : ''}`}
+                    onClick={() => {
+                      setShift('morning');
+                      setIsMenuOpen(false);
+                    }}
+                    aria-pressed={shift === 'morning' ? 'true' : 'false'}
+                  >
+                    ☀️ صباحي
+                  </button>
+                  <button
+                    className={`toggle-btn th-btn-shift ${shift === 'evening' ? 'on' : ''}`}
+                    onClick={() => {
+                      setShift('evening');
+                      setIsMenuOpen(false);
+                    }}
+                    aria-pressed={shift === 'evening' ? 'true' : 'false'}
+                  >
+                    🌙 مسائي
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+          <div className="th-date">{today}</div>
         </div>
-
-        <div className="th-date">{today}</div>
         <h1 className="th-title">مهام اليوم</h1>
         <div className="th-subtitle">بسم الله الرحمن الرحيم</div>
-
-        <div className="th-shift-hint" style={{ marginTop: 'var(--space-md)' }}>
-          {shift === 'morning' ? '🌅 أنت في الأسبوع الصباحي' : '🌆 أنت في الأسبوع المسائي'}
-        </div>
       </header>
 
       <ScheduleSettingsModal
