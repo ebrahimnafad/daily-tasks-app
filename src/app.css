@@ -20,5 +20,8 @@
 /* ── Feature: Tasks ── */
 @import './features/tasks/tasks.css';
 
+/* ── Feature: Calendar ── */
+@import './features/calendar/calendar.css';
+
 /* ── Feature: Finance ── */
 @import './features/finance/finance.css';

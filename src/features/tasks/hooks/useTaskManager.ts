@@ -51,7 +51,8 @@ export default function useTaskManager(
   skipped: CheckedMap,
   setSkipped: Dispatch<SetStateAction<CheckedMap>>,
   shift: ShiftType,
-  scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS
+  scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS,
+  saveSnapshot?: (data: import('@/types').DailySnapshot) => Promise<void>
 ): TaskManagerReturn {
   const [newItemText, setNewItemText] = useState<Record<number, string>>({});
   const [newItemAlertTime, setNewItemAlertTime] = useState<Record<number, string>>({});
@@ -393,6 +394,21 @@ export default function useTaskManager(
       );
     });
     const ids = toReset.map((t) => t.id);
+
+    // ── Save snapshot BEFORE clearing ────────────────────────────────────
+    if (saveSnapshot) {
+      const today = new Date().toISOString().split('T')[0];
+      void saveSnapshot({
+        date: today,
+        tasks: otherTasks,
+        checked,
+        skipped,
+        progress,
+        countDone,
+        totalOther,
+      });
+    }
+
     setChecked((p) => {
       const n = { ...p };
       ids.forEach((id) => delete n[id]);
@@ -403,7 +419,20 @@ export default function useTaskManager(
       toReset.forEach((t) => t.subtasks.forEach((s) => delete n[s.id]));
       return n;
     });
-  }, [tasks, shift, scheduleConfig, setChecked, setSubChecked]);
+  }, [
+    tasks,
+    shift,
+    scheduleConfig,
+    setChecked,
+    setSubChecked,
+    saveSnapshot,
+    otherTasks,
+    checked,
+    skipped,
+    progress,
+    countDone,
+    totalOther,
+  ]);
 
   // ── taskSubCheckedMap ─────────────────────────────────────────────────────
   const taskSubCheckedMap = useMemo<TaskSubCheckedMap>(() => {
@@ -457,6 +486,7 @@ export default function useTaskManager(
     toggleSkipTask,
     sendToSheets,
     resetNewDay,
+    saveSnapshot: saveSnapshot ?? (() => Promise.resolve()),
     prayerTask,
     prayersDone,
     prayerTotal,

@@ -5,11 +5,11 @@ import Brief from './Brief';
 import Actions from './Actions';
 
 export default function View() {
-  const { task, done, isSkipped } = useTaskCardContext();
+  const { task, done, isSkipped, highlightPin } = useTaskCardContext();
 
   return (
     <article
-      className={`task-card ${done ? 'done' : ''} ${task.isWarning ? 'warn' : ''} ${isSkipped ? 'skipped' : ''}`}
+      className={`task-card ${done ? 'done' : ''} ${task.isWarning ? 'warn' : ''} ${isSkipped ? 'skipped' : ''} ${highlightPin ? 'task-card--pinned' : ''}`}
       aria-label={`مهمة: ${task.title}`}
       style={isSkipped ? { opacity: 0.5 } : {}}
     >

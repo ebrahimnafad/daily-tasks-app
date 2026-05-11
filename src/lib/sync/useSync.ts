@@ -11,8 +11,11 @@ import {
   DEFAULT_EPOCH_KEY,
   LEGACY_TIME_TO_BLOCK,
   DEFAULT_SHIFTS,
+  getLogicalDateISO,
+  DAY_START_HOUR_KEY,
 } from '@/features/tasks/data/scheduleConfig';
 
+/** @deprecated use getLogicalDateISO(dayStartHour) instead */
 export const todayISO = (): string => new Date().toISOString().split('T')[0];
 
 interface DailyState {
@@ -66,8 +69,10 @@ const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
   return { tasks: localTasks, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
 };
 
-const fetchDaily = async (): Promise<{ daily: DailyState; timestamp: number }> => {
-  const today = todayISO();
+const fetchDaily = async (
+  dayStartHour: number
+): Promise<{ daily: DailyState; timestamp: number }> => {
+  const today = getLogicalDateISO(dayStartHour);
   try {
     const res = await fetch(`/api/db?resource=daily&date=${today}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
@@ -137,6 +142,10 @@ export interface UseSyncReturn {
   /** Override the auto-computed shift (updates epoch so the change persists) */
   setShift: (v: ShiftType) => void;
   syncStatus: SyncStatus;
+  /** Hour (0-23) at which a new day logically starts (default 0 = midnight) */
+  dayStartHour: number;
+  setDayStartHour: (hour: number) => void;
+  saveSnapshot: (data: import('@/types').DailySnapshot) => Promise<void>;
 }
 
 export default function useSync(
@@ -144,6 +153,19 @@ export default function useSync(
   onNewDay?: () => void,
   onQuota?: () => void
 ): UseSyncReturn {
+  // ── Day-start hour setting ────────────────────────────────────────
+  const [dayStartHour, setDayStartHourState] = useState<number>(() =>
+    lsGet<number>(DAY_START_HOUR_KEY, 0)
+  );
+
+  const setDayStartHour = useCallback(
+    (hour: number) => {
+      const clamped = Math.max(0, Math.min(23, Math.round(hour)));
+      setDayStartHourState(clamped);
+      lsSet(DAY_START_HOUR_KEY, clamped, onQuota);
+    },
+    [onQuota]
+  );
   const queryClient = useQueryClient();
 
   // ── Online / Offline detection ────────────────────────────────────────
@@ -211,7 +233,7 @@ export default function useSync(
   useEffect(() => {
     const tick = () => {
       setShiftState(computeShift(shiftEpoch, schedule));
-      const today = todayISO();
+      const today = getLogicalDateISO(dayStartHour);
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
@@ -224,7 +246,7 @@ export default function useSync(
     };
     const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
-  }, [shiftEpoch, schedule, onNewDay, onQuota, queryClient]);
+  }, [shiftEpoch, schedule, dayStartHour, onNewDay, onQuota, queryClient]);
 
   /**
    * Manual override: user toggles shift → we adjust the epoch so the
@@ -272,11 +294,11 @@ export default function useSync(
     daily: DailyState;
     timestamp: number;
   }>({
-    queryKey: ['daily', todayISO()],
-    queryFn: fetchDaily,
+    queryKey: ['daily', getLogicalDateISO(dayStartHour)],
+    queryFn: () => fetchDaily(dayStartHour),
     initialData: () => {
       const savedDate = lsGet<string | null>('mhm_date', null);
-      if (savedDate === todayISO()) {
+      if (savedDate === getLogicalDateISO(dayStartHour)) {
         return {
           daily: {
             checked: lsGet<CheckedMap>('mhm_checked', {}),
@@ -369,7 +391,7 @@ export default function useSync(
 
   const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
     mutationFn: async ({ checked: c, subChecked: sc, skipped: sk }) => {
-      const today = todayISO();
+      const today = getLogicalDateISO(dayStartHour);
       const res = await fetch('/api/db?resource=daily', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -381,7 +403,7 @@ export default function useSync(
       }
     },
     onMutate: async ({ checked: c, subChecked: sc, skipped: sk }) => {
-      const today = todayISO();
+      const today = getLogicalDateISO(dayStartHour);
       await queryClient.cancelQueries({ queryKey: ['daily', today] });
       const prevDaily = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
         'daily',
@@ -404,7 +426,7 @@ export default function useSync(
       setHasError(true);
       const ctx = context as { prevDaily?: { daily: DailyState; timestamp: number } } | undefined;
       if (ctx?.prevDaily) {
-        queryClient.setQueryData(['daily', todayISO()], ctx.prevDaily);
+        queryClient.setQueryData(['daily', getLogicalDateISO(dayStartHour)], ctx.prevDaily);
       }
     },
   });
@@ -436,7 +458,7 @@ export default function useSync(
     (updater) => {
       const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
         'daily',
-        todayISO(),
+        getLogicalDateISO(dayStartHour),
       ])?.daily ?? {
         checked: {},
         subChecked: {},
@@ -445,14 +467,14 @@ export default function useSync(
       const next = typeof updater === 'function' ? updater(cur.checked) : updater;
       updateDailyMut({ checked: next, subChecked: cur.subChecked, skipped: cur.skipped });
     },
-    [queryClient, updateDailyMut]
+    [queryClient, updateDailyMut, dayStartHour]
   );
 
   const setSubChecked = useCallback<Dispatch<SetStateAction<SubCheckedMap>>>(
     (updater) => {
       const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
         'daily',
-        todayISO(),
+        getLogicalDateISO(dayStartHour),
       ])?.daily ?? {
         checked: {},
         subChecked: {},
@@ -461,14 +483,14 @@ export default function useSync(
       const next = typeof updater === 'function' ? updater(cur.subChecked) : updater;
       updateDailyMut({ checked: cur.checked, subChecked: next, skipped: cur.skipped });
     },
-    [queryClient, updateDailyMut]
+    [queryClient, updateDailyMut, dayStartHour]
   );
 
   const setSkipped = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
     (updater) => {
       const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
         'daily',
-        todayISO(),
+        getLogicalDateISO(dayStartHour),
       ])?.daily ?? {
         checked: {},
         subChecked: {},
@@ -477,7 +499,7 @@ export default function useSync(
       const next = typeof updater === 'function' ? updater(cur.skipped) : updater;
       updateDailyMut({ checked: cur.checked, subChecked: cur.subChecked, skipped: next });
     },
-    [queryClient, updateDailyMut]
+    [queryClient, updateDailyMut, dayStartHour]
   );
 
   // ── Derived sync status ───────────────────────────────────────────────
@@ -488,6 +510,19 @@ export default function useSync(
       : fetchingTasks || fetchingDaily || fetchingSchedule
         ? 'syncing'
         : 'synced';
+
+  const saveSnapshot = useCallback(async (data: import('@/types').DailySnapshot): Promise<void> => {
+    try {
+      const res = await fetch('/api/db?resource=snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: data.date, snapshot: data }),
+      });
+      if (!res.ok) console.warn('Snapshot save failed:', res.status);
+    } catch (err) {
+      console.warn('Snapshot save error (offline?):', err);
+    }
+  }, []);
 
   return {
     tasks,
@@ -503,5 +538,8 @@ export default function useSync(
     shift,
     setShift,
     syncStatus,
+    dayStartHour,
+    setDayStartHour,
+    saveSnapshot,
   };
 }

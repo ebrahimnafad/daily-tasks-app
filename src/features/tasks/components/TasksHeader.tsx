@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { ShiftType, ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 import type { NotifPerm } from '@/types';
 import ScheduleSettingsModal from './ScheduleSettingsModal';
+import { useTaskContext } from '@/features/tasks/context/TaskContext';
 
 interface TasksHeaderProps {
   today: string;
@@ -26,6 +27,7 @@ export default function TasksHeader({
   scheduleConfig,
   setScheduleConfig,
 }: TasksHeaderProps) {
+  const { dayStartHour, setDayStartHour } = useTaskContext();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -138,6 +140,8 @@ export default function TasksHeader({
         schedule={scheduleConfig}
         onSave={setScheduleConfig}
         onClose={() => setShowScheduleModal(false)}
+        dayStartHour={dayStartHour}
+        setDayStartHour={setDayStartHour}
       />
     </>
   );

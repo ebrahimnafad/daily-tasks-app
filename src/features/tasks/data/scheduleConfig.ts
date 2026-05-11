@@ -2,6 +2,27 @@
 //  scheduleConfig.ts — Single source of truth for shift/block/day
 // ══════════════════════════════════════════════════════════════════
 
+/** localStorage key for the user-configured day-start hour (0-23, default 0) */
+export const DAY_START_HOUR_KEY = 'mhm_day_start_hour';
+
+/**
+ * Returns the "logical" date ISO string (YYYY-MM-DD).
+ * If the current time is before `dayStartHour`, it's still considered
+ * the previous calendar day — useful for users whose day starts after midnight.
+ *
+ * Examples:
+ *   dayStartHour=0  → behaves like normal midnight rollover
+ *   dayStartHour=15 → before 3 PM is treated as yesterday
+ */
+export function getLogicalDateISO(dayStartHour: number, from: Date = new Date()): string {
+  const hour = from.getHours() + from.getMinutes() / 60;
+  const effective = new Date(from);
+  if (dayStartHour > 0 && hour < dayStartHour) {
+    effective.setDate(effective.getDate() - 1);
+  }
+  return effective.toISOString().split('T')[0];
+}
+
 export interface TimeBlock {
   id: string;
   label: string;

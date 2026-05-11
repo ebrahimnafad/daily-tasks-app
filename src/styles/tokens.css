@@ -66,13 +66,13 @@
 }
 
 [data-theme='night'] {
-  --gold: #998561;
-  --gold-light: #bda782;
-  --gold-rgb: 153, 133, 97;
-  --text-gold: #fdf6e3;
-  --bg-gradient: linear-gradient(160deg, #0d0905 0%, #1a1209 50%, #0d0905 100%);
-  --bg-card: #140d07;
-  --bg-input: #0d0905;
+  --gold: #b39b71;
+  --gold-light: #d9bd8c;
+  --gold-rgb: 179, 155, 113;
+  --text-gold: #ffffff;
+  --bg-gradient: linear-gradient(160deg, #17100a 0%, #291c12 50%, #17100a 100%);
+  --bg-card: #20150d;
+  --bg-input: #17100a;
 }
 
 /* ── Night Shift Override (يتغلب على data-theme) ── */

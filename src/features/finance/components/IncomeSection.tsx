@@ -11,6 +11,7 @@ interface IncomeSectionProps {
 
 export default function IncomeSection({ income, setIncome, settings }: IncomeSectionProps) {
   const [modal, setModal] = useState<{ mode: 'add' | 'edit'; id?: string } | null>(null);
+  const [expanded, setExpanded] = useState(true);
   const [form, setForm] = useState({
     icon: '💼',
     title: '',
@@ -85,77 +86,122 @@ export default function IncomeSection({ income, setIncome, settings }: IncomeSec
       {income.length > 0 && (
         <div
           className="fin-income-card"
-          style={{ flexDirection: 'column', gap: 'var(--space-sm)' }}
+          style={{
+            flexDirection: 'column',
+            gap: 'var(--space-sm)',
+            padding: 0,
+            overflow: 'hidden',
+          }}
         >
-          <div className="fin-income-card__main" style={{ marginBottom: 'var(--space-xs)' }}>
+          {/* Collapsible header — click to toggle */}
+          <button
+            className="fin-income-card__toggle"
+            onClick={() => setExpanded((v) => !v)}
+            aria-expanded={expanded}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-sm)',
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: 'var(--space-lg)',
+              fontFamily: 'inherit',
+              textAlign: 'right',
+            }}
+          >
             <span className="fin-income-card__icon">💰</span>
             <div className="fin-income-card__info">
-              <div className="fin-income-card__title">إجمالي الدخل</div>
+              <div className="fin-income-card__title">مصادر الدخل</div>
               <div className="fin-income-card__meta">{income.length} مصدر</div>
             </div>
             <span
               className="fin-income-card__amount"
-              style={{ fontWeight: 700, color: 'var(--gold)' }}
+              style={{ fontWeight: 700, color: 'var(--gold)', marginInlineStart: 'auto' }}
             >
               {formatAmount(totalMonthly, settings)}
             </span>
-          </div>
-          <div
-            style={{
-              borderTop: '1px solid rgba(var(--gold-rgb),0.1)',
-              paddingTop: 'var(--space-sm)',
-            }}
-          >
-            {income.map((item) => (
-              <div
-                key={item.id}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: 'var(--space-xs) 0',
-                  gap: 'var(--space-sm)',
-                }}
-              >
+            <span
+              style={{
+                fontSize: '10px',
+                color: 'rgba(var(--gold-rgb), 0.4)',
+                transition: 'transform 0.25s',
+                transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+                flexShrink: 0,
+              }}
+            >
+              ▼
+            </span>
+          </button>
+
+          {/* Collapsible body */}
+          {expanded && (
+            <div
+              style={{
+                borderTop: '1px solid rgba(var(--gold-rgb),0.1)',
+                padding: '0 var(--space-lg) var(--space-md)',
+                animation: 'slideDown 0.22s ease',
+              }}
+            >
+              {income.map((item) => (
                 <div
-                  style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', flex: 1 }}
+                  key={item.id}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: 'var(--space-xs) 0',
+                    gap: 'var(--space-sm)',
+                  }}
                 >
-                  <span style={{ fontSize: 'var(--font-base)' }}>{item.icon || '💼'}</span>
-                  <div>
-                    <div style={{ fontSize: 'var(--font-sm)', color: 'var(--text-gold)' }}>
-                      {item.title}
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 'var(--space-sm)',
+                      flex: 1,
+                    }}
+                  >
+                    <span style={{ fontSize: 'var(--font-base)' }}>{item.icon || '💼'}</span>
+                    <div>
+                      <div style={{ fontSize: 'var(--font-sm)', color: 'var(--text-gold)' }}>
+                        {item.title}
+                      </div>
+                      <div
+                        style={{ fontSize: 'var(--font-xs)', color: 'rgba(var(--gold-rgb),0.5)' }}
+                      >
+                        {item.type === 'fixed' ? 'ثابت' : 'متغير'} · {freqLabel(item.frequency)}
+                      </div>
                     </div>
-                    <div style={{ fontSize: 'var(--font-xs)', color: 'rgba(var(--gold-rgb),0.5)' }}>
-                      {item.type === 'fixed' ? 'ثابت' : 'متغير'} · {freqLabel(item.frequency)}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
+                    <span style={{ fontSize: 'var(--font-sm)', color: 'var(--gold)' }}>
+                      {formatAmount(item.amount, settings)}
+                    </span>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                      <button
+                        className="fin-btn-sm"
+                        onClick={() => openEdit(item)}
+                        aria-label="تعديل"
+                        style={{ padding: '2px 6px' }}
+                      >
+                        ✏️
+                      </button>
+                      <button
+                        className="fin-btn-sm"
+                        onClick={() => remove(item.id)}
+                        aria-label="حذف"
+                        style={{ padding: '2px 6px' }}
+                      >
+                        🗑️
+                      </button>
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)' }}>
-                  <span style={{ fontSize: 'var(--font-sm)', color: 'var(--gold)' }}>
-                    {formatAmount(item.amount, settings)}
-                  </span>
-                  <div style={{ display: 'flex', gap: '2px' }}>
-                    <button
-                      className="fin-btn-sm"
-                      onClick={() => openEdit(item)}
-                      aria-label="تعديل"
-                      style={{ padding: '2px 6px' }}
-                    >
-                      ✏️
-                    </button>
-                    <button
-                      className="fin-btn-sm"
-                      onClick={() => remove(item.id)}
-                      aria-label="حذف"
-                      style={{ padding: '2px 6px' }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

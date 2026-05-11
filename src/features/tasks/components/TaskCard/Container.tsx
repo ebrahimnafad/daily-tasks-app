@@ -9,9 +9,15 @@ interface TaskCardContainerProps {
   task: Task;
   isChecked: boolean;
   taskSubChecked: Record<string | number, boolean>;
+  highlightPin?: boolean;
 }
 
-function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContainerProps) {
+function TaskCardContainer({
+  task,
+  isChecked,
+  taskSubChecked,
+  highlightPin = false,
+}: TaskCardContainerProps) {
   const { tm, prayersDone, prayerTotal, setChecked, setSubChecked } = useTaskContext();
 
   const [isExpanded, setIsExpanded] = useState(task.id === 1);
@@ -59,6 +65,7 @@ function TaskCardContainer({ task, isChecked, taskSubChecked }: TaskCardContaine
     setChecked,
     setSubChecked,
     isSkipped,
+    highlightPin,
   };
 
   return (

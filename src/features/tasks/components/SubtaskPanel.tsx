@@ -139,7 +139,7 @@ export function SubtaskPanel({
                     style={{
                       flex: 1,
                       textDecoration: sdone ? 'line-through' : 'none',
-                      color: sdone ? 'rgba(var(--gold-rgb), 0.75)' : 'inherit',
+                      color: sdone ? 'rgba(var(--gold-rgb), 0.75)' : undefined,
                     }}
                   >
                     {s.text}

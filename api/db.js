@@ -78,6 +78,18 @@ async function ensureSchema(sql) {
     )
   `;
 
+  // Add skipped column if not exists (idempotent migration)
+  await sql`ALTER TABLE daily_state ADD COLUMN IF NOT EXISTS skipped JSONB DEFAULT '{}'`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS daily_snapshots (
+      date       DATE PRIMARY KEY,
+      snapshot   JSONB NOT NULL DEFAULT '{}',
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS idx_daily_snapshots_date ON daily_snapshots(date)`;
+
   await sql`
     CREATE TABLE IF NOT EXISTS schedule_config (
       id         INTEGER PRIMARY KEY DEFAULT 1,
@@ -129,6 +141,16 @@ async function ensureSchema(sql) {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS calendar_notes (
+      id         INTEGER PRIMARY KEY DEFAULT 1,
+      data       JSONB   NOT NULL DEFAULT '[]',
+      client_id UUID DEFAULT gen_random_uuid(),
+      updated_at TIMESTAMPTZ DEFAULT NOW(),
+      CONSTRAINT single_row_calendar_notes CHECK (id = 1)
+    )
+  `;
+
   // ── Add indexes on updated_at for time-based queries ──
   await sql`CREATE INDEX IF NOT EXISTS idx_tasks_updated_at ON tasks_definition(updated_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_daily_state_updated_at ON daily_state(updated_at)`;
@@ -137,6 +159,7 @@ async function ensureSchema(sql) {
   await sql`CREATE INDEX IF NOT EXISTS idx_finance_obligations_updated_at ON finance_obligations(updated_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_finance_payments_updated_at ON finance_payments(updated_at)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_finance_goals_updated_at ON finance_goals(updated_at)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_calendar_notes_updated_at ON calendar_notes(updated_at)`;
 }
 
 // ── Generic JSONB single-row handler (DRY) ──
@@ -145,6 +168,7 @@ const FINANCE_TABLES = {
   obligations: { table: 'finance_obligations', field: 'obligations' },
   payments: { table: 'finance_payments', field: 'payments' },
   goals: { table: 'finance_goals', field: 'goals' },
+  notes: { table: 'calendar_notes', field: 'notes' },
 };
 
 export default async function handler(req, res) {
@@ -252,18 +276,19 @@ export default async function handler(req, res) {
           return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
 
         const rows = await sql`
-          SELECT checked, sub_checked, updated_at FROM daily_state WHERE date = ${date}
+          SELECT checked, sub_checked, skipped, updated_at FROM daily_state WHERE date = ${date}
         `;
         return res.status(200).json({
           checked: rows[0]?.checked ?? {},
           subChecked: rows[0]?.sub_checked ?? {},
+          skipped: rows[0]?.skipped ?? {},
           updatedAt: rows[0]?.updated_at ?? null,
         });
       }
 
       if (method === 'POST') {
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const { date, checked, subChecked } = body;
+        const { date, checked, subChecked, skipped } = body;
 
         if (!date) return res.status(400).json({ error: 'date مطلوب' });
         if (!isValidDate(date))
@@ -280,19 +305,75 @@ export default async function handler(req, res) {
         }
 
         await sql`
-          INSERT INTO daily_state (date, checked, sub_checked, updated_at)
+          INSERT INTO daily_state (date, checked, sub_checked, skipped, updated_at)
           VALUES (
             ${date},
             ${JSON.stringify(checked ?? {})}::jsonb,
             ${JSON.stringify(subChecked ?? {})}::jsonb,
+            ${JSON.stringify(skipped ?? {})}::jsonb,
             NOW()
           )
           ON CONFLICT (date) DO UPDATE
             SET checked     = EXCLUDED.checked,
                 sub_checked = EXCLUDED.sub_checked,
+                skipped     = EXCLUDED.skipped,
                 updated_at  = NOW()
         `;
         return res.status(200).json({ ok: true });
+      }
+    }
+
+    /* ─── Daily Snapshot (single date) ─── */
+    if (resource === 'snapshot') {
+      if (method === 'GET') {
+        const date = req.query.date;
+        if (!date) return res.status(400).json({ error: 'date مطلوب' });
+        if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
+        const rows = await sql`
+          SELECT snapshot, updated_at FROM daily_snapshots WHERE date = ${date}
+        `;
+        return res.status(200).json({
+          snapshot: rows[0]?.snapshot ?? null,
+          updatedAt: rows[0]?.updated_at ?? null,
+        });
+      }
+      if (method === 'POST') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+        const { date, snapshot } = body;
+        if (!date || !snapshot) return res.status(400).json({ error: 'date و snapshot مطلوبان' });
+        if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
+        await sql`
+          INSERT INTO daily_snapshots (date, snapshot, updated_at)
+          VALUES (${date}, ${JSON.stringify(snapshot)}::jsonb, NOW())
+          ON CONFLICT (date) DO UPDATE
+            SET snapshot = EXCLUDED.snapshot, updated_at = NOW()
+        `;
+        return res.status(200).json({ ok: true });
+      }
+    }
+
+    /* ─── Daily Snapshots Summary (all dates) ─── */
+    if (resource === 'snapshots') {
+      if (method === 'GET') {
+        const rows = await sql`
+          SELECT date, snapshot->>'progress' AS progress,
+                 snapshot->>'countDone' AS count_done,
+                 snapshot->>'totalOther' AS total_other
+          FROM daily_snapshots
+          ORDER BY date DESC
+          LIMIT 365
+        `;
+        return res.status(200).json({
+          summaries: rows.map((r) => ({
+            date:
+              r.date instanceof Date
+                ? r.date.toISOString().split('T')[0]
+                : String(r.date).split('T')[0],
+            progress: Number(r.progress ?? 0),
+            countDone: Number(r.count_done ?? 0),
+            totalOther: Number(r.total_other ?? 0),
+          })),
+        });
       }
     }
 

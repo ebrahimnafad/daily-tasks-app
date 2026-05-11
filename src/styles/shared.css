@@ -104,6 +104,90 @@
   );
 }
 
+/* ── Pinned highlight (used in the dedicated pinned section) ── */
+.task-card--pinned {
+  border-color: rgba(var(--gold-rgb), 0.45);
+  border-right: 3px solid var(--gold);
+  background: rgba(var(--gold-rgb), 0.06);
+  box-shadow: 0 0 18px rgba(var(--gold-rgb), 0.07);
+}
+.task-card--pinned:hover {
+  border-color: rgba(var(--gold-rgb), 0.65);
+  background: rgba(var(--gold-rgb), 0.09);
+}
+
+/* ── Pinned Section ── */
+.tpg-pinned-section {
+  margin-bottom: var(--space-xl);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  box-shadow: 0 0 24px rgba(var(--gold-rgb), 0.06);
+}
+
+.tpg-pinned-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-lg);
+  background: rgba(var(--gold-rgb), 0.1);
+  border: none;
+  cursor: pointer;
+  font-family: 'Amiri', serif;
+  text-align: right;
+  transition: background 0.2s;
+}
+.tpg-pinned-header:hover {
+  background: rgba(var(--gold-rgb), 0.16);
+}
+
+.tpg-pinned-header__icon {
+  font-size: var(--font-lg);
+  line-height: 1;
+}
+
+.tpg-pinned-header__label {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-gold);
+  flex: 1;
+}
+
+.tpg-pinned-header__count {
+  background: rgba(var(--gold-rgb), 0.2);
+  color: var(--gold);
+  font-size: var(--font-sm);
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  padding: 1px 8px;
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+}
+
+.tpg-pinned-header__chevron {
+  font-size: 10px;
+  color: rgba(var(--gold-rgb), 0.5);
+  transition: transform 0.25s ease;
+  flex-shrink: 0;
+}
+
+.tpg-pinned-body {
+  padding: var(--space-sm);
+  animation: slideDown 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Cards inside pinned section: keep border-radius, no bottom border on last */
+.tpg-pinned-body .task-card {
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-sm);
+}
+.tpg-pinned-body .task-card:last-child {
+  margin-bottom: 0;
+}
+
 /* ── Checkboxes ── */
 .task-checkbox {
   width: 26px;

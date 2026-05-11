@@ -4,6 +4,7 @@ import { useSync } from '@/lib/sync';
 import { useNotifications, useToasts } from '@/shared/hooks';
 import { AppShell, ErrorBoundary } from '@/shared/components';
 import { TaskContext, useTaskManager, INITIAL_TASKS, TaskModal } from '@/features/tasks';
+import { getLogicalDateISO } from '@/features/tasks/data/scheduleConfig';
 import {
   TasksErrorFallback,
   FinanceErrorFallback,
@@ -12,7 +13,9 @@ import {
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
-const CalendarView = lazy(() => import('@/features/tasks/components/CalendarView'));
+const CalendarView = lazy(() =>
+  import('@/features/calendar/CalendarPage').then((m) => ({ default: m.default }))
+);
 const FinancePage = lazy(() => import('@/features/finance/components/FinancePage'));
 
 // ── App ──────────────────────────────────────────────────────────────────────
@@ -35,6 +38,9 @@ export default function App() {
     shift,
     setShift,
     syncStatus,
+    dayStartHour,
+    setDayStartHour,
+    saveSnapshot,
   } = useSync(INITIAL_TASKS, onNewDay, onQuota);
 
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
@@ -50,7 +56,8 @@ export default function App() {
     skipped,
     setSkipped,
     shift,
-    schedule
+    schedule,
+    saveSnapshot
   );
   const { prayersDone, prayerTotal } = tm;
 
@@ -87,6 +94,9 @@ export default function App() {
       prayerTotal,
       notifPerm,
       requestNotifPerm,
+      dayStartHour,
+      setDayStartHour,
+      saveSnapshot,
     }),
     [
       tm,
@@ -99,10 +109,14 @@ export default function App() {
       prayerTotal,
       notifPerm,
       requestNotifPerm,
+      dayStartHour,
+      setDayStartHour,
+      saveSnapshot,
     ]
   );
 
-  const today = new Date().toLocaleDateString('ar-EG', {
+  const logicalDate = getLogicalDateISO(dayStartHour);
+  const today = new Date(logicalDate + 'T12:00:00').toLocaleDateString('ar-EG', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

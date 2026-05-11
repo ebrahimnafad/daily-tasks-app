@@ -1,7 +1,7 @@
-/* ═══════════════════════════════════════════════════
-   tasks.css — Tasks Feature Styles
-   مهام اليوم
-═══════════════════════════════════════════════════ */
+﻿/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   tasks.css â€” Tasks Feature Styles
+   Ù…Ù‡Ø§Ù… Ø§Ù„ÙŠÙˆÙ…
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 /* TasksHeader */
 .th-header {
@@ -318,9 +318,9 @@
   margin-bottom: var(--space-sm);
 }
 
-/* ══════════════════════════════════════════════════
-   RESPONSIVE — شاشات صغيرة (< 400px)
-══════════════════════════════════════════════════ */
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+   RESPONSIVE â€” Ø´Ø§Ø´Ø§Øª ØµØºÙŠØ±Ø© (< 400px)
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 @media (max-width: 400px) {
   h1 {
     font-size: 26px !important;
@@ -330,13 +330,13 @@
     border-radius: var(--radius-md);
   }
 
-  /* أزرار الـ header: أصغر حجماً */
+  /* Ø£Ø²Ø±Ø§Ø± Ø§Ù„Ù€ header: Ø£ØµØºØ± Ø­Ø¬Ù…Ø§Ù‹ */
   .toggle-btn {
     font-size: var(--font-sm) !important;
     padding: 4px 10px !important;
   }
 
-  /* لوحة البريف: عمود واحد بدلاً من عمودين */
+  /* Ù„ÙˆØ­Ø© Ø§Ù„Ø¨Ø±ÙŠÙ: Ø¹Ù…ÙˆØ¯ ÙˆØ§Ø­Ø¯ Ø¨Ø¯Ù„Ø§Ù‹ Ù…Ù† Ø¹Ù…ÙˆØ¯ÙŠÙ† */
   .expand-panel > div[style*='display: flex'][style*='gap: var(--space-lg)'] {
     flex-direction: column !important;
   }
@@ -344,7 +344,7 @@
     display: none;
   }
 
-  /* Modal: ملء الشاشة */
+  /* Modal: Ù…Ù„Ø¡ Ø§Ù„Ø´Ø§Ø´Ø© */
   .modal-box {
     max-height: 95vh;
     border-radius: var(--radius-lg) 16px 0 0;
@@ -361,8 +361,8 @@
   }
 }
 
-/* TIME BLOCK SECTIONS — تجميع المهام حسب الفترة
-══════════════════════════════════════════════════ */
+/* TIME BLOCK SECTIONS â€” ØªØ¬Ù…ÙŠØ¹ Ø§Ù„Ù…Ù‡Ø§Ù… Ø­Ø³Ø¨ Ø§Ù„ÙØªØ±Ø©
+â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
 @keyframes block-pulse {
   0%,
@@ -510,141 +510,4 @@
 }
 .tpg-empty p {
   margin: 0;
-}
-
-/* Calendar View */
-.cal-view {
-  max-width: 480px;
-  margin: 0 auto;
-  padding: var(--space-lg);
-}
-.cal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--space-md);
-}
-.cal-title {
-  font-size: var(--font-lg);
-  font-weight: 700;
-  color: var(--text-gold);
-}
-.cal-nav {
-  background: none;
-  border: 1px solid rgba(var(--gold-rgb), 0.3);
-  color: var(--gold);
-  padding: var(--space-sm) var(--space-md);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.cal-nav:hover {
-  background: rgba(var(--gold-rgb), 0.1);
-}
-.cal-today-btn {
-  width: 100%;
-  margin-bottom: var(--space-md);
-  padding: var(--space-sm);
-  background: rgba(var(--gold-rgb), 0.1);
-  border: 1px solid rgba(var(--gold-rgb), 0.3);
-  color: var(--gold);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-}
-.cal-days-header {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: var(--space-sm);
-}
-.cal-day-name {
-  text-align: center;
-  font-size: var(--font-xs);
-  color: rgba(var(--gold-rgb), 0.5);
-  padding: var(--space-xs);
-}
-.cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 2px;
-  margin-bottom: var(--space-lg);
-}
-.cal-cell {
-  position: relative;
-  aspect-ratio: 1;
-  background: rgba(var(--gold-rgb), 0.03);
-  border-radius: var(--radius-sm);
-  padding: 4px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-.cal-cell--empty {
-  background: transparent;
-}
-.cal-cell--today {
-  background: rgba(var(--gold-rgb), 0.15);
-  border: 1px solid var(--gold);
-}
-.cal-cell--has-tasks {
-  background: rgba(var(--gold-rgb), 0.08);
-}
-.cal-day-num {
-  font-size: var(--font-xs);
-  color: rgba(var(--gold-rgb), 0.7);
-  font-weight: 600;
-}
-.cal-tasks {
-  display: flex;
-  gap: 2px;
-  flex-wrap: wrap;
-  justify-content: center;
-  margin-top: 2px;
-}
-.cal-task-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-}
-.cal-more {
-  font-size: 8px;
-  color: rgba(var(--gold-rgb), 0.5);
-}
-.cal-selected-tasks {
-  background: rgba(var(--gold-rgb), 0.03);
-  border-radius: var(--radius-md);
-  padding: var(--space-md);
-}
-.cal-selected-title {
-  margin: 0 0 var(--space-md);
-  font-size: var(--font-base);
-  color: var(--text-gold);
-}
-.cal-date-group {
-  margin-bottom: var(--space-md);
-}
-.cal-date-label {
-  font-size: var(--font-sm);
-  color: var(--gold);
-  margin-bottom: var(--space-xs);
-  font-weight: 600;
-}
-.cal-date-tasks {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-xs);
-}
-.cal-task-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  font-size: var(--font-sm);
-  color: rgba(var(--gold-rgb), 0.7);
-  padding: var(--space-xs);
-  background: rgba(var(--gold-rgb), 0.03);
-  border-radius: var(--radius-sm);
-}
-.cal-empty {
-  text-align: center;
-  color: rgba(var(--gold-rgb), 0.4);
-  font-size: var(--font-sm);
 }

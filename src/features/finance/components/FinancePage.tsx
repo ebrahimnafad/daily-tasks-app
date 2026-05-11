@@ -123,6 +123,22 @@ export default function FinancePage({ syncStatus }: FinancePageProps) {
     [categories, setCategories]
   );
 
+  const deleteCategory = useCallback(
+    (id: string) => {
+      // Remove the category
+      setCategories((prev) => prev.filter((c) => c.id !== id));
+      // Remove all expenses belonging to this category
+      const expenseIds = expenses.filter((e) => e.categoryId === id).map((e) => e.id);
+      setExpenses((prev) => prev.filter((e) => e.categoryId !== id));
+      // Remove all transactions linked to those expenses or directly to the category
+      setTransactions((prev) =>
+        prev.filter((t) => t.categoryId !== id && !expenseIds.includes(t.expenseId ?? ''))
+      );
+      setCatModal(null);
+    },
+    [expenses, setCategories, setExpenses, setTransactions]
+  );
+
   const setCategoryBudget = useCallback(
     (catId: string, budget: number) => {
       setCategories((prev) =>
@@ -370,7 +386,12 @@ export default function FinancePage({ syncStatus }: FinancePageProps) {
         <ExpenseModal modal={expModal} onSave={saveExpense} onClose={() => setExpModal(null)} />
       )}
       {catModal && (
-        <CategoryModal modal={catModal} onSave={saveCategory} onClose={() => setCatModal(null)} />
+        <CategoryModal
+          modal={catModal}
+          onSave={saveCategory}
+          onDelete={deleteCategory}
+          onClose={() => setCatModal(null)}
+        />
       )}
       {txDrawer && (
         <TransactionDrawer

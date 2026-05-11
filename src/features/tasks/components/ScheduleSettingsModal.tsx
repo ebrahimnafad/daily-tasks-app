@@ -8,6 +8,8 @@ interface ScheduleSettingsModalProps {
   schedule: ShiftConfig[];
   onSave: (newSchedule: ShiftConfig[]) => void;
   onClose: () => void;
+  dayStartHour: number;
+  setDayStartHour: (hour: number) => void;
 }
 
 export default function ScheduleSettingsModal({
@@ -15,6 +17,8 @@ export default function ScheduleSettingsModal({
   schedule,
   onSave,
   onClose,
+  dayStartHour,
+  setDayStartHour,
 }: ScheduleSettingsModalProps) {
   const [editingSchedule, setEditingSchedule] = useState<ShiftConfig[]>(schedule);
   const [selectedShiftId, setSelectedShiftId] = useState<string>(schedule[0]?.id || 'morning');
@@ -131,6 +135,46 @@ export default function ScheduleSettingsModal({
           <button className="icon-btn" onClick={onClose} aria-label="إغلاق">
             ✕
           </button>
+        </div>
+
+        {/* General Settings */}
+        <div className="ss-card" style={{ marginBottom: 'var(--space-lg)' }}>
+          <div className="ss-section-title">⏰ إعدادات عامة</div>
+          <div className="ss-input-group">
+            <label className="ss-label" htmlFor="day-start-hour">
+              وقت بداية اليوم
+              <span
+                style={{
+                  fontSize: '0.8em',
+                  color: 'rgba(var(--gold-rgb), 0.5)',
+                  marginRight: '6px',
+                }}
+              >
+                (المهام والإحصائيات تُحسب من هذا الوقت)
+              </span>
+            </label>
+            <input
+              id="day-start-hour"
+              type="time"
+              className="form-input"
+              value={`${String(dayStartHour).padStart(2, '0')}:00`}
+              onChange={(e) => {
+                const [hours] = e.target.value.split(':').map(Number);
+                setDayStartHour(hours);
+              }}
+            />
+            {dayStartHour > 0 && (
+              <div
+                style={{
+                  marginTop: 'var(--space-sm)',
+                  fontSize: 'var(--font-sm)',
+                  color: 'rgba(var(--gold-rgb), 0.55)',
+                }}
+              >
+                ℹ️ اليوم يبدأ الساعة {dayStartHour}:00 — أي وقت قبلها يُعدّ من اليوم السابق.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Shift Selector Tabs */}

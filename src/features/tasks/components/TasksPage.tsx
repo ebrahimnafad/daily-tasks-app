@@ -34,7 +34,11 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     setModal,
   } = tm;
   const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({});
+  const [collapsedPinned, setCollapsedPinned] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  // All pinned tasks visible in this shift (across all blocks)
+  const pinnedTasks = tm.otherTasks.filter((t) => t.isPinned);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 60000);
@@ -96,6 +100,41 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         totalOther={totalOther}
         currentBlock={shiftConfig.blocks.find((b) => b.id === currentBlockId)}
       />
+
+      {/* ── Pinned Tasks Section ──────────────────────────────────────── */}
+      {pinnedTasks.length > 0 && (
+        <section className="tpg-pinned-section" aria-label="المهام المثبتة">
+          <button
+            className="tpg-pinned-header"
+            onClick={() => setCollapsedPinned((v) => !v)}
+            aria-expanded={!collapsedPinned}
+          >
+            <span className="tpg-pinned-header__icon">📌</span>
+            <span className="tpg-pinned-header__label">مهام مثبتة</span>
+            <span className="tpg-pinned-header__count">{pinnedTasks.length}</span>
+            <span
+              className="tpg-pinned-header__chevron"
+              style={{ transform: collapsedPinned ? 'rotate(0deg)' : 'rotate(180deg)' }}
+            >
+              ▼
+            </span>
+          </button>
+
+          {!collapsedPinned && (
+            <div className="tpg-pinned-body">
+              {pinnedTasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  isChecked={!!checked[task.id]}
+                  taskSubChecked={taskSubCheckedMap[task.id]}
+                  highlightPin
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
 
       {/* Task blocks — grouped by time block */}
       <main aria-label="قائمة المهام">

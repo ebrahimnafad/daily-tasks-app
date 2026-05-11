@@ -37,6 +37,25 @@ export interface Task {
   time?: string;
 }
 
+// ── Daily Snapshot ────────────────────────────────────────────────────────────────────────────────
+
+export interface DailySnapshot {
+  date: string;
+  tasks: Task[];
+  checked: CheckedMap;
+  skipped: CheckedMap;
+  progress: number;
+  countDone: number;
+  totalOther: number;
+}
+
+export interface SnapshotSummary {
+  date: string;
+  progress: number;
+  countDone: number;
+  totalOther: number;
+}
+
 export interface Category {
   label: string;
   color: string;
@@ -127,6 +146,8 @@ export interface TaskManagerReturn {
   // Actions
   sendToSheets: () => Promise<void>;
   resetNewDay: () => void;
+  /** Saves a daily snapshot before clearing. Called automatically inside resetNewDay. */
+  saveSnapshot: (data: import('@/types').DailySnapshot) => Promise<void>;
 
   // Derived state
   prayerTask: Task | undefined;
@@ -164,6 +185,11 @@ export interface TaskContextValue {
   prayerTotal: number;
   notifPerm: NotifPerm;
   requestNotifPerm: () => Promise<void>;
+  /** Hour (0-23) at which the logical day starts (default 0 = midnight) */
+  dayStartHour: number;
+  setDayStartHour: (hour: number) => void;
+  /** Save a snapshot to the DB */
+  saveSnapshot: (data: import('@/types').DailySnapshot) => Promise<void>;
 }
 
 // ── useSync return ────────────────────────────────────────────────────────

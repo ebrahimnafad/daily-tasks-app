@@ -5,10 +5,11 @@ import { CATEGORY_ICONS, CATEGORY_COLORS } from '../constants';
 interface CategoryModalProps {
   modal: CategoryModalState;
   onSave: (data: Partial<ExpenseCategory>, mode: 'add' | 'edit', id?: string) => void;
+  onDelete: (id: string) => void;
   onClose: () => void;
 }
 
-export default function CategoryModal({ modal, onSave, onClose }: CategoryModalProps) {
+export default function CategoryModal({ modal, onSave, onDelete, onClose }: CategoryModalProps) {
   const [form, setForm] = useState(() => {
     if (modal.mode === 'edit' && modal.data) {
       return {
@@ -109,6 +110,23 @@ export default function CategoryModal({ modal, onSave, onClose }: CategoryModalP
           <button className="fin-btn-secondary" onClick={onClose}>
             إلغاء
           </button>
+          {modal.mode === 'edit' && modal.data && (
+            <button
+              className="fin-btn-danger"
+              style={{ marginInlineStart: 'auto' }}
+              onClick={() => {
+                if (
+                  window.confirm(
+                    `حذف قسم "${modal.data!.name}"؟\nسيتم حذف جميع البنود والمعاملات المرتبطة به.`
+                  )
+                ) {
+                  onDelete(modal.data!.id);
+                }
+              }}
+            >
+              🗑️ حذف القسم
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -24,6 +24,7 @@ export interface TaskCardContextValue {
   setChecked: React.Dispatch<React.SetStateAction<CheckedMap>>;
   setSubChecked: React.Dispatch<React.SetStateAction<SubCheckedMap>>;
   isSkipped: boolean;
+  highlightPin: boolean;
 }
 
 export const TaskCardContext = createContext<TaskCardContextValue | null>(null);
