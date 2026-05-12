@@ -4,6 +4,7 @@ interface TabBarProps {
   activeTab: string;
   onTabChange: (id: string) => void;
   financeBadge: number;
+  onLogout?: () => void;
 }
 
 interface Tab {
@@ -12,7 +13,7 @@ interface Tab {
   label: string;
 }
 
-export default function TabBar({ activeTab, onTabChange, financeBadge }: TabBarProps) {
+export default function TabBar({ activeTab, onTabChange, financeBadge, onLogout }: TabBarProps) {
   const tabs = useMemo<Tab[]>(
     () => [
       { id: 'tasks', icon: '📋', label: 'المهام' },
@@ -48,6 +49,23 @@ export default function TabBar({ activeTab, onTabChange, financeBadge }: TabBarP
           </button>
         );
       })}
+
+      {onLogout && (
+        <button
+          id="logout-btn"
+          className="tab-bar__item tab-bar__item--logout"
+          aria-label="تسجيل الخروج"
+          title="تسجيل الخروج"
+          onClick={() => {
+            if (window.confirm('هل تريد تسجيل الخروج؟')) onLogout();
+          }}
+        >
+          <span className="tab-bar__icon" aria-hidden="true">
+            🚪
+          </span>
+          <span className="tab-bar__label">خروج</span>
+        </button>
+      )}
     </nav>
   );
 }

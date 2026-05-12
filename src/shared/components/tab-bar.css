@@ -43,6 +43,21 @@
   color: var(--gold);
 }
 
+/* Logout — visually separated from nav tabs */
+.tab-bar__item--logout {
+  flex: 0 0 auto;
+  max-width: 80px;
+  color: rgba(217, 126, 106, 0.45);
+  border-right: 1px solid rgba(var(--gold-rgb), 0.12);
+  margin-right: auto; /* pushes it to the inline-end (left in RTL) */
+  transition: color 0.2s ease;
+}
+
+.tab-bar__item--logout:hover,
+.tab-bar__item--logout:focus-visible {
+  color: #d97e6a;
+}
+
 .tab-bar__icon {
   font-size: var(--font-xl);
   line-height: 1;
