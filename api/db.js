@@ -226,6 +226,305 @@ const FINANCE_TABLES = {
   notes: { table: 'calendar_notes', field: 'notes' },
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Sub-handlers (one per resource)
+// ─────────────────────────────────────────────────────────────────────────────
+
+async function handleAuth(req, res, sql) {
+  const { action } = req.query;
+  const { method } = req;
+
+  // GET action=me — verify token
+  if (method === 'GET' && action === 'me') {
+    const payload = await requireAuth(req, res);
+    if (!payload) return;
+    return res.status(200).json({ ok: true, username: payload.username });
+  }
+
+  if (method !== 'POST') {
+    return res.status(400).json({ error: 'إجراء auth غير معروف' });
+  }
+
+  const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+
+  // POST action=setup — one-time account creation
+  if (action === 'setup') {
+    const setupSecret = req.headers['x-setup-secret'];
+    const envSecret = process.env.SETUP_SECRET;
+    if (!envSecret || setupSecret !== envSecret) {
+      return res.status(403).json({ error: 'مفتاح الإعداد غير صحيح أو مفقود' });
+    }
+    const existing = await sql`SELECT COUNT(*) AS count FROM users`;
+    if (parseInt(existing[0].count) > 0) {
+      return res.status(409).json({ error: 'الحساب موجود بالفعل' });
+    }
+    const { username, password } = body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username و password مطلوبان' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+    }
+    const hash = await bcrypt.hash(password, 12);
+    await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash})`;
+    return res.status(201).json({ ok: true });
+  }
+
+  // POST action=login
+  if (action === 'login') {
+    const { username, password } = body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'username و password مطلوبان' });
+    }
+    const users = await sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
+    if (!users.length) {
+      // Timing-safe: still run hash compare to prevent user enumeration
+      await bcrypt.compare(
+        password,
+        '$2b$12$invalidhashpadding000000000000000000000000000000000000'
+      );
+      return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
+    const user = users[0];
+    const valid = await bcrypt.compare(password, user.password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+    }
+    const token = await signToken({ userId: user.id, username: user.username });
+    return res.status(200).json({ ok: true, token });
+  }
+
+  // POST action=change-password
+  if (action === 'change-password') {
+    const payload = await requireAuth(req, res);
+    if (!payload) return;
+    const { currentPassword, newPassword } = body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'currentPassword و newPassword مطلوبان' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' });
+    }
+    const users = await sql`SELECT * FROM users WHERE id = ${payload.userId} LIMIT 1`;
+    const valid = await bcrypt.compare(currentPassword, users[0].password_hash);
+    if (!valid) {
+      return res.status(401).json({ error: 'كلمة المرور الحالية غير صحيحة' });
+    }
+    const hash = await bcrypt.hash(newPassword, 12);
+    await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${payload.userId}`;
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(400).json({ error: 'إجراء auth غير معروف' });
+}
+
+async function handleTasks(req, res, sql) {
+  const { method } = req;
+
+  if (method === 'GET') {
+    const rows = await sql`SELECT data, updated_at FROM tasks_definition WHERE id = 1`;
+    return res.status(200).json({
+      tasks: rows[0]?.data ?? null,
+      updatedAt: rows[0]?.updated_at ?? null,
+    });
+  }
+
+  if (method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const { tasks } = body;
+
+    if (!Array.isArray(tasks)) {
+      return res.status(400).json({ error: 'tasks يجب أن يكون مصفوفة' });
+    }
+    if (tasks.length > 500) {
+      return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
+    }
+
+    await sql`
+      INSERT INTO tasks_definition (id, data, updated_at)
+      VALUES (1, ${JSON.stringify(tasks)}::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE
+        SET data = EXCLUDED.data, updated_at = NOW()
+    `;
+    return res.status(200).json({ ok: true });
+  }
+}
+
+async function handleSchedule(req, res, sql) {
+  const { method } = req;
+
+  if (method === 'GET') {
+    const rows = await sql`SELECT data, updated_at FROM schedule_config WHERE id = 1`;
+    return res.status(200).json({
+      schedule: rows[0]?.data ?? null,
+      updatedAt: rows[0]?.updated_at ?? null,
+    });
+  }
+
+  if (method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const { schedule } = body;
+
+    if (!Array.isArray(schedule)) {
+      return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
+    }
+
+    await sql`
+      INSERT INTO schedule_config (id, data, updated_at)
+      VALUES (1, ${JSON.stringify(schedule)}::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE
+        SET data = EXCLUDED.data, updated_at = NOW()
+    `;
+    return res.status(200).json({ ok: true });
+  }
+}
+
+async function handleDailyState(req, res, sql) {
+  const { method } = req;
+
+  if (method === 'GET') {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'date مطلوب' });
+    if (!isValidDate(date))
+      return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
+
+    const rows = await sql`
+      SELECT checked, sub_checked, skipped, updated_at FROM daily_state WHERE date = ${date}
+    `;
+    return res.status(200).json({
+      checked: rows[0]?.checked ?? {},
+      subChecked: rows[0]?.sub_checked ?? {},
+      skipped: rows[0]?.skipped ?? {},
+      updatedAt: rows[0]?.updated_at ?? null,
+    });
+  }
+
+  if (method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const { date, checked, subChecked, skipped } = body;
+
+    if (!date) return res.status(400).json({ error: 'date مطلوب' });
+    if (!isValidDate(date))
+      return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
+
+    if (checked !== undefined && (typeof checked !== 'object' || Array.isArray(checked))) {
+      return res.status(400).json({ error: 'checked يجب أن يكون object' });
+    }
+    if (subChecked !== undefined && (typeof subChecked !== 'object' || Array.isArray(subChecked))) {
+      return res.status(400).json({ error: 'subChecked يجب أن يكون object' });
+    }
+
+    await sql`
+      INSERT INTO daily_state (date, checked, sub_checked, skipped, updated_at)
+      VALUES (
+        ${date},
+        ${JSON.stringify(checked ?? {})}::jsonb,
+        ${JSON.stringify(subChecked ?? {})}::jsonb,
+        ${JSON.stringify(skipped ?? {})}::jsonb,
+        NOW()
+      )
+      ON CONFLICT (date) DO UPDATE
+        SET checked     = EXCLUDED.checked,
+            sub_checked = EXCLUDED.sub_checked,
+            skipped     = EXCLUDED.skipped,
+            updated_at  = NOW()
+    `;
+    return res.status(200).json({ ok: true });
+  }
+}
+
+async function handleSnapshot(req, res, sql) {
+  const { method } = req;
+
+  if (method === 'GET') {
+    const { date } = req.query;
+    if (!date) return res.status(400).json({ error: 'date مطلوب' });
+    if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
+    const rows = await sql`
+      SELECT snapshot, updated_at FROM daily_snapshots WHERE date = ${date}
+    `;
+    return res.status(200).json({
+      snapshot: rows[0]?.snapshot ?? null,
+      updatedAt: rows[0]?.updated_at ?? null,
+    });
+  }
+
+  if (method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const { date, snapshot } = body;
+    if (!date || !snapshot) return res.status(400).json({ error: 'date و snapshot مطلوبان' });
+    if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
+    await sql`
+      INSERT INTO daily_snapshots (date, snapshot, updated_at)
+      VALUES (${date}, ${JSON.stringify(snapshot)}::jsonb, NOW())
+      ON CONFLICT (date) DO UPDATE
+        SET snapshot = EXCLUDED.snapshot, updated_at = NOW()
+    `;
+    return res.status(200).json({ ok: true });
+  }
+}
+
+async function handleSnapshots(req, res, sql) {
+  if (req.method === 'GET') {
+    const rows = await sql`
+      SELECT date, snapshot->>'progress' AS progress,
+             snapshot->>'countDone' AS count_done,
+             snapshot->>'totalOther' AS total_other
+      FROM daily_snapshots
+      ORDER BY date DESC
+      LIMIT 365
+    `;
+    return res.status(200).json({
+      summaries: rows.map((r) => ({
+        date:
+          r.date instanceof Date
+            ? r.date.toISOString().split('T')[0]
+            : String(r.date).split('T')[0],
+        progress: Number(r.progress ?? 0),
+        countDone: Number(r.count_done ?? 0),
+        totalOther: Number(r.total_other ?? 0),
+      })),
+    });
+  }
+}
+
+async function handleFinance(req, res, sql, finRes) {
+  const { method } = req;
+
+  if (method === 'GET') {
+    const rows = await sql(`SELECT data, updated_at FROM ${finRes.table} WHERE id = 1`);
+    return res.status(200).json({
+      [finRes.field]: rows[0]?.data ?? [],
+      updatedAt: rows[0]?.updated_at ?? null,
+    });
+  }
+
+  if (method === 'POST') {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+    const data = body[finRes.field];
+    if (!Array.isArray(data)) {
+      return res.status(400).json({ error: `${finRes.field} يجب أن يكون مصفوفة` });
+    }
+    if (data.length > 1000) {
+      return res.status(400).json({ error: 'تجاوز الحد المسموح (1000 عنصر)' });
+    }
+    await sql(
+      `
+      INSERT INTO ${finRes.table} (id, data, updated_at)
+      VALUES (1, $1::jsonb, NOW())
+      ON CONFLICT (id) DO UPDATE
+        SET data = EXCLUDED.data, updated_at = NOW()
+    `,
+      [JSON.stringify(data)]
+    );
+    return res.status(200).json({ ok: true });
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main handler — routing only
+// ─────────────────────────────────────────────────────────────────────────────
+
 export default async function handler(req, res) {
   setCorsHeaders(req, res);
 
@@ -235,7 +534,7 @@ export default async function handler(req, res) {
   }
 
   /* ── Rate Limiting ── */
-  const resource = req.query.resource;
+  const { resource } = req.query;
   const isAuthRoute = resource === 'auth';
   const limiterKey = isAuthRoute
     ? 'auth'
@@ -255,310 +554,31 @@ export default async function handler(req, res) {
     });
   }
 
-  const sql = neon(process.env.DATABASE_URL);
-  const method = req.method;
-
   // ── رفض الطلبات غير المدعومة مبكراً ────────────────────────────────────
-  if (method !== 'GET' && method !== 'POST') {
-    return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return res.status(405).json({ error: `الطريقة ${req.method} غير مدعومة` });
   }
+
+  const sql = neon(process.env.DATABASE_URL);
 
   try {
     await ensureSchema(sql);
 
-    /* ─── Auth ─── */
-    if (resource === 'auth') {
-      const action = req.query.action;
-
-      // GET /api/db?resource=auth&action=me — verify token
-      if (method === 'GET' && action === 'me') {
-        const payload = await requireAuth(req, res);
-        if (!payload) return;
-        return res.status(200).json({ ok: true, username: payload.username });
-      }
-
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-
-        // POST action=setup — one-time account creation
-        if (action === 'setup') {
-          const setupSecret = req.headers['x-setup-secret'];
-          const envSecret = process.env.SETUP_SECRET;
-          if (!envSecret || setupSecret !== envSecret) {
-            return res.status(403).json({ error: 'مفتاح الإعداد غير صحيح أو مفقود' });
-          }
-          const existing = await sql`SELECT COUNT(*) AS count FROM users`;
-          if (parseInt(existing[0].count) > 0) {
-            return res.status(409).json({ error: 'الحساب موجود بالفعل' });
-          }
-          const { username, password } = body;
-          if (!username || !password) {
-            return res.status(400).json({ error: 'username و password مطلوبان' });
-          }
-          if (password.length < 6) {
-            return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
-          }
-          const hash = await bcrypt.hash(password, 12);
-          await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash})`;
-          return res.status(201).json({ ok: true });
-        }
-
-        // POST action=login
-        if (action === 'login') {
-          const { username, password } = body;
-          if (!username || !password) {
-            return res.status(400).json({ error: 'username و password مطلوبان' });
-          }
-          const users = await sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
-          if (!users.length) {
-            // Timing-safe: still run hash compare to prevent user enumeration
-            await bcrypt.compare(
-              password,
-              '$2b$12$invalidhashpadding000000000000000000000000000000000000'
-            );
-            return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
-          }
-          const user = users[0];
-          const valid = await bcrypt.compare(password, user.password_hash);
-          if (!valid) {
-            return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
-          }
-          const token = await signToken({ userId: user.id, username: user.username });
-          return res.status(200).json({ ok: true, token });
-        }
-
-        // POST action=change-password
-        if (action === 'change-password') {
-          const payload = await requireAuth(req, res);
-          if (!payload) return;
-          const { currentPassword, newPassword } = body;
-          if (!currentPassword || !newPassword) {
-            return res.status(400).json({ error: 'currentPassword و newPassword مطلوبان' });
-          }
-          if (newPassword.length < 6) {
-            return res
-              .status(400)
-              .json({ error: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' });
-          }
-          const users = await sql`SELECT * FROM users WHERE id = ${payload.userId} LIMIT 1`;
-          const valid = await bcrypt.compare(currentPassword, users[0].password_hash);
-          if (!valid) {
-            return res.status(401).json({ error: 'كلمة المرور الحالية غير صحيحة' });
-          }
-          const hash = await bcrypt.hash(newPassword, 12);
-          await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${payload.userId}`;
-          return res.status(200).json({ ok: true });
-        }
-      }
-
-      return res.status(400).json({ error: 'إجراء auth غير معروف' });
-    }
+    // ── Route to the appropriate sub-handler ──
+    if (resource === 'auth') return handleAuth(req, res, sql);
 
     /* ── All other resources require authentication ── */
     const authPayload = await requireAuth(req, res);
     if (!authPayload) return;
 
-    /* ─── Tasks Definition ─── */
-    if (resource === 'tasks') {
-      if (method === 'GET') {
-        const rows = await sql`SELECT data, updated_at FROM tasks_definition WHERE id = 1`;
-        return res.status(200).json({
-          tasks: rows[0]?.data ?? null,
-          updatedAt: rows[0]?.updated_at ?? null,
-        });
-      }
+    if (resource === 'tasks') return handleTasks(req, res, sql);
+    if (resource === 'schedule') return handleSchedule(req, res, sql);
+    if (resource === 'daily') return handleDailyState(req, res, sql);
+    if (resource === 'snapshot') return handleSnapshot(req, res, sql);
+    if (resource === 'snapshots') return handleSnapshots(req, res, sql);
 
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const { tasks } = body;
-
-        if (!Array.isArray(tasks)) {
-          return res.status(400).json({ error: 'tasks يجب أن يكون مصفوفة' });
-        }
-
-        if (tasks.length > 500) {
-          return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
-        }
-
-        await sql`
-          INSERT INTO tasks_definition (id, data, updated_at)
-          VALUES (1, ${JSON.stringify(tasks)}::jsonb, NOW())
-          ON CONFLICT (id) DO UPDATE
-            SET data = EXCLUDED.data, updated_at = NOW()
-        `;
-        return res.status(200).json({ ok: true });
-      }
-    }
-
-    /* ─── Schedule Config ─── */
-    if (resource === 'schedule') {
-      if (method === 'GET') {
-        const rows = await sql`SELECT data, updated_at FROM schedule_config WHERE id = 1`;
-        return res.status(200).json({
-          schedule: rows[0]?.data ?? null,
-          updatedAt: rows[0]?.updated_at ?? null,
-        });
-      }
-
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const { schedule } = body;
-
-        if (!Array.isArray(schedule)) {
-          return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
-        }
-
-        await sql`
-          INSERT INTO schedule_config (id, data, updated_at)
-          VALUES (1, ${JSON.stringify(schedule)}::jsonb, NOW())
-          ON CONFLICT (id) DO UPDATE
-            SET data = EXCLUDED.data, updated_at = NOW()
-        `;
-        return res.status(200).json({ ok: true });
-      }
-    }
-
-    /* ─── Daily State ─── */
-    if (resource === 'daily') {
-      if (method === 'GET') {
-        const date = req.query.date;
-        if (!date) return res.status(400).json({ error: 'date مطلوب' });
-        if (!isValidDate(date))
-          return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
-
-        const rows = await sql`
-          SELECT checked, sub_checked, skipped, updated_at FROM daily_state WHERE date = ${date}
-        `;
-        return res.status(200).json({
-          checked: rows[0]?.checked ?? {},
-          subChecked: rows[0]?.sub_checked ?? {},
-          skipped: rows[0]?.skipped ?? {},
-          updatedAt: rows[0]?.updated_at ?? null,
-        });
-      }
-
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const { date, checked, subChecked, skipped } = body;
-
-        if (!date) return res.status(400).json({ error: 'date مطلوب' });
-        if (!isValidDate(date))
-          return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
-
-        if (checked !== undefined && (typeof checked !== 'object' || Array.isArray(checked))) {
-          return res.status(400).json({ error: 'checked يجب أن يكون object' });
-        }
-        if (
-          subChecked !== undefined &&
-          (typeof subChecked !== 'object' || Array.isArray(subChecked))
-        ) {
-          return res.status(400).json({ error: 'subChecked يجب أن يكون object' });
-        }
-
-        await sql`
-          INSERT INTO daily_state (date, checked, sub_checked, skipped, updated_at)
-          VALUES (
-            ${date},
-            ${JSON.stringify(checked ?? {})}::jsonb,
-            ${JSON.stringify(subChecked ?? {})}::jsonb,
-            ${JSON.stringify(skipped ?? {})}::jsonb,
-            NOW()
-          )
-          ON CONFLICT (date) DO UPDATE
-            SET checked     = EXCLUDED.checked,
-                sub_checked = EXCLUDED.sub_checked,
-                skipped     = EXCLUDED.skipped,
-                updated_at  = NOW()
-        `;
-        return res.status(200).json({ ok: true });
-      }
-    }
-
-    /* ─── Daily Snapshot (single date) ─── */
-    if (resource === 'snapshot') {
-      if (method === 'GET') {
-        const date = req.query.date;
-        if (!date) return res.status(400).json({ error: 'date مطلوب' });
-        if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
-        const rows = await sql`
-          SELECT snapshot, updated_at FROM daily_snapshots WHERE date = ${date}
-        `;
-        return res.status(200).json({
-          snapshot: rows[0]?.snapshot ?? null,
-          updatedAt: rows[0]?.updated_at ?? null,
-        });
-      }
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const { date, snapshot } = body;
-        if (!date || !snapshot) return res.status(400).json({ error: 'date و snapshot مطلوبان' });
-        if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
-        await sql`
-          INSERT INTO daily_snapshots (date, snapshot, updated_at)
-          VALUES (${date}, ${JSON.stringify(snapshot)}::jsonb, NOW())
-          ON CONFLICT (date) DO UPDATE
-            SET snapshot = EXCLUDED.snapshot, updated_at = NOW()
-        `;
-        return res.status(200).json({ ok: true });
-      }
-    }
-
-    /* ─── Daily Snapshots Summary (all dates) ─── */
-    if (resource === 'snapshots') {
-      if (method === 'GET') {
-        const rows = await sql`
-          SELECT date, snapshot->>'progress' AS progress,
-                 snapshot->>'countDone' AS count_done,
-                 snapshot->>'totalOther' AS total_other
-          FROM daily_snapshots
-          ORDER BY date DESC
-          LIMIT 365
-        `;
-        return res.status(200).json({
-          summaries: rows.map((r) => ({
-            date:
-              r.date instanceof Date
-                ? r.date.toISOString().split('T')[0]
-                : String(r.date).split('T')[0],
-            progress: Number(r.progress ?? 0),
-            countDone: Number(r.count_done ?? 0),
-            totalOther: Number(r.total_other ?? 0),
-          })),
-        });
-      }
-    }
-
-    /* ─── Finance Resources (generic JSONB handler) ─── */
     const finRes = FINANCE_TABLES[resource];
-    if (finRes) {
-      if (method === 'GET') {
-        const rows = await sql(`SELECT data, updated_at FROM ${finRes.table} WHERE id = 1`);
-        return res.status(200).json({
-          [finRes.field]: rows[0]?.data ?? [],
-          updatedAt: rows[0]?.updated_at ?? null,
-        });
-      }
-      if (method === 'POST') {
-        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-        const data = body[finRes.field];
-        if (!Array.isArray(data)) {
-          return res.status(400).json({ error: `${finRes.field} يجب أن يكون مصفوفة` });
-        }
-        if (data.length > 1000) {
-          return res.status(400).json({ error: 'تجاوز الحد المسموح (1000 عنصر)' });
-        }
-        await sql(
-          `
-          INSERT INTO ${finRes.table} (id, data, updated_at)
-          VALUES (1, $1::jsonb, NOW())
-          ON CONFLICT (id) DO UPDATE
-            SET data = EXCLUDED.data, updated_at = NOW()
-        `,
-          [JSON.stringify(data)]
-        );
-        return res.status(200).json({ ok: true });
-      }
-    }
+    if (finRes) return handleFinance(req, res, sql, finRes);
 
     return res.status(400).json({ error: `resource غير معروف: ${resource}` });
   } catch (error) {

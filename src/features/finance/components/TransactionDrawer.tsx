@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import type { Transaction, TransactionDrawerState, FinanceSettings } from '../types';
+import { localDateISO } from '@/lib/date/localDate';
 
 interface TransactionDrawerProps {
   state: TransactionDrawerState;
@@ -33,7 +34,7 @@ export default function TransactionDrawer({
   // نموذج إضافة فاتورة جديدة
   const [form, setForm] = useState({
     amount: !('category' in state) && state.expense.amount ? String(state.expense.amount) : '',
-    date: new Date().toISOString().split('T')[0],
+    date: localDateISO(),
     notes: '',
     useForeignCurrency: false,
     originalAmount: '',

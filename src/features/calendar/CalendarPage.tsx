@@ -10,6 +10,7 @@ import { authFetch } from '@/features/auth/authFetch';
 import useNotesSync from './useNotesSync';
 import useNoteSearch from './useNoteSearch';
 import NotesPanel from './NotesPanel';
+import { localDateISO } from '@/lib/date/localDate';
 
 interface FinanceEvent {
   id: string;
@@ -50,7 +51,7 @@ const SYNC_LABELS: Record<string, string> = {
 export default function CalendarPage({ tasks }: CalendarPageProps) {
   const { tm } = useTaskContext();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateISO();
   const [selectedDate, setSelectedDate] = useState<string>(today);
 
   // ── Snapshot summaries (for battery indicator) ──────────────────────
@@ -238,7 +239,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
   const goToToday = () => {
     const now = new Date();
     setCurrentDate(now);
-    const d = now.toISOString().split('T')[0];
+    const d = localDateISO(now);
     setSelectedDate(d);
     setSelectedSnapshot(null);
   };

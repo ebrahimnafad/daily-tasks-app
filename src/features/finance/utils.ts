@@ -9,6 +9,7 @@ import type {
   QuarterlyFinanceSummary,
   FinanceSettings,
 } from './types';
+import { localMonthISO } from '@/lib/date/localDate';
 
 // ── تحويل التردد لمكافئ شهري ─────────────────────────────────────────────────
 export function toMonthlyAmount(amount: number, frequency: string): number {
@@ -153,14 +154,14 @@ export function calcGoalMonthlyTarget(
 
 // ── الشهر الحالي كنص YYYY-MM ─────────────────────────────────────────────────
 export function getCurrentMonth(): string {
-  return new Date().toISOString().slice(0, 7);
+  return localMonthISO();
 }
 
 // ── التنقل بين الأشهر ────────────────────────────────────────────────────────
 export function shiftMonth(month: string, delta: number): string {
-  const d = new Date(month + '-01');
+  const d = new Date(month + '-01T00:00:00');
   d.setMonth(d.getMonth() + delta);
-  return d.toISOString().slice(0, 7);
+  return localMonthISO(d);
 }
 
 // ── تسمية الشهر بالعربي ──────────────────────────────────────────────────────

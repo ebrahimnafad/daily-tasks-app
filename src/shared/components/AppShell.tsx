@@ -1,4 +1,4 @@
-import { TabBar } from '@/shared/components';
+import TabBar from './TabBar';
 import type { ToastsReturn } from '@/shared/hooks/useToasts';
 import { getSyncBadgeInfo } from '@/lib/sync/syncBadge';
 import type { SyncStatus } from '@/types';

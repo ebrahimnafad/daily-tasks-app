@@ -15,9 +15,10 @@ import {
   getLogicalDateISO,
   DAY_START_HOUR_KEY,
 } from '@/features/tasks/data/scheduleConfig';
+import { localDateISO } from '@/lib/date/localDate';
 
 /** @deprecated use getLogicalDateISO(dayStartHour) instead */
-export const todayISO = (): string => new Date().toISOString().split('T')[0];
+export const todayISO = (): string => localDateISO();
 
 interface DailyState {
   checked: CheckedMap;

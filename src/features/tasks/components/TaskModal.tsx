@@ -1,6 +1,7 @@
 import { useEffect, useRef, memo } from 'react';
 import type { TaskForm } from '@/types';
 import { type ShiftConfig, type TimeBlock } from '@/features/tasks/data/scheduleConfig';
+import { localDateISO } from '@/lib/date/localDate';
 
 const CATEGORIES = [
   { label: 'عبادة', color: 'var(--gold)' },
@@ -253,7 +254,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
                 className="form-select"
                 value={form.date || ''}
                 onChange={(e) => onFormField('date', e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
+                min={localDateISO()}
               />
             </div>
           )}

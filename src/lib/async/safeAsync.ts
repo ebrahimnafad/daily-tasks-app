@@ -41,11 +41,3 @@ export const withErrorHandler = <T extends (...args: unknown[]) => Promise<unkno
     throw lastError;
   }) as T;
 };
-
-export async function safeAsync<T>(
-  fn: () => Promise<T>,
-  options?: WithErrorHandlerOptions<T>
-): Promise<T | undefined> {
-  const wrapped = withErrorHandler(fn, options as WithErrorHandlerOptions<unknown>);
-  return wrapped() as Promise<T | undefined>;
-}

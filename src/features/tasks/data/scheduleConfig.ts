@@ -20,7 +20,11 @@ export function getLogicalDateISO(dayStartHour: number, from: Date = new Date())
   if (dayStartHour > 0 && hour < dayStartHour) {
     effective.setDate(effective.getDate() - 1);
   }
-  return effective.toISOString().split('T')[0];
+  // Use local date parts — toISOString() would return UTC which is wrong for UTC+ timezones
+  const y = effective.getFullYear();
+  const m = String(effective.getMonth() + 1).padStart(2, '0');
+  const d = String(effective.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 export interface TimeBlock {
@@ -127,7 +131,11 @@ export function getMostRecentFriday(from: Date = new Date()): string {
   const day = d.getDay(); // 0=Sun…5=Fri…6=Sat
   const daysBack = day === 5 ? 0 : day < 5 ? day + 2 : 1; // days since last Friday
   d.setDate(d.getDate() - daysBack);
-  return d.toISOString().split('T')[0];
+  // Use local date parts — toISOString() would return UTC
+  const y = d.getFullYear();
+  const mo = String(d.getMonth() + 1).padStart(2, '0');
+  const da = String(d.getDate()).padStart(2, '0');
+  return `${y}-${mo}-${da}`;
 }
 
 /**

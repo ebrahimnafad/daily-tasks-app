@@ -5,6 +5,7 @@ import { KEYS } from '@/features/finance/hooks/useFinanceSync';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
+import { localDateISO } from '@/lib/date/localDate';
 
 interface FinanceEvent {
   id: string;
@@ -38,7 +39,7 @@ const MONTHS = [
 export default function CalendarView({ tasks }: CalendarViewProps) {
   const { tm } = useTaskContext();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const today = new Date().toISOString().split('T')[0];
+  const today = localDateISO();
   const [selectedDate, setSelectedDate] = useState<string>(today);
 
   const year = currentDate.getFullYear();
@@ -161,7 +162,7 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
   const goToToday = () => {
     const now = new Date();
     setCurrentDate(now);
-    setSelectedDate(now.toISOString().split('T')[0]);
+    setSelectedDate(localDateISO(now));
   };
 
   const selectedDateTasks = tasksByDate[selectedDate] || [];

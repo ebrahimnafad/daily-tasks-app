@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   TaskSchema,
-  validateTask,
   parseTaskFormSafe,
   ExpenseSchema,
   parseSafe,
@@ -9,6 +8,7 @@ import {
   IncomeSchema,
   GoalSchema,
 } from '../schemas';
+import { z } from 'zod';
 
 describe('TaskSchema', () => {
   const validTask = {
@@ -152,16 +152,16 @@ describe('TaskSchema', () => {
     expect(() => TaskSchema.parse(task)).toThrow();
   });
 
-  it('should validate array of tasks via validateTask', () => {
+  it('should validate array of tasks via TaskSchema', () => {
     const tasks = [validTask];
 
-    expect(() => validateTask(tasks)).not.toThrow();
+    expect(() => z.array(TaskSchema).parse(tasks)).not.toThrow();
   });
 
   it('should throw on invalid array of tasks', () => {
     const tasks = [{ ...validTask, title: '' }];
 
-    expect(() => validateTask(tasks)).toThrow();
+    expect(() => z.array(TaskSchema).parse(tasks)).toThrow();
   });
 });
 

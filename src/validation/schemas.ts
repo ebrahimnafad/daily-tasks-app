@@ -1,6 +1,4 @@
 import { z } from 'zod';
-import type { Task } from '@/types';
-import type { Expense, Income, Goal, ExpenseCategory, Transaction } from '@/features/finance/types';
 
 const VALID_ICONS = [
   '📋',
@@ -73,14 +71,6 @@ export const TaskFormSchema = z.object({
 });
 
 export type TaskFormInput = z.infer<typeof TaskFormSchema>;
-
-export const validateTask = (data: unknown): Task[] => {
-  return z.array(TaskSchema).parse(data);
-};
-
-export const validateTaskForm = (data: unknown): TaskFormInput => {
-  return TaskFormSchema.parse(data);
-};
 
 export const parseTaskFormSafe = (
   data: unknown
@@ -180,32 +170,6 @@ export type TransactionInput = z.infer<typeof TransactionSchema>;
 export type IncomeInput = z.infer<typeof IncomeSchema>;
 export type GoalInput = z.infer<typeof GoalSchema>;
 export type FinanceSettingsInput = z.infer<typeof FinanceSettingsSchema>;
-
-export const validateExpense = (data: unknown): Expense => {
-  return ExpenseSchema.parse(data);
-};
-
-export const validateExpenseCategory = (data: unknown): ExpenseCategory => {
-  return ExpenseCategorySchema.parse(data);
-};
-
-export const validateTransaction = (data: unknown): Transaction => {
-  return TransactionSchema.parse(data);
-};
-
-export const validateIncome = (data: unknown): Income => {
-  return IncomeSchema.parse(data);
-};
-
-export const validateGoal = (data: unknown): Goal => {
-  return GoalSchema.parse(data);
-};
-
-export const validateFinanceSettings = (
-  data: unknown
-): { currency: 'SAR' | 'EGP'; exchangeRate?: number; showExchangeRate: boolean } => {
-  return FinanceSettingsSchema.parse(data);
-};
 
 export const parseSafe = <T>(
   schema: z.ZodSchema<T>,
