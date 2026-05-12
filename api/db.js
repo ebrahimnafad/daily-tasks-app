@@ -467,7 +467,7 @@ async function handleSnapshot(req, res, sql) {
 async function handleSnapshots(req, res, sql) {
   if (req.method === 'GET') {
     const rows = await sql`
-      SELECT date, snapshot->>'progress' AS progress,
+      SELECT to_char(date, 'YYYY-MM-DD') AS date_str, snapshot->>'progress' AS progress,
              snapshot->>'countDone' AS count_done,
              snapshot->>'totalOther' AS total_other
       FROM daily_snapshots
@@ -476,10 +476,7 @@ async function handleSnapshots(req, res, sql) {
     `;
     return res.status(200).json({
       summaries: rows.map((r) => ({
-        date:
-          r.date instanceof Date
-            ? r.date.toISOString().split('T')[0]
-            : String(r.date).split('T')[0],
+        date: r.date_str,
         progress: Number(r.progress ?? 0),
         countDone: Number(r.count_done ?? 0),
         totalOther: Number(r.total_other ?? 0),

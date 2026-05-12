@@ -7,11 +7,13 @@ import { sendProgressToSheets } from '@/api/googleSheets';
 import {
   DEFAULT_SHIFTS,
   isWorkday,
+  getLogicalDateISO,
+  DAY_START_HOUR_KEY,
   type ShiftType,
   type ShiftConfig,
 } from '@/features/tasks/data/scheduleConfig';
 import type { Task, CheckedMap, SubCheckedMap, TaskManagerReturn } from '@/types';
-import { localDateISO } from '@/lib/date/localDate';
+import { lsGet } from '@/lib/storage/localStorage';
 
 export default function useTaskManager(
   tasks: Task[],
@@ -80,7 +82,8 @@ export default function useTaskManager(
 
     // Save snapshot BEFORE clearing
     if (saveSnapshot) {
-      const today = localDateISO();
+      const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
+      const today = getLogicalDateISO(dayStartHour);
       void saveSnapshot({
         date: today,
         tasks: otherTasks,
