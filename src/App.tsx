@@ -252,7 +252,7 @@ function AppContent({ logout }: { logout: () => void }) {
 
 // ── App — auth gate only, no data hooks ──────────────────────────────────────
 export default function App() {
-  const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, login, logout } = useAuth();
 
   if (authLoading) {
     return (
@@ -275,7 +275,7 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return <LoginPage />;
+    return <LoginPage login={login} />;
   }
 
   return <AppContent logout={logout} />;

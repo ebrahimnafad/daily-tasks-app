@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from 'react';
-import { useAuth } from './useAuth';
 
-export default function LoginPage() {
-  const { login } = useAuth();
+interface LoginPageProps {
+  login: (username: string, password: string) => Promise<string | null>;
+}
+
+export default function LoginPage({ login }: LoginPageProps) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
