@@ -25,3 +25,6 @@
 
 /* ── Feature: Finance ── */
 @import './features/finance/finance.css';
+
+/* ── Feature: Auth ── */
+@import './features/auth/auth.css';

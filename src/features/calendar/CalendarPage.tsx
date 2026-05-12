@@ -6,6 +6,7 @@ import { KEYS } from '@/features/finance/hooks/useFinanceSync';
 import { lsGet } from '@/lib/storage/localStorage';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
+import { authFetch } from '@/features/auth/authFetch';
 import useNotesSync from './useNotesSync';
 import useNoteSearch from './useNoteSearch';
 import NotesPanel from './NotesPanel';
@@ -58,7 +59,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
 
   useEffect(() => {
-    fetch('/api/db?resource=snapshots', { cache: 'no-store' })
+    authFetch('/api/db?resource=snapshots', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data: { summaries?: SnapshotSummary[] }) => {
         if (!Array.isArray(data.summaries)) return;
@@ -86,7 +87,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
       }
       setLoadingSnapshot(true);
       try {
-        const r = await fetch(`/api/db?resource=snapshot&date=${date}`, { cache: 'no-store' });
+        const r = await authFetch(`/api/db?resource=snapshot&date=${date}`, { cache: 'no-store' });
         const data = (await r.json()) as { snapshot: DailySnapshot | null };
         setSelectedSnapshot(data.snapshot ?? null);
       } catch {

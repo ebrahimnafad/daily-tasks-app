@@ -3,6 +3,10 @@
  * Vercel Serverless Function — Neon Postgres CRUD
  *
  * Routes (via /api/db?resource=X):
+ *   POST      /api/db?resource=auth&action=setup  → إنشاء الحساب (مرة واحدة)
+ *   POST      /api/db?resource=auth&action=login  → تسجيل الدخول → JWT
+ *   GET       /api/db?resource=auth&action=me     → التحقق من الجلسة
+ *   POST      /api/db?resource=auth&action=change-password → تغيير كلمة المرور
  *   GET|POST  /api/db?resource=tasks         → تعريفات المهام
  *   GET|POST  /api/db?resource=daily         → الحالة اليومية
  *   GET|POST  /api/db?resource=income        → مصادر الدخل
@@ -10,10 +14,12 @@
  *   GET|POST  /api/db?resource=payments      → سجلات الدفع
  *   GET|POST  /api/db?resource=goals         → أهداف الادخار
  *
- * يتطلب Environment Variable: DATABASE_URL
+ * يتطلب Environment Variables: DATABASE_URL, JWT_SECRET, SETUP_SECRET
  */
 
 import { neon } from '@neondatabase/serverless';
+import { SignJWT, jwtVerify } from 'jose';
+import bcrypt from 'bcryptjs';
 import { applyRateLimit } from './middleware/rateLimit.js';
 
 // ── CORS: تقييد الوصول ──────────────────────────────────────────────────
@@ -39,12 +45,51 @@ function setCorsHeaders(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', origin);
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Setup-Secret');
   res.setHeader('Access-Control-Max-Age', '86400');
   res.setHeader('Vary', 'Origin');
   res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
   res.setHeader('Pragma', 'no-cache');
   res.setHeader('Expires', '0');
+}
+
+// ── JWT helpers ──────────────────────────────────────────────────────────
+const getJwtSecret = () => {
+  const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars!!';
+  return new TextEncoder().encode(secret);
+};
+
+async function signToken(payload) {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('30d')
+    .sign(getJwtSecret());
+}
+
+async function verifyToken(token) {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
+/** Extracts and verifies the Bearer token. Returns payload or sends 401 and returns null. */
+async function requireAuth(req, res) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'غير مصرح — يرجى تسجيل الدخول' });
+    return null;
+  }
+  const token = authHeader.slice(7);
+  const payload = await verifyToken(token);
+  if (!payload) {
+    res.status(401).json({ error: 'جلسة منتهية الصلاحية — يرجى تسجيل الدخول مجدداً' });
+    return null;
+  }
+  return payload;
 }
 
 // ── Regex للتحقق من صيغة التاريخ YYYY-MM-DD ──────────────────────────────
@@ -58,6 +103,16 @@ function isValidDate(str) {
 
 /** إنشاء الجداول إذا لم تكن موجودة (idempotent) */
 async function ensureSchema(sql) {
+  // ── Users ──
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL PRIMARY KEY,
+      username      TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
   await sql`
     CREATE TABLE IF NOT EXISTS tasks_definition (
       id         INTEGER PRIMARY KEY DEFAULT 1,
@@ -181,7 +236,12 @@ export default async function handler(req, res) {
 
   /* ── Rate Limiting ── */
   const resource = req.query.resource;
-  const limiterKey = resource === 'daily' || resource === 'tasks' ? 'sync' : 'general';
+  const isAuthRoute = resource === 'auth';
+  const limiterKey = isAuthRoute
+    ? 'auth'
+    : resource === 'daily' || resource === 'tasks'
+      ? 'sync'
+      : 'general';
   const rateLimit = applyRateLimit(req, resource || 'unknown', limiterKey);
 
   if (!rateLimit.allowed) {
@@ -206,6 +266,98 @@ export default async function handler(req, res) {
   try {
     await ensureSchema(sql);
 
+    /* ─── Auth ─── */
+    if (resource === 'auth') {
+      const action = req.query.action;
+
+      // GET /api/db?resource=auth&action=me — verify token
+      if (method === 'GET' && action === 'me') {
+        const payload = await requireAuth(req, res);
+        if (!payload) return;
+        return res.status(200).json({ ok: true, username: payload.username });
+      }
+
+      if (method === 'POST') {
+        const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
+
+        // POST action=setup — one-time account creation
+        if (action === 'setup') {
+          const setupSecret = req.headers['x-setup-secret'];
+          const envSecret = process.env.SETUP_SECRET;
+          if (!envSecret || setupSecret !== envSecret) {
+            return res.status(403).json({ error: 'مفتاح الإعداد غير صحيح أو مفقود' });
+          }
+          const existing = await sql`SELECT COUNT(*) AS count FROM users`;
+          if (parseInt(existing[0].count) > 0) {
+            return res.status(409).json({ error: 'الحساب موجود بالفعل' });
+          }
+          const { username, password } = body;
+          if (!username || !password) {
+            return res.status(400).json({ error: 'username و password مطلوبان' });
+          }
+          if (password.length < 6) {
+            return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
+          }
+          const hash = await bcrypt.hash(password, 12);
+          await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash})`;
+          return res.status(201).json({ ok: true });
+        }
+
+        // POST action=login
+        if (action === 'login') {
+          const { username, password } = body;
+          if (!username || !password) {
+            return res.status(400).json({ error: 'username و password مطلوبان' });
+          }
+          const users = await sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
+          if (!users.length) {
+            // Timing-safe: still run hash compare to prevent user enumeration
+            await bcrypt.compare(
+              password,
+              '$2b$12$invalidhashpadding000000000000000000000000000000000000'
+            );
+            return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+          }
+          const user = users[0];
+          const valid = await bcrypt.compare(password, user.password_hash);
+          if (!valid) {
+            return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
+          }
+          const token = await signToken({ userId: user.id, username: user.username });
+          return res.status(200).json({ ok: true, token });
+        }
+
+        // POST action=change-password
+        if (action === 'change-password') {
+          const payload = await requireAuth(req, res);
+          if (!payload) return;
+          const { currentPassword, newPassword } = body;
+          if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'currentPassword و newPassword مطلوبان' });
+          }
+          if (newPassword.length < 6) {
+            return res
+              .status(400)
+              .json({ error: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' });
+          }
+          const users = await sql`SELECT * FROM users WHERE id = ${payload.userId} LIMIT 1`;
+          const valid = await bcrypt.compare(currentPassword, users[0].password_hash);
+          if (!valid) {
+            return res.status(401).json({ error: 'كلمة المرور الحالية غير صحيحة' });
+          }
+          const hash = await bcrypt.hash(newPassword, 12);
+          await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${payload.userId}`;
+          return res.status(200).json({ ok: true });
+        }
+      }
+
+      return res.status(400).json({ error: 'إجراء auth غير معروف' });
+    }
+
+    /* ── All other resources require authentication ── */
+    const authPayload = await requireAuth(req, res);
+    if (!authPayload) return;
+
     /* ─── Tasks Definition ─── */
     if (resource === 'tasks') {
       if (method === 'GET') {
@@ -217,7 +369,6 @@ export default async function handler(req, res) {
       }
 
       if (method === 'POST') {
-        // Vercel parses JSON bodies automatically if Content-Type is application/json
         const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
         const { tasks } = body;
 

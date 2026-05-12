@@ -1,9 +1,22 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
-  // Mock API requests to prevent optimistic update rollbacks when DB is not configured
+  // Mock API requests to prevent failures when DB / auth is not configured in test env
   await page.route('**/api/db**', async (route) => {
-    if (route.request().method() === 'POST') {
+    const url = route.request().url();
+    const method = route.request().method();
+
+    // Auth: always return authenticated
+    if (url.includes('resource=auth')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true, username: 'test', token: 'mock-token' }),
+      });
+      return;
+    }
+
+    if (method === 'POST') {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -12,6 +25,11 @@ test.beforeEach(async ({ page }) => {
     } else {
       await route.fallback();
     }
+  });
+
+  // Inject a fake auth token so the app considers the user authenticated
+  await page.addInitScript(() => {
+    localStorage.setItem('auth_token', 'mock-token-for-e2e');
   });
 });
 

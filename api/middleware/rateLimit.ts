@@ -64,6 +64,11 @@ export const rateLimiters = {
   }),
   sync: createLimiter({ windowMs: 60000, max: 30, message: 'تم تجاوز حد المزامنة. حاول لاحقاً.' }),
   sheets: createLimiter({ windowMs: 60000, max: 10, message: 'تم تجاوز حد الإرسال. حاول لاحقاً.' }),
+  auth: createLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 5,
+    message: 'محاولات تسجيل الدخول كثيرة جداً. حاول بعد 15 دقيقة.',
+  }),
 };
 
 export function applyRateLimit(

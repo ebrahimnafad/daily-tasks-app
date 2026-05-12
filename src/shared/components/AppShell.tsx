@@ -10,6 +10,7 @@ interface AppShellProps {
   shift: string;
   syncStatus: SyncStatus;
   toasts: ToastsReturn;
+  onLogout?: () => void;
 }
 
 function SyncBadge({ status }: { status: SyncStatus }) {
@@ -42,6 +43,7 @@ export default function AppShell({
   shift,
   syncStatus,
   toasts,
+  onLogout,
 }: AppShellProps) {
   const { newDayToast, quotaError, needRefresh, updateServiceWorker } = toasts;
 
@@ -58,6 +60,42 @@ export default function AppShell({
     >
       <TabBar activeTab={activeTab} onTabChange={setActiveTab} financeBadge={0} />
       {activeTab !== 'finance' && <SyncBadge status={syncStatus} />}
+
+      {/* Logout button */}
+      {onLogout && (
+        <button
+          id="logout-btn"
+          onClick={onLogout}
+          title="تسجيل الخروج"
+          aria-label="تسجيل الخروج"
+          style={{
+            position: 'fixed',
+            top: 12,
+            left: 12,
+            zIndex: 200,
+            background: 'rgba(var(--gold-rgb), 0.08)',
+            border: '1px solid rgba(var(--gold-rgb), 0.2)',
+            borderRadius: 'var(--radius-sm)',
+            color: 'rgba(var(--gold-rgb), 0.5)',
+            fontSize: '16px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            lineHeight: 1,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = 'var(--gold)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor =
+              'rgba(var(--gold-rgb), 0.45)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.color = 'rgba(var(--gold-rgb), 0.5)';
+            (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(var(--gold-rgb), 0.2)';
+          }}
+        >
+          🚪
+        </button>
+      )}
 
       {newDayToast && (
         <div

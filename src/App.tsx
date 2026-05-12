@@ -10,6 +10,8 @@ import {
   FinanceErrorFallback,
   CalendarErrorFallback,
 } from '@/shared/components/FeatureErrorFallback';
+import { useAuth } from '@/features/auth/useAuth';
+import LoginPage from '@/features/auth/LoginPage';
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
@@ -18,8 +20,8 @@ const CalendarView = lazy(() =>
 );
 const FinancePage = lazy(() => import('@/features/finance/components/FinancePage'));
 
-// ── App ──────────────────────────────────────────────────────────────────────
-export default function App() {
+// ── AppContent — all hooks live here (no early returns allowed above hooks) ──
+function AppContent({ logout }: { logout: () => void }) {
   const [activeTab, setActiveTab] = useState('tasks');
   const toasts = useToasts();
   const { onNewDay, onQuota } = toasts;
@@ -45,7 +47,6 @@ export default function App() {
 
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 
-  // ── UI State ─────────────────────────────────────────────────────────────
   const tm = useTaskManager(
     tasks,
     setTasks,
@@ -123,7 +124,6 @@ export default function App() {
     day: 'numeric',
   });
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <ErrorBoundary level="global">
       <AppShell
@@ -132,6 +132,7 @@ export default function App() {
         shift={shift}
         syncStatus={syncStatus}
         toasts={toasts}
+        onLogout={logout}
       >
         <Suspense
           fallback={
@@ -247,4 +248,35 @@ export default function App() {
       </AppShell>
     </ErrorBoundary>
   );
+}
+
+// ── App — auth gate only, no data hooks ──────────────────────────────────────
+export default function App() {
+  const { isAuthenticated, isLoading: authLoading, logout } = useAuth();
+
+  if (authLoading) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'var(--bg)',
+          fontSize: '2.5rem',
+          color: 'var(--gold)',
+        }}
+        aria-label="جاري التحميل"
+      >
+        ✦
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
+
+  return <AppContent logout={logout} />;
 }
