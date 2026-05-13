@@ -7,10 +7,83 @@ const MAX_CHARS = 2000;
 interface NotesPanelProps {
   date: string;
   notes: CalendarNote[];
-  onAdd: (date: string, text: string) => void;
-  onUpdate: (id: string, text: string) => void;
+  onAdd: (date: string, text: string, tags?: string[]) => void;
+  onUpdate: (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
+}
+
+function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
+  const [input, setInput] = useState('');
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      const newTag = input.trim().replace(/^#/, '');
+      if (newTag && !tags.includes(newTag)) {
+        onChange([...tags, newTag]);
+      }
+      setInput('');
+    }
+  };
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '4px',
+        alignItems: 'center',
+        padding: '4px 8px',
+        background: 'var(--bg-lighter)',
+        borderRadius: '6px',
+      }}
+    >
+      {tags.map((tag) => (
+        <span
+          key={tag}
+          style={{
+            background: 'rgba(var(--gold-rgb), 0.15)',
+            color: 'var(--gold)',
+            padding: '2px 8px',
+            borderRadius: '12px',
+            fontSize: '0.8em',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          #{tag}
+          <button
+            onClick={() => onChange(tags.filter((t) => t !== tag))}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'inherit',
+              cursor: 'pointer',
+              padding: 0,
+              fontSize: '1em',
+            }}
+          >
+            ✕
+          </button>
+        </span>
+      ))}
+      <input
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder={tags.length === 0 ? 'أضف تصنيف (اضغط Enter)' : 'تصنيف جديد...'}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          outline: 'none',
+          color: 'var(--text-color)',
+          fontSize: '0.85em',
+          flex: 1,
+          minWidth: '100px',
+        }}
+      />
+    </div>
+  );
 }
 
 // ── Markdown toolbar helpers ──────────────────────────────────────────────
@@ -34,7 +107,7 @@ function insertLine(textarea: HTMLTextAreaElement, prefix: string): string {
 // ── NoteCard ──────────────────────────────────────────────────────────────
 interface NoteCardProps {
   note: CalendarNote;
-  onUpdate: (id: string, text: string) => void;
+  onUpdate: (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
 }
@@ -42,26 +115,33 @@ interface NoteCardProps {
 function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.text);
+  const [draftTags, setDraftTags] = useState<string[]>(note.tags || []);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
   const startEdit = () => {
     setDraft(note.text);
+    setDraftTags(note.tags || []);
     setEditing(true);
     setTimeout(() => taRef.current?.focus(), 0);
   };
 
   const save = () => {
     const trimmed = draft.trim();
-    if (trimmed && trimmed !== note.text) {
-      onUpdate(note.id, trimmed);
+    if (
+      trimmed &&
+      (trimmed !== note.text || JSON.stringify(draftTags) !== JSON.stringify(note.tags || []))
+    ) {
+      onUpdate(note.id, { text: trimmed, tags: draftTags });
     } else {
       setDraft(note.text); // revert if empty or unchanged
+      setDraftTags(note.tags || []);
     }
     setEditing(false);
   };
 
   const cancel = () => {
     setDraft(note.text);
+    setDraftTags(note.tags || []);
     setEditing(false);
   };
 
@@ -157,6 +237,8 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
             dir="auto"
           />
 
+          <TagInput tags={draftTags} onChange={setDraftTags} />
+
           <div
             style={{
               display: 'flex',
@@ -184,6 +266,24 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
       ) : (
         <div onDoubleClick={startEdit} title="اضغط مرتين للتعديل">
           <MarkdownNote text={note.text} />
+          {note.tags && note.tags.length > 0 && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
+              {note.tags.map((tag) => (
+                <span
+                  key={tag}
+                  style={{
+                    background: 'rgba(var(--gold-rgb), 0.1)',
+                    color: 'var(--gold)',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '0.8em',
+                  }}
+                >
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -193,20 +293,22 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
 // ── Add Note Form ─────────────────────────────────────────────────────────
 interface AddNoteFormProps {
   date: string;
-  onAdd: (date: string, text: string) => void;
+  onAdd: (date: string, text: string, tags?: string[]) => void;
   onClose: () => void;
 }
 
 function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
   const [text, setText] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const taRef = useRef<HTMLTextAreaElement>(null);
   const overLimit = text.length > MAX_CHARS;
 
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed || overLimit) return;
-    onAdd(date, trimmed);
+    onAdd(date, trimmed, tags);
     setText('');
+    setTags([]);
     onClose();
   };
 
@@ -266,7 +368,16 @@ function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
         autoFocus
       />
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <TagInput tags={tags} onChange={setTags} />
+
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginTop: '8px',
+        }}
+      >
         <span className={`cal-note-char-count${overLimit ? ' over' : ''}`}>
           {text.length} / {MAX_CHARS}
         </span>

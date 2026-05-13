@@ -108,6 +108,7 @@ export function SubtaskPanel({
                     style={{ width: '100%' }}
                     value={editingSubText}
                     autoFocus
+                    enterKeyHint="next"
                     aria-label="تعديل العنصر"
                     onChange={(e) => onEditingSubTextChange(e.target.value)}
                     onKeyDown={(e) => {
@@ -115,11 +116,18 @@ export function SubtaskPanel({
                       if (e.key === 'Escape') onCancelEditSub();
                     }}
                   />
-                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      gap: '8px',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
                     <input
                       type="time"
                       className="sub-edit-inp"
-                      style={{ width: 'auto', padding: '0 4px' }}
+                      style={{ width: 'auto', padding: '0 4px', flex: '0 1 auto' }}
                       value={editingSubAlertTime}
                       aria-label="تعديل وقت التذكير"
                       onChange={(e) => onEditingSubAlertTimeChange(e.target.value)}
@@ -128,6 +136,28 @@ export function SubtaskPanel({
                         if (e.key === 'Escape') onCancelEditSub();
                       }}
                     />
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="add-sub-btn"
+                        onClick={onSaveEditSub}
+                        style={{ padding: '4px 12px', flexShrink: 0 }}
+                      >
+                        حفظ
+                      </button>
+                      <button
+                        className="add-sub-btn"
+                        onClick={onCancelEditSub}
+                        style={{
+                          padding: '4px 12px',
+                          flexShrink: 0,
+                          background: 'transparent',
+                          border: '1px solid var(--border-color)',
+                          color: 'inherit',
+                        }}
+                      >
+                        إلغاء
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -211,21 +241,29 @@ export function SubtaskPanel({
           style={{ width: '100%' }}
           placeholder="أضف عنصر جديد للقائمة..."
           value={newItemText}
+          enterKeyHint="next"
           aria-label="إضافة عنصر جديد للقائمة الفرعية"
           onChange={(e) => onNewItemTextChange(e.target.value)}
           onKeyDown={handleAddKeyDown}
         />
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-start' }}>
+        <div
+          style={{
+            display: 'flex',
+            gap: '8px',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
           <input
             type="time"
             className="add-sub-inp"
-            style={{ width: 'auto', padding: '0 8px' }}
+            style={{ width: 'auto', padding: '0 8px', flex: '0 1 auto' }}
             value={newItemAlertTime}
             aria-label="وقت تذكير العنصر الجديد"
             onChange={(e) => onNewItemAlertTimeChange(e.target.value)}
             onKeyDown={handleAddKeyDown}
           />
-          <button className="add-sub-btn" onClick={onAddSubItem}>
+          <button className="add-sub-btn" onClick={onAddSubItem} style={{ flexShrink: 0 }}>
             + إضافة
           </button>
         </div>

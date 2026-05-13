@@ -11,4 +11,5 @@ export interface CalendarNote {
   /** ISO timestamp */
   updatedAt: string;
   pinned?: boolean;
+  tags?: string[];
 }

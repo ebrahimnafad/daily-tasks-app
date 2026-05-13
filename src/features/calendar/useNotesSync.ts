@@ -47,8 +47,8 @@ export type SyncStatus = 'syncing' | 'synced' | 'offline' | 'error';
 
 interface UseNotesSyncReturn {
   notes: CalendarNote[];
-  addNote: (date: string, text: string) => CalendarNote;
-  updateNote: (id: string, text: string) => void;
+  addNote: (date: string, text: string, tags?: string[]) => CalendarNote;
+  updateNote: (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => void;
   deleteNote: (id: string) => void;
   togglePin: (id: string) => void;
   syncStatus: SyncStatus;
@@ -77,9 +77,9 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
 
   // ── Setters ───────────────────────────────────────────────────────────
   const addNote = useCallback(
-    (date: string, text: string): CalendarNote => {
+    (date: string, text: string, tags: string[] = []): CalendarNote => {
       const now = new Date().toISOString();
-      const note: CalendarNote = { id: nanoid(), date, text, createdAt: now, updatedAt: now };
+      const note: CalendarNote = { id: nanoid(), date, text, tags, createdAt: now, updatedAt: now };
       setNotesState((prev) => {
         const next = [note, ...prev];
         persist(next);
@@ -91,10 +91,10 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   );
 
   const updateNote = useCallback(
-    (id: string, text: string) => {
+    (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => {
       setNotesState((prev) => {
         const next = prev.map((n) =>
-          n.id === id ? { ...n, text, updatedAt: new Date().toISOString() } : n
+          n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n
         );
         persist(next);
         return next;

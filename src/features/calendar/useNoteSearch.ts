@@ -11,7 +11,12 @@ export default function useNoteSearch(notes: CalendarNote[], query: string): Cal
     const q = query.trim().toLowerCase();
     if (!q) return [];
     return notes
-      .filter((n) => n.text.toLowerCase().includes(q) || n.date.includes(q))
+      .filter(
+        (n) =>
+          n.text.toLowerCase().includes(q) ||
+          n.date.includes(q) ||
+          (n.tags && n.tags.some((t) => t.toLowerCase().includes(q)))
+      )
       .sort((a, b) => {
         if (a.pinned && !b.pinned) return -1;
         if (!a.pinned && b.pinned) return 1;
