@@ -18,6 +18,7 @@ import {
   DEFAULT_SHIFTS,
 } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
+import { HOLIDAYS_BY_DATE, HOLIDAY_COLOR } from './holidays';
 
 interface FinanceEvent {
   id: string;
@@ -388,6 +389,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
               const hasExpenses = dayFinance.length > 0;
 
               const shiftType = getDayShiftType(dateStr);
+              const holiday = HOLIDAYS_BY_DATE[dateStr] ?? null;
 
               // ── Compute cell background (shift tint + heatmap blended) ──
               let cellBg: string | undefined;
@@ -416,6 +418,11 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                     ? '3px solid rgba(167,139,250,0.72)'
                     : '2px dashed rgba(100,116,139,0.45)';
 
+              // ── Bottom border for holiday ──
+              const cellBorderBottom = holiday
+                ? `2px solid ${HOLIDAY_COLOR[holiday.type]}`
+                : undefined;
+
               return (
                 <div
                   key={day}
@@ -424,6 +431,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                     cursor: 'pointer',
                     background: cellBg,
                     borderTop: cellBorderTop,
+                    borderBottom: cellBorderBottom,
                     boxShadow: isSelected ? 'inset 0 0 0 2px var(--gold)' : undefined,
                     opacity: shiftType === 'off' ? 0.72 : 1,
                   }}
@@ -451,6 +459,15 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                   {hasNotes && (
                     <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}>
                       📝
+                    </span>
+                  )}
+                  {/* Holiday icon bottom-left */}
+                  {holiday && (
+                    <span
+                      className="cal-cell-holiday"
+                      title={holiday.name + (holiday.note ? ` (${holiday.note})` : '')}
+                    >
+                      {holiday.icon}
                     </span>
                   )}
                   {/* Battery indicator for past days with snapshots */}
@@ -502,6 +519,21 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                 month: 'long',
               })}
             </h3>
+            {/* Holiday banner */}
+            {HOLIDAYS_BY_DATE[selectedDate] &&
+              (() => {
+                const h = HOLIDAYS_BY_DATE[selectedDate];
+                return (
+                  <div
+                    className="cal-holiday-banner"
+                    style={{ borderColor: HOLIDAY_COLOR[h.type], color: HOLIDAY_COLOR[h.type] }}
+                  >
+                    <span className="cal-holiday-banner__icon">{h.icon}</span>
+                    <span className="cal-holiday-banner__name">{h.name}</span>
+                    {h.note && <span className="cal-holiday-banner__note">({h.note})</span>}
+                  </div>
+                );
+              })()}
 
             {selectedDateTasks.length === 0 && selectedDateFinance.length === 0 ? (
               <p className="cal-empty">لا توجد مهام أو استحقاقات في هذا اليوم</p>

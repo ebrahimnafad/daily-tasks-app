@@ -710,3 +710,40 @@
 .cal-note-body tr:nth-child(even) td {
   background: rgba(var(--gold-rgb), 0.03);
 }
+
+/* ── Holiday cell icon ─────────────────────────────────────────────── */
+.cal-cell-holiday {
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Holiday banner (selected-day panel) ───────────────────────────── */
+.cal-holiday-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.03);
+  margin-bottom: var(--space-md);
+  animation: slideDown 0.18s ease;
+}
+.cal-holiday-banner__icon {
+  font-size: var(--font-lg);
+  flex-shrink: 0;
+}
+.cal-holiday-banner__name {
+  font-size: var(--font-base);
+  font-weight: 700;
+  flex: 1;
+}
+.cal-holiday-banner__note {
+  font-size: var(--font-xs);
+  opacity: 0.65;
+  flex-shrink: 0;
+}
