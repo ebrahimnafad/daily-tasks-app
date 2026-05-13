@@ -724,14 +724,19 @@
 /* ── Holiday banner (selected-day panel) ───────────────────────────── */
 .cal-holiday-banner {
   display: flex;
-  align-items: center;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-md);
   border: 1px solid;
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.03);
   margin-bottom: var(--space-md);
   animation: slideDown 0.18s ease;
+}
+.cal-holiday-banner__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
 }
 .cal-holiday-banner__icon {
   font-size: var(--font-lg);
@@ -742,8 +747,71 @@
   font-weight: 700;
   flex: 1;
 }
-.cal-holiday-banner__note {
+.cal-holiday-banner__approx {
   font-size: var(--font-xs);
-  opacity: 0.65;
+  opacity: 0.7;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
   flex-shrink: 0;
+}
+.cal-holiday-banner__confirmed {
+  font-size: var(--font-xs);
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid currentColor;
+  border-radius: var(--radius-pill);
+  padding: 1px 7px;
+  flex-shrink: 0;
+}
+
+/* ── Holiday date-adjustment strip ─────────────────────────────────── */
+.cal-holiday-adj {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  padding-top: var(--space-xs);
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.cal-holiday-adj__label {
+  font-size: var(--font-xs);
+  opacity: 0.75;
+  flex: 1;
+  min-width: 0;
+}
+.cal-holiday-adj__controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.cal-holiday-adj__btn {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-sm);
+  color: inherit;
+  font-size: 13px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1;
+}
+.cal-holiday-adj__btn:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.cal-holiday-adj__btn--reset {
+  font-size: 15px;
+  opacity: 0.65;
+}
+.cal-holiday-adj__offset {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
 }

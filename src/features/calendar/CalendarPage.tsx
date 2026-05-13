@@ -3,7 +3,7 @@ import type { Task } from '@/types';
 import type { SnapshotSummary, DailySnapshot } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
 import { KEYS } from '@/features/finance/hooks/useFinanceSync';
-import { lsGet } from '@/lib/storage/localStorage';
+import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
 import { authFetch } from '@/features/auth/authFetch';
@@ -18,7 +18,13 @@ import {
   DEFAULT_SHIFTS,
 } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
-import { HOLIDAYS_BY_DATE, HOLIDAY_COLOR } from './holidays';
+import {
+  HOLIDAY_GROUPS,
+  HOLIDAY_COLOR,
+  LS_HOLIDAY_OFFSETS,
+  buildHolidayMap,
+  addDays,
+} from './holidays';
 
 interface FinanceEvent {
   id: string;
@@ -80,6 +86,27 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
       return shiftId as DayShiftType;
     },
     [schedule, shiftEpoch]
+  );
+
+  // ── Holiday offsets (user-confirmed moon-sighting adjustments) ────
+  const [holidayOffsets, setHolidayOffsets] = useState<Record<string, number>>(() =>
+    lsGet<Record<string, number>>(LS_HOLIDAY_OFFSETS, {})
+  );
+
+  const adjustHoliday = useCallback((groupId: string, delta: number | 'reset') => {
+    setHolidayOffsets((prev) => {
+      const current = prev[groupId] ?? 0;
+      const next = delta === 'reset' ? 0 : current + delta;
+      const updated = { ...prev, [groupId]: next };
+      lsSet(LS_HOLIDAY_OFFSETS, updated);
+      return updated;
+    });
+  }, []);
+
+  /** Flat date → Holiday map, rebuilt whenever offsets change */
+  const holidayMap = useMemo(
+    () => buildHolidayMap(HOLIDAY_GROUPS, holidayOffsets),
+    [holidayOffsets]
   );
 
   // ── Snapshot summaries (for battery indicator) ──────────────────────
@@ -389,7 +416,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
               const hasExpenses = dayFinance.length > 0;
 
               const shiftType = getDayShiftType(dateStr);
-              const holiday = HOLIDAYS_BY_DATE[dateStr] ?? null;
+              const holiday = holidayMap[dateStr] ?? null;
 
               // ── Compute cell background (shift tint + heatmap blended) ──
               let cellBg: string | undefined;
@@ -463,10 +490,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                   )}
                   {/* Holiday icon bottom-left */}
                   {holiday && (
-                    <span
-                      className="cal-cell-holiday"
-                      title={holiday.name + (holiday.note ? ` (${holiday.note})` : '')}
-                    >
+                    <span className="cal-cell-holiday" title={holiday.name}>
                       {holiday.icon}
                     </span>
                   )}
@@ -519,18 +543,67 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                 month: 'long',
               })}
             </h3>
-            {/* Holiday banner */}
-            {HOLIDAYS_BY_DATE[selectedDate] &&
+            {/* Holiday banner with adjustment controls */}
+            {holidayMap[selectedDate] &&
               (() => {
-                const h = HOLIDAYS_BY_DATE[selectedDate];
+                const h = holidayMap[selectedDate];
+                const offset = holidayOffsets[h.groupId] ?? 0;
+                const confirmed = !h.approximate || offset !== 0;
+                const group = HOLIDAY_GROUPS.find((g) => g.id === h.groupId);
+                const baseDate = group?.baseDates[h.dayIndex] ?? h.date;
+                const confirmedDate = addDays(baseDate, offset);
                 return (
                   <div
                     className="cal-holiday-banner"
                     style={{ borderColor: HOLIDAY_COLOR[h.type], color: HOLIDAY_COLOR[h.type] }}
                   >
-                    <span className="cal-holiday-banner__icon">{h.icon}</span>
-                    <span className="cal-holiday-banner__name">{h.name}</span>
-                    {h.note && <span className="cal-holiday-banner__note">({h.note})</span>}
+                    <div className="cal-holiday-banner__row">
+                      <span className="cal-holiday-banner__icon">{h.icon}</span>
+                      <span className="cal-holiday-banner__name">{h.name}</span>
+                      {h.approximate && !confirmed && (
+                        <span className="cal-holiday-banner__approx">تقريبي</span>
+                      )}
+                      {confirmed && h.approximate && (
+                        <span className="cal-holiday-banner__confirmed">✓ مؤكد</span>
+                      )}
+                    </div>
+                    {h.approximate && h.dayIndex === 0 && (
+                      <div className="cal-holiday-adj">
+                        <span className="cal-holiday-adj__label">
+                          {confirmed
+                            ? `الموعد المؤكد: ${new Date(confirmedDate + 'T12:00:00').toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })}`
+                            : 'تأكيد الموعد بعد إعلان رؤية الهلال:'}
+                        </span>
+                        <div className="cal-holiday-adj__controls">
+                          <button
+                            className="cal-holiday-adj__btn"
+                            onClick={() => adjustHoliday(h.groupId, -1)}
+                            title="يوم قبل"
+                          >
+                            ◀
+                          </button>
+                          <span className="cal-holiday-adj__offset">
+                            {offset === 0 ? '±٠' : offset > 0 ? `+${offset}` : `${offset}`}
+                          </span>
+                          <button
+                            className="cal-holiday-adj__btn"
+                            onClick={() => adjustHoliday(h.groupId, +1)}
+                            title="يوم بعد"
+                          >
+                            ▶
+                          </button>
+                          {offset !== 0 && (
+                            <button
+                              className="cal-holiday-adj__btn cal-holiday-adj__btn--reset"
+                              onClick={() => adjustHoliday(h.groupId, 'reset')}
+                              title="إعادة ضبط"
+                            >
+                              ↩
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
