@@ -54,6 +54,7 @@ export default function ScheduleSettingsModal({
   };
 
   const handleDeleteBlock = (blockId: string) => {
+    if (!window.confirm('حذف هذه الكتلة الزمنية؟')) return;
     if (selectedDay === 'default') {
       handleUpdateShift({
         blocks: selectedShift.blocks.filter((b) => b.id !== blockId),
@@ -100,6 +101,7 @@ export default function ScheduleSettingsModal({
 
   const handleRemoveCustomization = () => {
     if (selectedDay === 'default') return;
+    if (!window.confirm('إلغاء تخصيص هذا اليوم والعودة للجدول الافتراضي؟')) return;
     const newOverrides = { ...selectedShift.dayOverrides };
     delete newOverrides[selectedDay];
     handleUpdateShift({ dayOverrides: newOverrides });

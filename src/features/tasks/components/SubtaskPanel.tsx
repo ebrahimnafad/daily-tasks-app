@@ -221,7 +221,9 @@ export function SubtaskPanel({
                       padding: 'var(--space-xs) var(--space-sm)',
                       fontSize: 'var(--font-sm)',
                     }}
-                    onClick={() => onDeleteSubItem(s.id)}
+                    onClick={() => {
+                      if (window.confirm(`حذف "${s.text}"؟`)) onDeleteSubItem(s.id);
+                    }}
                   >
                     ✕
                   </button>

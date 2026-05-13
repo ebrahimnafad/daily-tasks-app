@@ -231,6 +231,54 @@ export default function useSync(
 
   const [shift, setShiftState] = useState<ShiftType>(() => computeShift(shiftEpoch, schedule));
 
+  // ── Auto-save snapshot at midnight (before clearing daily state) ─────
+  // We use a ref so the interval always calls the latest version of the
+  // callback without needing it in the dependency array.
+  const autoSnapshotRef = useRef<() => void>(() => undefined);
+  useEffect(() => {
+    autoSnapshotRef.current = () => {
+      const storedDate = lsGet<string | null>('mhm_date', null);
+      if (!storedDate) return;
+      const currentTasks =
+        queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ?? [];
+      const daily = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+        'daily',
+        storedDate,
+      ])?.daily ?? { checked: {}, subChecked: {}, skipped: {} };
+
+      // Only auto-save if there's any activity
+      const hasActivity =
+        Object.keys(daily.checked).length > 0 || Object.keys(daily.skipped).length > 0;
+      if (!hasActivity) return;
+
+      const nonPrayer = currentTasks.filter((t) => t.recurrence !== 'صلاة');
+      const totalOtherAuto = nonPrayer.length;
+      const countDoneAuto = nonPrayer.filter((t) => {
+        if (t.subtasks.length > 0) return t.subtasks.every((s) => daily.subChecked?.[s.id]);
+        return !!daily.checked[t.id];
+      }).length;
+      const progressAuto =
+        totalOtherAuto > 0 ? Math.round((countDoneAuto / totalOtherAuto) * 100) : 0;
+
+      void authFetch('/api/db?resource=snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          date: storedDate,
+          snapshot: {
+            date: storedDate,
+            tasks: nonPrayer,
+            checked: daily.checked,
+            skipped: daily.skipped,
+            progress: progressAuto,
+            countDone: countDoneAuto,
+            totalOther: totalOtherAuto,
+          },
+        }),
+      }).catch((err) => console.warn('Auto-snapshot save error:', err));
+    };
+  });
+
   // Combined: shift recompute + midnight auto-reset
   useEffect(() => {
     const tick = () => {
@@ -238,6 +286,8 @@ export default function useSync(
       const today = getLogicalDateISO(dayStartHour);
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
+        // Auto-save yesterday's snapshot before clearing
+        autoSnapshotRef.current();
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
         lsSet('mhm_checked', {}, onQuota);
         lsSet('mhm_sub_checked', {}, onQuota);

@@ -40,14 +40,14 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     const currentHour = now.getHours() + now.getMinutes() / 60;
     const initial: Record<string, boolean> = {};
     (scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0])?.blocks.forEach((b) => {
-      let effEnd = b.endHour;
-      let effCurrent = currentHour;
-      if (b.endHour <= b.startHour) {
-        effEnd += 24;
-        if (currentHour < b.startHour) effCurrent += 24;
+      // Only auto-collapse simple (non-overnight) blocks that have clearly ended.
+      // Overnight blocks (endHour <= startHour, e.g. 6 PM – 3 AM) are skipped:
+      // at 4 AM the previous night's instance has ended, but tonight's hasn't
+      // begun yet — collapsing them would be confusing/wrong.
+      const isOvernight = b.endHour <= b.startHour;
+      if (!isOvernight && currentHour >= b.endHour) {
+        initial[b.id] = true;
       }
-      // Collapse if the block has fully ended
-      if (effCurrent >= effEnd) initial[b.id] = true;
     });
     return initial;
   });

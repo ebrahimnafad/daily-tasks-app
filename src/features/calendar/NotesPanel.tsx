@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, forwardRef, useImperativeHandle } from 'react';
 import type { CalendarNote } from './types';
 import MarkdownNote from './MarkdownNote';
 
@@ -13,78 +13,110 @@ interface NotesPanelProps {
   onTogglePin: (id: string) => void;
 }
 
-function TagInput({ tags, onChange }: { tags: string[]; onChange: (tags: string[]) => void }) {
-  const [input, setInput] = useState('');
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
+// Exposed via ref so the parent can flush any uncommitted input text before saving
+interface TagInputHandle {
+  /** Commits any in-progress typed text and returns the final tags array. */
+  flush: () => string[];
+}
+
+const TagInput = forwardRef<TagInputHandle, { tags: string[]; onChange: (tags: string[]) => void }>(
+  ({ tags, onChange }, ref) => {
+    const [input, setInput] = useState('');
+
+    // Expose flush() so parents can call it synchronously before save
+    useImperativeHandle(ref, () => ({
+      flush: () => {
+        const newTag = input.trim().replace(/^#/, '');
+        if (newTag && !tags.includes(newTag)) {
+          const next = [...tags, newTag];
+          onChange(next);
+          setInput('');
+          return next;
+        }
+        return tags;
+      },
+    }));
+
+    const commitInput = () => {
       const newTag = input.trim().replace(/^#/, '');
       if (newTag && !tags.includes(newTag)) {
         onChange([...tags, newTag]);
       }
       setInput('');
-    }
-  };
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        gap: '4px',
-        alignItems: 'center',
-        padding: '4px 8px',
-        background: 'var(--bg-lighter)',
-        borderRadius: '6px',
-      }}
-    >
-      {tags.map((tag) => (
-        <span
-          key={tag}
-          style={{
-            background: 'rgba(var(--gold-rgb), 0.15)',
-            color: 'var(--gold)',
-            padding: '2px 8px',
-            borderRadius: '12px',
-            fontSize: '0.8em',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-        >
-          #{tag}
-          <button
-            onClick={() => onChange(tags.filter((t) => t !== tag))}
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        commitInput();
+      }
+    };
+
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '4px',
+          alignItems: 'center',
+          padding: '4px 8px',
+          background: 'var(--bg-lighter)',
+          borderRadius: '6px',
+        }}
+      >
+        {tags.map((tag) => (
+          <span
+            key={tag}
             style={{
-              background: 'none',
-              border: 'none',
-              color: 'inherit',
-              cursor: 'pointer',
-              padding: 0,
-              fontSize: '1em',
+              background: 'rgba(var(--gold-rgb), 0.15)',
+              color: 'var(--gold)',
+              padding: '2px 8px',
+              borderRadius: '12px',
+              fontSize: '0.8em',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
-            ✕
-          </button>
-        </span>
-      ))}
-      <input
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        onKeyDown={handleKeyDown}
-        placeholder={tags.length === 0 ? 'أضف تصنيف (اضغط Enter)' : 'تصنيف جديد...'}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          outline: 'none',
-          color: 'var(--text-color)',
-          fontSize: '0.85em',
-          flex: 1,
-          minWidth: '100px',
-        }}
-      />
-    </div>
-  );
-}
+            #{tag}
+            <button
+              onClick={() => onChange(tags.filter((t) => t !== tag))}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: 'inherit',
+                cursor: 'pointer',
+                padding: 0,
+                fontSize: '1em',
+              }}
+            >
+              ✕
+            </button>
+          </span>
+        ))}
+        <input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={commitInput}
+          placeholder={
+            tags.length === 0 ? 'أضف تصنيف (اضغط Enter أو انتقل للحفظ)' : 'تصنيف جديد...'
+          }
+          style={{
+            background: 'transparent',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--text-color)',
+            fontSize: '0.85em',
+            flex: 1,
+            minWidth: '100px',
+          }}
+        />
+      </div>
+    );
+  }
+);
+TagInput.displayName = 'TagInput';
 
 // ── Markdown toolbar helpers ──────────────────────────────────────────────
 function wrap(
@@ -118,6 +150,7 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
   const [draftTags, setDraftTags] = useState<string[]>(note.tags || []);
   const [copied, setCopied] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const tagInputRef = useRef<{ flush: () => string[] }>(null);
 
   const shareNote = async () => {
     const dateLabel = new Date(note.date + 'T00:00:00').toLocaleDateString('ar-SA', {
@@ -155,6 +188,8 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
   };
 
   const save = () => {
+    // Flush any uncommitted text from the tag input before saving
+    const finalTags = tagInputRef.current?.flush() ?? draftTags;
     const trimmed = draft.trim();
     if (!trimmed) {
       setDraft(note.text);
@@ -163,7 +198,7 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
       return;
     }
     // Always save — the useEffect will re-sync if nothing actually changed
-    onUpdate(note.id, { text: trimmed, tags: draftTags });
+    onUpdate(note.id, { text: trimmed, tags: finalTags });
     setEditing(false);
   };
 
@@ -229,7 +264,9 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
           <button
             className="cal-note-btn cal-note-btn--delete"
             title="حذف"
-            onClick={() => onDelete(note.id)}
+            onClick={() => {
+              if (window.confirm('هل تريد حذف هذه الملاحظة؟')) onDelete(note.id);
+            }}
           >
             🗑️
           </button>
@@ -273,7 +310,7 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
             dir="auto"
           />
 
-          <TagInput tags={draftTags} onChange={setDraftTags} />
+          <TagInput ref={tagInputRef} tags={draftTags} onChange={setDraftTags} />
 
           <div
             style={{
@@ -337,12 +374,15 @@ function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
   const [text, setText] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const taRef = useRef<HTMLTextAreaElement>(null);
+  const tagInputRef = useRef<{ flush: () => string[] }>(null);
   const overLimit = text.length > MAX_CHARS;
 
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed || overLimit) return;
-    onAdd(date, trimmed, tags);
+    // Flush any uncommitted tag text before submitting
+    const finalTags = tagInputRef.current?.flush() ?? tags;
+    onAdd(date, trimmed, finalTags);
     setText('');
     setTags([]);
     onClose();
@@ -404,7 +444,7 @@ function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
         autoFocus
       />
 
-      <TagInput tags={tags} onChange={setTags} />
+      <TagInput ref={tagInputRef} tags={tags} onChange={setTags} />
 
       <div
         style={{
