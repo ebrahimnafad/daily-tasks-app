@@ -127,15 +127,14 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
 
   const save = () => {
     const trimmed = draft.trim();
-    if (
-      trimmed &&
-      (trimmed !== note.text || JSON.stringify(draftTags) !== JSON.stringify(note.tags || []))
-    ) {
-      onUpdate(note.id, { text: trimmed, tags: draftTags });
-    } else {
-      setDraft(note.text); // revert if empty or unchanged
+    if (!trimmed) {
+      setDraft(note.text);
       setDraftTags(note.tags || []);
+      setEditing(false);
+      return;
     }
+    // Always save — the useEffect will re-sync if nothing actually changed
+    onUpdate(note.id, { text: trimmed, tags: draftTags });
     setEditing(false);
   };
 
@@ -440,7 +439,7 @@ export default function NotesPanel({
 
       {sorted.map((note) => (
         <NoteCard
-          key={note.id}
+          key={`${note.id}-${note.updatedAt}`}
           note={note}
           onUpdate={onUpdate}
           onDelete={onDelete}

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
+import { authFetch } from '@/features/auth/authFetch';
 import type { CalendarNote } from './types';
 
 // ── Keys ──────────────────────────────────────────────────────────────────
@@ -128,7 +129,7 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   // ── Cloud sync ────────────────────────────────────────────────────────
   const doSync = useCallback(async (currentNotes: CalendarNote[]) => {
     try {
-      const res = await fetch('/api/db?resource=notes', {
+      const res = await authFetch('/api/db?resource=notes', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notes: currentNotes }),
@@ -152,7 +153,7 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
 
   const loadFromServer = useCallback(async () => {
     try {
-      const res = await fetch('/api/db?resource=notes', { cache: 'no-store' });
+      const res = await authFetch('/api/db?resource=notes', { cache: 'no-store' });
       if (!res.ok) {
         setSyncStatus('offline');
         return;
