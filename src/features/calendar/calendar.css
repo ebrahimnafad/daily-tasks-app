@@ -103,6 +103,74 @@
   color: rgba(var(--gold-rgb), 0.5);
 }
 
+/* ── Shift-type cell modifiers ──────────────────────────────────────── */
+
+/* Morning shift — warm amber */
+.cal-cell--morning .cal-day-num {
+  font-weight: 700;
+}
+.cal-cell--morning:hover {
+  border-top-color: rgba(251, 191, 36, 1) !important;
+}
+
+/* Evening shift — cool violet */
+.cal-cell--evening .cal-day-num {
+  font-weight: 700;
+}
+.cal-cell--evening:hover {
+  border-top-color: rgba(167, 139, 250, 1) !important;
+}
+
+/* Off day — muted, hatched */
+.cal-cell--off {
+  border-radius: var(--radius-sm);
+}
+.cal-cell--off .cal-day-num {
+  font-weight: 400;
+}
+
+/* ── Shift Legend ────────────────────────────────────────────────────── */
+.cal-shift-legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-lg);
+  flex-wrap: wrap;
+}
+.cal-shift-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  border-top: 3px solid transparent;
+  letter-spacing: 0.02em;
+}
+.cal-shift-legend__item--morning {
+  color: rgba(251, 191, 36, 0.9);
+  background: rgba(251, 191, 36, 0.08);
+  border-top-color: rgba(251, 191, 36, 0.75);
+}
+.cal-shift-legend__item--evening {
+  color: rgba(167, 139, 250, 0.9);
+  background: rgba(139, 92, 246, 0.1);
+  border-top-color: rgba(167, 139, 250, 0.72);
+}
+.cal-shift-legend__item--off {
+  color: rgba(100, 116, 139, 0.85);
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(100, 116, 139, 0.07) 0px,
+    rgba(100, 116, 139, 0.07) 4px,
+    transparent 4px,
+    transparent 9px
+  );
+  border-top: 2px dashed rgba(100, 116, 139, 0.45);
+  opacity: 0.85;
+}
+
 /* ── Selected Day Panel ── */
 .cal-selected-tasks {
   background: rgba(var(--gold-rgb), 0.03);

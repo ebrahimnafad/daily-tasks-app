@@ -11,6 +11,13 @@ import useNotesSync from './useNotesSync';
 import useNoteSearch from './useNoteSearch';
 import NotesPanel from './NotesPanel';
 import { localDateISO } from '@/lib/date/localDate';
+import {
+  computeShift,
+  getMostRecentFriday,
+  DEFAULT_EPOCH_KEY,
+  DEFAULT_SHIFTS,
+} from '@/features/tasks/data/scheduleConfig';
+import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 
 interface FinanceEvent {
   id: string;
@@ -48,11 +55,31 @@ const SYNC_LABELS: Record<string, string> = {
   error: '⚠️ خطأ في الحفظ',
 };
 
+// Shift type for a calendar day: 'morning' | 'evening' | 'off'
+type DayShiftType = 'morning' | 'evening' | 'off';
+
 export default function CalendarPage({ tasks }: CalendarPageProps) {
   const { tm } = useTaskContext();
   const [currentDate, setCurrentDate] = useState(new Date());
   const today = localDateISO();
   const [selectedDate, setSelectedDate] = useState<string>(today);
+
+  // ── Schedule shift config (read-only, from localStorage) ──────────
+  const schedule = useMemo(() => lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS), []);
+  const shiftEpoch = useMemo(() => lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday()), []);
+
+  /** Classify a calendar date as morning-shift, evening-shift, or off-day */
+  const getDayShiftType = useCallback(
+    (dateStr: string): DayShiftType => {
+      const date = new Date(dateStr + 'T12:00:00');
+      const shiftId = computeShift(shiftEpoch, schedule, date);
+      const shift = schedule.find((s) => s.id === shiftId);
+      const dow = date.getDay();
+      if (shift?.offDays.includes(dow)) return 'off';
+      return shiftId as DayShiftType;
+    },
+    [schedule, shiftEpoch]
+  );
 
   // ── Snapshot summaries (for battery indicator) ──────────────────────
   const [snapSummaries, setSnapSummaries] = useState<Record<string, SnapshotSummary>>({});
@@ -360,20 +387,67 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
               const heatmapOpacity = Math.max(0.08, intensity * 0.75); // scales from 0.08 (baseline) up to 0.75 max
               const hasExpenses = dayFinance.length > 0;
 
+              const shiftType = getDayShiftType(dateStr);
+
+              // ── Compute cell background (shift tint + heatmap blended) ──
+              let cellBg: string | undefined;
+              if (isToday) {
+                cellBg = undefined; // CSS class handles today
+              } else if (shiftType === 'off') {
+                cellBg =
+                  'repeating-linear-gradient(-45deg,rgba(100,116,139,0.07) 0px,rgba(100,116,139,0.07) 4px,transparent 4px,transparent 9px)';
+              } else if (hasExpenses && shiftType === 'morning') {
+                cellBg = `rgba(251,191,36,${Math.max(0.07, heatmapOpacity * 0.9)})`;
+              } else if (hasExpenses && shiftType === 'evening') {
+                cellBg = `rgba(139,92,246,${Math.max(0.09, heatmapOpacity * 0.6)})`;
+              } else if (hasExpenses) {
+                cellBg = `rgba(var(--gold-rgb),${heatmapOpacity})`;
+              } else if (shiftType === 'morning') {
+                cellBg = 'rgba(251,191,36,0.07)';
+              } else if (shiftType === 'evening') {
+                cellBg = 'rgba(139,92,246,0.09)';
+              }
+
+              // ── Top border stripe per shift ──
+              const cellBorderTop =
+                shiftType === 'morning'
+                  ? '3px solid rgba(251,191,36,0.75)'
+                  : shiftType === 'evening'
+                    ? '3px solid rgba(167,139,250,0.72)'
+                    : '2px dashed rgba(100,116,139,0.45)';
+
               return (
                 <div
                   key={day}
                   onClick={() => handleSelectDate(dateStr)}
                   style={{
                     cursor: 'pointer',
-                    border: isSelected ? '2px solid var(--gold)' : undefined,
-                    background: hasExpenses
-                      ? `rgba(var(--gold-rgb), ${heatmapOpacity})`
-                      : undefined,
+                    background: cellBg,
+                    borderTop: cellBorderTop,
+                    boxShadow: isSelected ? 'inset 0 0 0 2px var(--gold)' : undefined,
+                    opacity: shiftType === 'off' ? 0.72 : 1,
                   }}
-                  className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${dayTasks.length > 0 || hasExpenses ? 'cal-cell--has-tasks' : ''} ${snapSummaries[dateStr] ? 'cal-cell--has-snapshot' : ''}`}
+                  className={`cal-cell ${isToday ? 'cal-cell--today' : ''} ${
+                    shiftType === 'morning' ? 'cal-cell--morning' : ''
+                  } ${shiftType === 'evening' ? 'cal-cell--evening' : ''} ${
+                    shiftType === 'off' ? 'cal-cell--off' : ''
+                  } ${dayTasks.length > 0 || hasExpenses ? 'cal-cell--has-tasks' : ''} ${
+                    snapSummaries[dateStr] ? 'cal-cell--has-snapshot' : ''
+                  }`}
                 >
-                  <span className="cal-day-num">{day}</span>
+                  <span
+                    className="cal-day-num"
+                    style={{
+                      color:
+                        shiftType === 'morning'
+                          ? 'rgba(251,191,36,0.92)'
+                          : shiftType === 'evening'
+                            ? 'rgba(167,139,250,0.92)'
+                            : 'rgba(var(--gold-rgb),0.35)',
+                    }}
+                  >
+                    {day}
+                  </span>
                   {hasNotes && (
                     <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}>
                       📝
@@ -409,6 +483,13 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                 </div>
               );
             })}
+          </div>
+
+          {/* ── Shift legend ── */}
+          <div className="cal-shift-legend">
+            <span className="cal-shift-legend__item cal-shift-legend__item--morning">☀️ صباحي</span>
+            <span className="cal-shift-legend__item cal-shift-legend__item--evening">🌙 مسائي</span>
+            <span className="cal-shift-legend__item cal-shift-legend__item--off">🏖️ إجازة</span>
           </div>
 
           {/* Selected day tasks */}
