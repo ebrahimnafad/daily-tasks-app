@@ -119,15 +119,15 @@ export function SubtaskPanel({
                   <div
                     style={{
                       display: 'flex',
-                      gap: '8px',
-                      justifyContent: 'space-between',
+                      gap: '6px',
                       alignItems: 'center',
+                      flexWrap: 'wrap',
                     }}
                   >
                     <input
                       type="time"
                       className="sub-edit-inp"
-                      style={{ width: 'auto', padding: '0 4px', flex: '0 1 auto' }}
+                      style={{ flex: '1 1 80px', minWidth: '80px', padding: '4px 6px' }}
                       value={editingSubAlertTime}
                       aria-label="تعديل وقت التذكير"
                       onChange={(e) => onEditingSubAlertTimeChange(e.target.value)}
@@ -136,28 +136,26 @@ export function SubtaskPanel({
                         if (e.key === 'Escape') onCancelEditSub();
                       }}
                     />
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        className="add-sub-btn"
-                        onClick={onSaveEditSub}
-                        style={{ padding: '4px 12px', flexShrink: 0 }}
-                      >
-                        حفظ
-                      </button>
-                      <button
-                        className="add-sub-btn"
-                        onClick={onCancelEditSub}
-                        style={{
-                          padding: '4px 12px',
-                          flexShrink: 0,
-                          background: 'transparent',
-                          border: '1px solid var(--border-color)',
-                          color: 'inherit',
-                        }}
-                      >
-                        إلغاء
-                      </button>
-                    </div>
+                    <button
+                      className="add-sub-btn"
+                      onClick={onSaveEditSub}
+                      style={{ flexShrink: 0, padding: '5px 14px' }}
+                    >
+                      حفظ
+                    </button>
+                    <button
+                      className="icon-btn"
+                      onClick={onCancelEditSub}
+                      style={{
+                        flexShrink: 0,
+                        padding: '5px 12px',
+                        fontSize: 'var(--font-sm)',
+                        opacity: 0.75,
+                      }}
+                      aria-label="إلغاء التعديل"
+                    >
+                      إلغاء
+                    </button>
                   </div>
                 </div>
               ) : (
