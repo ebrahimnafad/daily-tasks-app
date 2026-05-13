@@ -33,7 +33,24 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     setForm,
     setModal,
   } = tm;
-  const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>({});
+  const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
+
+  const [collapsedBlocks, setCollapsedBlocks] = useState<Record<string, boolean>>(() => {
+    const now = new Date();
+    const currentHour = now.getHours() + now.getMinutes() / 60;
+    const initial: Record<string, boolean> = {};
+    (scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0])?.blocks.forEach((b) => {
+      let effEnd = b.endHour;
+      let effCurrent = currentHour;
+      if (b.endHour <= b.startHour) {
+        effEnd += 24;
+        if (currentHour < b.startHour) effCurrent += 24;
+      }
+      // Collapse if the block has fully ended
+      if (effCurrent >= effEnd) initial[b.id] = true;
+    });
+    return initial;
+  });
   const [collapsedPinned, setCollapsedPinned] = useState(false);
   const [currentTime, setCurrentTime] = useState(() => new Date());
 
@@ -57,8 +74,6 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     });
     setModal({ mode: 'add' });
   };
-
-  const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
   const getBlockProgress = (startHour: number, endHour: number) => {
     const currentHour = currentTime.getHours() + currentTime.getMinutes() / 60;

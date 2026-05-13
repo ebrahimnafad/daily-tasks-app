@@ -116,7 +116,36 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.text);
   const [draftTags, setDraftTags] = useState<string[]>(note.tags || []);
+  const [copied, setCopied] = useState(false);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  const shareNote = async () => {
+    const dateLabel = new Date(note.date + 'T00:00:00').toLocaleDateString('ar-SA', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    const tagsLine = note.tags?.length ? `\n🏷️ ${note.tags.map((t) => '#' + t).join('  ')}` : '';
+    const shareText = `📅 ${dateLabel}\n\n${note.text}${tagsLine}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'ملاحظة', text: shareText });
+        return;
+      } catch {
+        // user cancelled or share failed — fall through to clipboard
+      }
+    }
+    // Clipboard fallback
+    try {
+      await navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* ignore */
+    }
+  };
 
   const startEdit = () => {
     setDraft(note.text);
@@ -185,6 +214,14 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
             onClick={() => onTogglePin(note.id)}
           >
             {note.pinned ? '📌' : '📍'}
+          </button>
+          <button
+            className="cal-note-btn"
+            title={copied ? 'تم النسخ ✓' : 'مشاركة'}
+            onClick={() => void shareNote()}
+            style={copied ? { color: 'var(--gold)' } : undefined}
+          >
+            {copied ? '✓' : '📤'}
           </button>
           <button className="cal-note-btn" title="تعديل" onClick={startEdit}>
             ✏️

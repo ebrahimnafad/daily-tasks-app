@@ -11,7 +11,7 @@ interface IncomeSectionProps {
 
 export default function IncomeSection({ income, setIncome, settings }: IncomeSectionProps) {
   const [modal, setModal] = useState<{ mode: 'add' | 'edit'; id?: string } | null>(null);
-  const [expanded, setExpanded] = useState(true);
+  const [expanded, setExpanded] = useState(false);
   const [form, setForm] = useState({
     icon: '💼',
     title: '',
