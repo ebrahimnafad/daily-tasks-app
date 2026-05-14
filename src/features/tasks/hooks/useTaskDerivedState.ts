@@ -80,11 +80,41 @@ export function useTaskDerivedState(
     // Catch-all: tasks with 'anytime' or unrecognized timeBlock
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
     const unassigned = others.filter((t) => !assignedIds.has(t.id));
-    if (unassigned.length > 0) {
-      unassigned.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+
+    // Restore missing blocks from other shifts so tasks don't get dumped into "Others"
+    const knownMissingBlocks = new Map<string, (typeof activeBlocks)[0]>();
+    scheduleConfig.forEach((s) =>
+      s.blocks.forEach((b) => {
+        if (!activeBlocks.some((ab) => ab.id === b.id)) {
+          knownMissingBlocks.set(b.id, b);
+        }
+      })
+    );
+
+    const strictlyUnassigned: typeof others = [];
+    const missingBlockGroups = new Map<string, typeof others>();
+
+    unassigned.forEach((t) => {
+      const tb = t.timeBlock ?? 'anytime';
+      if (knownMissingBlocks.has(tb)) {
+        if (!missingBlockGroups.has(tb)) missingBlockGroups.set(tb, []);
+        missingBlockGroups.get(tb)!.push(t);
+      } else {
+        strictlyUnassigned.push(t);
+      }
+    });
+
+    missingBlockGroups.forEach((groupTasks, blockId) => {
+      const block = knownMissingBlocks.get(blockId)!;
+      groupTasks.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+      byBlock.push({ block, tasks: groupTasks, isCurrent: false });
+    });
+
+    if (strictlyUnassigned.length > 0) {
+      strictlyUnassigned.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
       byBlock.push({
         block: { id: 'anytime', label: 'مهام أخرى', icon: '📌', startHour: 0, endHour: 24 },
-        tasks: unassigned,
+        tasks: strictlyUnassigned,
         isCurrent: false,
       });
     }
