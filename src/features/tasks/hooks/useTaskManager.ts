@@ -73,9 +73,12 @@ export default function useTaskManager(
       const r = t.recurrence ?? 'يومي';
       return (
         r === 'يومي' || (r === 'أيام العمل' && workday) || (r === 'أسبوعي' && isStartOfWeek)
-        // 'مرة واحدة' (once) is intentionally excluded: its checked state must
-        // persist across resets so the filter in useTaskDerivedState can keep it
-        // hidden after completion. The user manually deletes it when done.
+        // 'مرة واحدة' (once): excluded — checked state must persist so the filter
+        // keeps it hidden after completion. User manually deletes when done.
+        // 'أسبوعي' (weekly): resets on Friday (isStartOfWeek) — task only appears on its
+        // anchor day-of-week, so cleared state is invisible until the next anchor day.
+        // 'شهري' (monthly): no reset entry needed — task only appears on its anchor
+        // day-of-month, so the checked state from last month is never visible.
       );
     });
     const ids = toReset.map((t) => t.id);

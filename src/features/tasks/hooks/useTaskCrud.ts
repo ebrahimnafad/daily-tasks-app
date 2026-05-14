@@ -8,6 +8,7 @@ import {
   type ShiftType,
   type ShiftConfig,
 } from '@/features/tasks/data/scheduleConfig';
+import { localDateISO } from '@/lib/date/localDate';
 import type { Task, TaskForm, CheckedMap, SubCheckedMap, ModalState } from '@/types';
 
 export const EMPTY_FORM: TaskForm = {
@@ -142,7 +143,11 @@ export function useTaskCrud(
       timeBlock: form.timeBlock || 'anytime',
       isWarning: form.isWarning,
       recurrence: form.recurrence,
-      date: form.date || undefined,
+      // Weekly and monthly tasks require an anchor date for the recurrence filter.
+      // If the user didn't set one, default to today so the task appears correctly.
+      date:
+        form.date ||
+        (form.recurrence === 'شهري' || form.recurrence === 'أسبوعي' ? localDateISO() : undefined),
       alertTime: form.alertTime || '',
       brief: {
         blockers: form.blockers.filter((b) => b.trim()),

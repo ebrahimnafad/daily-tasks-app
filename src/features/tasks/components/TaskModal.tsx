@@ -34,7 +34,7 @@ const ICONS = [
   '⭐',
   '🔔',
 ];
-const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'مرة واحدة', 'موعد محدد'];
+const RECURRENCE_OPTIONS = ['يومي', 'أيام العمل', 'أسبوعي', 'شهري', 'مرة واحدة', 'موعد محدد'];
 
 interface ModalState {
   mode: 'add' | 'edit';

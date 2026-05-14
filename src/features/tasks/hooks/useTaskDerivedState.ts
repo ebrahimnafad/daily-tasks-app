@@ -58,6 +58,20 @@ export function useTaskDerivedState(
         // fall through and appear every day — now explicitly blocked.
         if (!t.date || t.date !== todayISO()) return false;
       }
+      // Monthly task: only visible on the same day-of-month as the anchor date.
+      // Falls back to visible when no date is set (safe for pre-existing tasks).
+      if (rec === 'شهري') {
+        if (!t.date) return true;
+        const anchor = new Date(t.date);
+        return anchor.getDate() === new Date().getDate();
+      }
+      // Weekly task: only visible on the same day-of-week as the anchor date.
+      // Falls back to visible when no date is set (safe for pre-existing tasks).
+      if (rec === 'أسبوعي') {
+        if (!t.date) return true;
+        const anchor = new Date(t.date);
+        return anchor.getDay() === new Date().getDay();
+      }
       // 'Once' task: hide once it has been checked. The checked state is NOT
       // cleared by resetNewDay, so the task stays visually done until the
       // user manually deletes it — matching "مرة واحدة" (one-time) semantics.
