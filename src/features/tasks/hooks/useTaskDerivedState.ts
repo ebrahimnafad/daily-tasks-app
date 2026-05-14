@@ -52,9 +52,16 @@ export function useTaskDerivedState(
       const rec = t.recurrence ?? 'يومي';
       if (rec === 'أيام العمل' && !workday) return false;
       if (rec === 'عطل' && workday) return false;
-      if (rec === 'موعد محدد' && t.date) {
-        if (t.date !== todayISO()) return false;
+      if (rec === 'موعد محدد') {
+        // Hide when no date is set OR when the task's date is not today.
+        // The previous guard `&& t.date` let undated specific-date tasks
+        // fall through and appear every day — now explicitly blocked.
+        if (!t.date || t.date !== todayISO()) return false;
       }
+      // 'Once' task: hide once it has been checked. The checked state is NOT
+      // cleared by resetNewDay, so the task stays visually done until the
+      // user manually deletes it — matching "مرة واحدة" (one-time) semantics.
+      if (rec === 'مرة واحدة' && !!checked[t.id]) return false;
       return true;
     });
 

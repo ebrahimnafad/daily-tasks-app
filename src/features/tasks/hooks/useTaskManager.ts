@@ -72,10 +72,10 @@ export default function useTaskManager(
     const toReset = tasks.filter((t) => {
       const r = t.recurrence ?? 'يومي';
       return (
-        r === 'يومي' ||
-        (r === 'أيام العمل' && workday) ||
-        (r === 'أسبوعي' && isStartOfWeek) ||
-        r === 'مرة واحدة'
+        r === 'يومي' || (r === 'أيام العمل' && workday) || (r === 'أسبوعي' && isStartOfWeek)
+        // 'مرة واحدة' (once) is intentionally excluded: its checked state must
+        // persist across resets so the filter in useTaskDerivedState can keep it
+        // hidden after completion. The user manually deletes it when done.
       );
     });
     const ids = toReset.map((t) => t.id);
