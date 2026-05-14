@@ -163,6 +163,26 @@ describe('TaskSchema', () => {
 
     expect(() => z.array(TaskSchema).parse(tasks)).toThrow();
   });
+
+  it('should accept variable-length brief arrays (what saveTask actually writes)', () => {
+    // saveTask filters empty strings, so brief arrays can be 0..N items
+    expect(() =>
+      TaskSchema.parse({ ...validTask, brief: { blockers: [], helpers: [] } })
+    ).not.toThrow();
+    expect(() =>
+      TaskSchema.parse({
+        ...validTask,
+        brief: { blockers: ['blocker 1'], helpers: ['helper 1', 'helper 2'] },
+      })
+    ).not.toThrow();
+  });
+
+  it('should reject brief arrays exceeding the max length', () => {
+    const tooMany = Array.from({ length: 11 }, (_, i) => `item ${i}`);
+    expect(() =>
+      TaskSchema.parse({ ...validTask, brief: { blockers: tooMany, helpers: [] } })
+    ).toThrow();
+  });
 });
 
 describe('parseTaskFormSafe', () => {

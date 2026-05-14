@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard, TasksHeader, TasksProgress } from '@/features/tasks';
+import { EMPTY_FORM } from '@/features/tasks/hooks/useTaskCrud';
 import type { ShiftType } from '@/features/tasks/data/scheduleConfig';
 
 interface TasksPageProps {
@@ -67,11 +68,7 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
   };
 
   const addTaskToBlock = (blockId: string) => {
-    setForm({
-      ...tm.form,
-      shifts: [shift],
-      timeBlock: blockId,
-    });
+    setForm({ ...EMPTY_FORM, shifts: [shift], timeBlock: blockId });
     setModal({ mode: 'add' });
   };
 

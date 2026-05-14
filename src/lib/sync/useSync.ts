@@ -176,6 +176,11 @@ export default function useSync(
   const [hasError, setHasError] = useState(false);
   // Guard: don't trigger refetch on the very first online event at mount
   const didMountRef = useRef(false);
+  // Pending daily state — accumulates synchronous updates so sequential calls
+  // within the same event handler (e.g. deleteTask → setChecked + setSubChecked)
+  // always read each other's changes instead of stale query-cache data.
+  const pendingDailyRef = useRef<DailyState | null>(null);
+  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleOnline = () => {
@@ -479,6 +484,12 @@ export default function useSync(
       const ctx = context as { prevDaily?: { daily: DailyState; timestamp: number } } | undefined;
       if (ctx?.prevDaily) {
         queryClient.setQueryData(['daily', getLogicalDateISO(dayStartHour)], ctx.prevDaily);
+        // Restore localStorage to match — without this a page reload after a
+        // failed sync would load the bad optimistic state from disk
+        const prev = ctx.prevDaily.daily;
+        lsSet('mhm_checked', prev.checked, onQuota);
+        lsSet('mhm_sub_checked', prev.subChecked, onQuota);
+        lsSet('mhm_skipped', prev.skipped, onQuota);
       }
     },
   });
@@ -506,52 +517,73 @@ export default function useSync(
     [queryClient, updateScheduleMut]
   );
 
-  const setChecked = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
-    (updater) => {
-      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
+  // ── Atomic daily setter ────────────────────────────────────────────────
+  // Reads pendingDailyRef first so that multiple synchronous calls within the
+  // same event handler always see each other's changes. A setTimeout(0) debounce
+  // then flushes exactly ONE mutation after all synchronous updates complete.
+  const setDaily = useCallback(
+    (updater: ((prev: DailyState) => DailyState) | DailyState) => {
+      const cached = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
         'daily',
         getLogicalDateISO(dayStartHour),
-      ])?.daily ?? {
-        checked: {},
-        subChecked: {},
-        skipped: {},
-      };
-      const next = typeof updater === 'function' ? updater(cur.checked) : updater;
-      updateDailyMut({ checked: next, subChecked: cur.subChecked, skipped: cur.skipped });
+      ])?.daily ?? { checked: {}, subChecked: {}, skipped: {} };
+      const prev = pendingDailyRef.current ?? cached;
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      pendingDailyRef.current = next;
+
+      // Persist to localStorage immediately for offline resilience
+      const today = getLogicalDateISO(dayStartHour);
+      lsSet('mhm_checked', next.checked, onQuota);
+      lsSet('mhm_sub_checked', next.subChecked, onQuota);
+      lsSet('mhm_skipped', next.skipped, onQuota);
+      lsSet('mhm_date', today, onQuota);
+
+      // Coalesce all synchronous calls into a single mutation
+      if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);
+      flushTimerRef.current = setTimeout(() => {
+        const payload = pendingDailyRef.current;
+        if (payload === null) return;
+        pendingDailyRef.current = null;
+        flushTimerRef.current = null;
+        updateDailyMut(payload);
+      }, 0);
     },
-    [queryClient, updateDailyMut, dayStartHour]
+    [queryClient, dayStartHour, onQuota, updateDailyMut]
+  );
+
+  // Cancel any pending flush on unmount to avoid state updates on an unmounted hook
+  useEffect(
+    () => () => {
+      if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);
+    },
+    []
+  );
+
+  const setChecked = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
+    (updater) =>
+      setDaily((prev) => ({
+        ...prev,
+        checked: typeof updater === 'function' ? updater(prev.checked) : updater,
+      })),
+    [setDaily]
   );
 
   const setSubChecked = useCallback<Dispatch<SetStateAction<SubCheckedMap>>>(
-    (updater) => {
-      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
-        'daily',
-        getLogicalDateISO(dayStartHour),
-      ])?.daily ?? {
-        checked: {},
-        subChecked: {},
-        skipped: {},
-      };
-      const next = typeof updater === 'function' ? updater(cur.subChecked) : updater;
-      updateDailyMut({ checked: cur.checked, subChecked: next, skipped: cur.skipped });
-    },
-    [queryClient, updateDailyMut, dayStartHour]
+    (updater) =>
+      setDaily((prev) => ({
+        ...prev,
+        subChecked: typeof updater === 'function' ? updater(prev.subChecked) : updater,
+      })),
+    [setDaily]
   );
 
   const setSkipped = useCallback<Dispatch<SetStateAction<CheckedMap>>>(
-    (updater) => {
-      const cur = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
-        'daily',
-        getLogicalDateISO(dayStartHour),
-      ])?.daily ?? {
-        checked: {},
-        subChecked: {},
-        skipped: {},
-      };
-      const next = typeof updater === 'function' ? updater(cur.skipped) : updater;
-      updateDailyMut({ checked: cur.checked, subChecked: cur.subChecked, skipped: next });
-    },
-    [queryClient, updateDailyMut, dayStartHour]
+    (updater) =>
+      setDaily((prev) => ({
+        ...prev,
+        skipped: typeof updater === 'function' ? updater(prev.skipped) : updater,
+      })),
+    [setDaily]
   );
 
   // ── Derived sync status ───────────────────────────────────────────────

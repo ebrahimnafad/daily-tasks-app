@@ -56,7 +56,11 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
   const titleInput = useRef<HTMLInputElement>(null);
 
   const currentShift = form.shifts?.[0] || 'morning';
-  const availableBlocks = schedule?.find((s) => s.id === currentShift)?.blocks || [];
+  const shiftConfig = schedule?.find((s) => s.id === currentShift);
+  const currentDayOfWeek = new Date().getDay();
+  // Match the runtime lookup in useTaskDerivedState — use day overrides when present
+  const availableBlocks =
+    shiftConfig?.dayOverrides?.[currentDayOfWeek] || shiftConfig?.blocks || [];
 
   useEffect(() => {
     const t = setTimeout(() => titleInput.current?.focus(), 50);

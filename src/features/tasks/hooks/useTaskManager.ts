@@ -105,12 +105,20 @@ export default function useTaskManager(
       toReset.forEach((t) => t.subtasks.forEach((s) => delete n[s.id]));
       return n;
     });
+    // Clear skip state for reset tasks — leftover skip entries would inflate
+    // the progress denominator on the new day, making 100% unreachable
+    setSkipped((p) => {
+      const n = { ...p };
+      ids.forEach((id) => delete n[id]);
+      return n;
+    });
   }, [
     tasks,
     shift,
     scheduleConfig,
     setChecked,
     setSubChecked,
+    setSkipped,
     saveSnapshot,
     otherTasks,
     checked,

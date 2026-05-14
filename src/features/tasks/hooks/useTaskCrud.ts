@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { Dispatch, SetStateAction, MouseEvent } from 'react';
 import { CATEGORIES } from '@/features/tasks/components/TaskModal';
 import { parseTaskFormSafe } from '@/validation/schemas';
@@ -10,7 +10,7 @@ import {
 } from '@/features/tasks/data/scheduleConfig';
 import type { Task, TaskForm, CheckedMap, SubCheckedMap, ModalState } from '@/types';
 
-const EMPTY_FORM: TaskForm = {
+export const EMPTY_FORM: TaskForm = {
   icon: '📋',
   title: '',
   category: 'أخرى',
@@ -53,6 +53,13 @@ export function useTaskCrud(
   const [modal, setModal] = useState<ModalState | null>(null);
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  // Guard against double-tap: blocks re-entrant saveTask calls that fire before
+  // React re-renders and closes the modal. Reset by useEffect when modal → null.
+  const isSavingRef = useRef(false);
+
+  useEffect(() => {
+    if (!modal) isSavingRef.current = false;
+  }, [modal]);
 
   const openAdd = useCallback(() => {
     const now = new Date();
@@ -98,6 +105,11 @@ export function useTaskCrud(
     if (f === 'category') {
       const c = CATEGORIES.find((x) => x.label === v);
       setForm((p) => ({ ...p, category: v as string, color: c ? c.color : '#aaaaaa' }));
+    } else if (f === 'shifts') {
+      // Changing the shift invalidates the current timeBlock (it may not exist in the new
+      // shift's active blocks). Reset to 'anytime' so the dropdown shows a valid selection
+      // and the user explicitly picks the correct block from the updated options.
+      setForm((p) => ({ ...p, shifts: v as string[], timeBlock: 'anytime' }));
     } else {
       setForm((p) => ({ ...p, [f]: v }));
     }
@@ -105,6 +117,10 @@ export function useTaskCrud(
 
   const saveTask = useCallback(() => {
     if (!modal) return;
+    // Block a second call that arrives before the modal closes (rapid double-tap).
+    // The ref stays true until the modal-closed useEffect resets it.
+    if (isSavingRef.current) return;
+    isSavingRef.current = true;
     const validation = parseTaskFormSafe(form);
     if (!validation.success) {
       alert(`خطأ في البيانات:\n${validation.errors.join('\n')}`);
@@ -155,6 +171,12 @@ export function useTaskCrud(
         delete n[id];
         return n;
       });
+      // Remove skip state so the orphaned entry doesn't inflate progress tomorrow
+      setSkipped((p) => {
+        const n = { ...p };
+        delete n[id];
+        return n;
+      });
       if (task?.subtasks?.length) {
         setSubChecked((p) => {
           const n = { ...p };
@@ -164,7 +186,7 @@ export function useTaskCrud(
       }
       setDeleteConfirm(null);
     },
-    [tasks, setTasks, setChecked, setSubChecked]
+    [tasks, setTasks, setChecked, setSubChecked, setSkipped]
   );
 
   const togglePinTask = useCallback(

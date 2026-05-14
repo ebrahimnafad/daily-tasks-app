@@ -50,8 +50,8 @@ export const TaskSchema = z.object({
     })
   ),
   brief: z.object({
-    blockers: z.array(z.string().max(200)).length(3),
-    helpers: z.array(z.string().max(200)).length(3),
+    blockers: z.array(z.string().max(200)).max(10),
+    helpers: z.array(z.string().max(200)).max(10),
   }),
 });
 
