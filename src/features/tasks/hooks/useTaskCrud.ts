@@ -141,6 +141,12 @@ export function useTaskCrud(
         ? form.shifts
         : (['morning', 'evening'] as ShiftType[])) as ShiftType[],
       timeBlock: form.timeBlock || 'anytime',
+      // Weekly and monthly tasks have no guaranteed shift context —
+      // force 'anytime' to prevent misplacement under a block that doesn't
+      // exist in the active shift on future anchor days.
+      ...(form.recurrence === 'أسبوعي' || form.recurrence === 'شهري'
+        ? { timeBlock: 'anytime' }
+        : {}),
       isWarning: form.isWarning,
       recurrence: form.recurrence,
       // Weekly and monthly tasks require an anchor date for the recurrence filter.
