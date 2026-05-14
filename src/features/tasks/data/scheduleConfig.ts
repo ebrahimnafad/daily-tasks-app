@@ -90,7 +90,9 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
     id: 'evening',
     label: 'الأسبوع المسائي',
     icon: '🌙',
-    offDays: [], // No fixed off days
+    offDays: [], // Kept for CalendarPage/ScheduleSettingsModal — isWorkday() ignores this
+    //             for the evening shift by design: evening is a 7-day rotation with no
+    //             off days regardless of what the user sets. See isWorkday() below.
     offDayLabel: '',
     fridaySchedule: {
       start: 13, // 1:00 PM
@@ -161,10 +163,22 @@ export function computeShift(
 /**
  * Given current shift and today's day-of-week, return whether today is a work day.
  * Friday is always a workday but with special hours.
+ *
+ * NOTE — evening shift: by design this is a 7-day rotation with no days off.
+ * isWorkday() always returns true for 'evening' regardless of the offDays field
+ * stored in ShiftConfig. The offDays field on the evening entry exists only for
+ * CalendarPage and ScheduleSettingsModal compatibility — it has no effect here.
+ * Do not remove this guard without a deliberate product decision.
  */
 export function isWorkday(shiftId: string, shifts: ShiftConfig[], dayOfWeek: number): boolean {
+  // By design: evening shift is a 7-day rotation — always a workday.
+  // User-configured off days are intentionally ignored for this shift.
+  if (shiftId === 'evening') return true;
+
   const shift = shifts.find((s) => s.id === shiftId);
   if (!shift) return true;
+  // Off days are user-editable via ScheduleSettingsModal and stored in ShiftConfig.
+  // This is the single source of truth for non-evening shifts.
   return !shift.offDays.includes(dayOfWeek);
 }
 
