@@ -81,15 +81,24 @@ export function useTaskDerivedState(
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
     const unassigned = others.filter((t) => !assignedIds.has(t.id));
 
-    // Restore missing blocks from other shifts so tasks don't get dumped into "Others"
+    // Track all block IDs already rendered (active blocks for this shift/day)
+    const renderedBlockIds = new Set(byBlock.map((e) => e.block.id));
+
+    // Restore missing blocks from other shifts so tasks don't get dumped into "Others".
+    // A block is truly "missing" only if it is not already rendered in byBlock.
     const knownMissingBlocks = new Map<string, (typeof activeBlocks)[0]>();
-    scheduleConfig.forEach((s) =>
-      s.blocks.forEach((b) => {
-        if (!activeBlocks.some((ab) => ab.id === b.id)) {
+    scheduleConfig.forEach((s) => {
+      // Check both base blocks and any day overrides for this shift
+      const overrideBlocks = Object.values(s.dayOverrides ?? {})
+        .flat()
+        .filter((b): b is (typeof activeBlocks)[0] => b !== undefined);
+      const allShiftBlocks = [...s.blocks, ...overrideBlocks];
+      allShiftBlocks.forEach((b) => {
+        if (!renderedBlockIds.has(b.id)) {
           knownMissingBlocks.set(b.id, b);
         }
-      })
-    );
+      });
+    });
 
     const strictlyUnassigned: typeof others = [];
     const missingBlockGroups = new Map<string, typeof others>();
