@@ -77,23 +77,19 @@ export function useTaskDerivedState(
       return { block, tasks: blockTasks, isCurrent: block.id === blockId };
     });
 
-    // Catch-all: tasks with 'anytime' or unrecognized timeBlock
+    // Catch-all: tasks with 'anytime' or unrecognized timeBlock for this shift
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
     const unassigned = others.filter((t) => !assignedIds.has(t.id));
 
-    // Track all block IDs already rendered (active blocks for this shift/day)
+    // Build a map of blockId → block definition from ALL shifts (including day overrides),
+    // but ONLY for blocks that are NOT already rendered in the active shift.
     const renderedBlockIds = new Set(byBlock.map((e) => e.block.id));
-
-    // Restore missing blocks from other shifts so tasks don't get dumped into "Others".
-    // A block is truly "missing" only if it is not already rendered in byBlock.
     const knownMissingBlocks = new Map<string, (typeof activeBlocks)[0]>();
     scheduleConfig.forEach((s) => {
-      // Check both base blocks and any day overrides for this shift
       const overrideBlocks = Object.values(s.dayOverrides ?? {})
         .flat()
         .filter((b): b is (typeof activeBlocks)[0] => b !== undefined);
-      const allShiftBlocks = [...s.blocks, ...overrideBlocks];
-      allShiftBlocks.forEach((b) => {
+      [...s.blocks, ...overrideBlocks].forEach((b) => {
         if (!renderedBlockIds.has(b.id)) {
           knownMissingBlocks.set(b.id, b);
         }
@@ -105,7 +101,12 @@ export function useTaskDerivedState(
 
     unassigned.forEach((t) => {
       const tb = t.timeBlock ?? 'anytime';
-      if (knownMissingBlocks.has(tb)) {
+      // Only restore a phantom block if the task is EXCLUSIVELY bound to a single
+      // shift that is NOT the current one. Tasks shared across both shifts that
+      // happen to have a non-matching timeBlock should go to مهام أخرى instead.
+      const taskShifts = t.shifts ?? ['morning', 'evening'];
+      const isShiftExclusive = taskShifts.length === 1 && !taskShifts.includes(shift);
+      if (isShiftExclusive && knownMissingBlocks.has(tb)) {
         if (!missingBlockGroups.has(tb)) missingBlockGroups.set(tb, []);
         missingBlockGroups.get(tb)!.push(t);
       } else {
