@@ -77,54 +77,15 @@ export function useTaskDerivedState(
       return { block, tasks: blockTasks, isCurrent: block.id === blockId };
     });
 
-    // Catch-all: tasks with 'anytime' or unrecognized timeBlock for this shift
+    // Catch-all: tasks whose timeBlock doesn't match any active block → مهام أخرى
     const assignedIds = new Set(byBlock.flatMap((e) => e.tasks.map((t) => t.id)));
     const unassigned = others.filter((t) => !assignedIds.has(t.id));
 
-    // Build a map of blockId → block definition from ALL shifts (including day overrides),
-    // but ONLY for blocks that are NOT already rendered in the active shift.
-    const renderedBlockIds = new Set(byBlock.map((e) => e.block.id));
-    const knownMissingBlocks = new Map<string, (typeof activeBlocks)[0]>();
-    scheduleConfig.forEach((s) => {
-      const overrideBlocks = Object.values(s.dayOverrides ?? {})
-        .flat()
-        .filter((b): b is (typeof activeBlocks)[0] => b !== undefined);
-      [...s.blocks, ...overrideBlocks].forEach((b) => {
-        if (!renderedBlockIds.has(b.id)) {
-          knownMissingBlocks.set(b.id, b);
-        }
-      });
-    });
-
-    const strictlyUnassigned: typeof others = [];
-    const missingBlockGroups = new Map<string, typeof others>();
-
-    unassigned.forEach((t) => {
-      const tb = t.timeBlock ?? 'anytime';
-      // Only restore a phantom block if the task is EXCLUSIVELY bound to a single
-      // shift that is NOT the current one. Tasks shared across both shifts that
-      // happen to have a non-matching timeBlock should go to مهام أخرى instead.
-      const taskShifts = t.shifts ?? ['morning', 'evening'];
-      const isShiftExclusive = taskShifts.length === 1 && !taskShifts.includes(shift);
-      if (isShiftExclusive && knownMissingBlocks.has(tb)) {
-        if (!missingBlockGroups.has(tb)) missingBlockGroups.set(tb, []);
-        missingBlockGroups.get(tb)!.push(t);
-      } else {
-        strictlyUnassigned.push(t);
-      }
-    });
-
-    missingBlockGroups.forEach((groupTasks, blockId) => {
-      const block = knownMissingBlocks.get(blockId)!;
-      groupTasks.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
-      byBlock.push({ block, tasks: groupTasks, isCurrent: false });
-    });
-
-    if (strictlyUnassigned.length > 0) {
-      strictlyUnassigned.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
+    if (unassigned.length > 0) {
+      unassigned.sort((a, b) => (b.isPinned ? 1 : 0) - (a.isPinned ? 1 : 0));
       byBlock.push({
         block: { id: 'anytime', label: 'مهام أخرى', icon: '📌', startHour: 0, endHour: 24 },
-        tasks: strictlyUnassigned,
+        tasks: unassigned,
         isCurrent: false,
       });
     }
