@@ -3,6 +3,20 @@ import type { ShiftConfig, TimeBlock } from '@/features/tasks/data/scheduleConfi
 import '../tasks.css';
 import '../schedule-settings.css';
 
+// ── Time helpers ─────────────────────────────────────────────────────
+// e.g. 13.5 → "13:30", 0.5 → "00:30", 4 → "04:00"
+function decimalHourToHHmm(decimal: number): string {
+  const h = Math.floor(decimal);
+  const m = Math.round((decimal - h) * 60);
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+}
+
+// e.g. "13:30" → 13.5, "00:30" → 0.5, "04:00" → 4
+function hhmmToDecimalHour(hhmm: string): number {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h + m / 60;
+}
+
 interface ScheduleSettingsModalProps {
   isOpen: boolean;
   schedule: ShiftConfig[];
@@ -222,6 +236,46 @@ export default function ScheduleSettingsModal({
           </div>
         </div>
 
+        {/* Week Start Hour — per shift */}
+        <div className="ss-card" style={{ marginBottom: 'var(--space-lg)' }}>
+          <div className="ss-section-title">🔄 بداية الأسبوع الجديد</div>
+          <div className="ss-input-group">
+            <label className="ss-label" htmlFor={`week-start-hour-${selectedShift.id}`}>
+              وقت تبدّل الأسبوع (يوم الجمعة)
+              <span
+                style={{
+                  fontSize: '0.8em',
+                  color: 'rgba(var(--gold-rgb), 0.5)',
+                  marginRight: '6px',
+                }}
+              >
+                (الوقت الذي يُعدّ فيه الجمعة بداية للأسبوع الجديد)
+              </span>
+            </label>
+            <input
+              id={`week-start-hour-${selectedShift.id}`}
+              type="time"
+              className="form-input"
+              value={decimalHourToHHmm(selectedShift.weekStartHour ?? 0)}
+              onChange={(e) =>
+                handleUpdateShift({ weekStartHour: hhmmToDecimalHour(e.target.value) })
+              }
+            />
+            {(selectedShift.weekStartHour ?? 0) > 0 && (
+              <div
+                style={{
+                  marginTop: 'var(--space-sm)',
+                  fontSize: 'var(--font-sm)',
+                  color: 'rgba(var(--gold-rgb), 0.55)',
+                }}
+              >
+                ℹ️ أي وقت قبل {decimalHourToHHmm(selectedShift.weekStartHour ?? 0)} يوم الجمعة يُعدّ
+                من الأسبوع السابق.
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Friday Schedule Section */}
         <div className="ss-card">
           <div className="ss-section-title">🕌 جدول يوم الجمعة الخاص</div>
@@ -234,15 +288,12 @@ export default function ScheduleSettingsModal({
                 id="friday-start"
                 type="time"
                 className="form-input"
-                value={
-                  selectedShift.fridaySchedule.start.toString().padStart(2, '0').slice(0, 2) + ':00'
-                }
+                value={decimalHourToHHmm(selectedShift.fridaySchedule.start)}
                 onChange={(e) => {
-                  const [hours] = e.target.value.split(':').map(Number);
                   handleUpdateShift({
                     fridaySchedule: {
                       ...selectedShift.fridaySchedule,
-                      start: hours,
+                      start: hhmmToDecimalHour(e.target.value),
                     },
                   });
                 }}
@@ -256,15 +307,12 @@ export default function ScheduleSettingsModal({
                 id="friday-end"
                 type="time"
                 className="form-input"
-                value={
-                  selectedShift.fridaySchedule.end.toString().padStart(2, '0').slice(0, 2) + ':00'
-                }
+                value={decimalHourToHHmm(selectedShift.fridaySchedule.end)}
                 onChange={(e) => {
-                  const [hours] = e.target.value.split(':').map(Number);
                   handleUpdateShift({
                     fridaySchedule: {
                       ...selectedShift.fridaySchedule,
-                      end: hours,
+                      end: hhmmToDecimalHour(e.target.value),
                     },
                   });
                 }}
@@ -459,10 +507,11 @@ export default function ScheduleSettingsModal({
                       id={`block-start-${block.id}`}
                       type="time"
                       className="form-input"
-                      value={block.startHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
+                      value={decimalHourToHHmm(block.startHour)}
                       onChange={(e) => {
-                        const [hours] = e.target.value.split(':').map(Number);
-                        handleUpdateBlock(block.id, { startHour: hours });
+                        handleUpdateBlock(block.id, {
+                          startHour: hhmmToDecimalHour(e.target.value),
+                        });
                       }}
                     />
                   </div>
@@ -474,10 +523,9 @@ export default function ScheduleSettingsModal({
                       id={`block-end-${block.id}`}
                       type="time"
                       className="form-input"
-                      value={block.endHour.toString().padStart(2, '0').slice(0, 2) + ':00'}
+                      value={decimalHourToHHmm(block.endHour)}
                       onChange={(e) => {
-                        const [hours] = e.target.value.split(':').map(Number);
-                        handleUpdateBlock(block.id, { endHour: hours });
+                        handleUpdateBlock(block.id, { endHour: hhmmToDecimalHour(e.target.value) });
                       }}
                     />
                   </div>

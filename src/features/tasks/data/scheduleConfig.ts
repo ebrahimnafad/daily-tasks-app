@@ -57,6 +57,11 @@ export interface ShiftConfig {
   offDays: number[];
   /** Human-readable off-day label */
   offDayLabel: string;
+  /** Decimal hour on Friday at which the logical week boundary occurs.
+   *  0 = calendar midnight (default), 4 = 04:00 AM, 4.5 = 04:30 AM.
+   *  computeShift() treats times before this hour on Friday as still the previous week.
+   *  Persisted automatically as part of ShiftConfig inside 'mhm_schedule'. */
+  weekStartHour?: number;
   /** Friday special schedule for this shift */
   fridaySchedule: FridaySchedule;
   blocks: TimeBlock[];
@@ -94,6 +99,7 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
     //             for the evening shift by design: evening is a 7-day rotation with no
     //             off days regardless of what the user sets. See isWorkday() below.
     offDayLabel: '',
+    weekStartHour: 0, // midnight — matches existing behavior, safe default
     fridaySchedule: {
       start: 13, // 1:00 PM
       end: 21.5, // 9:30 PM
@@ -107,6 +113,7 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
     icon: '☀️',
     offDays: [4, 6], // Thursday + Saturday
     offDayLabel: 'إجازة — الخميس والسبت',
+    weekStartHour: 0, // midnight — matches existing behavior, safe default
     fridaySchedule: {
       start: 18.5, // 6:30 PM
       end: 3, // 3:00 AM next day
@@ -151,8 +158,15 @@ export function computeShift(
   today: Date = new Date()
 ): ShiftType {
   if (!shifts || shifts.length === 0) return 'morning'; // fallback
+  // fires at user-configured week-start hour, not hardcoded midnight.
+  // All shifts share one physical week boundary — use shifts[0].weekStartHour to avoid
+  // circular dependency (computeShift cannot know the current shift without calling itself).
+  // With weekStartHour=0 (default) adjusted === today — identical behaviour to before.
+  const offsetHours = shifts[0].weekStartHour ?? 0;
+  const adjusted = new Date(today.getTime() - offsetHours * 60 * 60 * 1000);
+
   const epoch = new Date(epochFridayISO + 'T00:00:00');
-  const thisFriday = new Date(getMostRecentFriday(today) + 'T00:00:00');
+  const thisFriday = new Date(getMostRecentFriday(adjusted) + 'T00:00:00');
   const msPerWeek = 7 * 24 * 60 * 60 * 1000;
   const weeksElapsed = Math.round((thisFriday.getTime() - epoch.getTime()) / msPerWeek);
 
