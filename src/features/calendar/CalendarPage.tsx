@@ -18,13 +18,15 @@ import {
   DEFAULT_SHIFTS,
 } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
+import { HOLIDAY_COLOR, LS_HOLIDAY_OFFSETS, addDays, HOLIDAY_GROUPS } from './holidays';
+import { useHolidayData } from './useHolidayData';
 import {
-  HOLIDAY_GROUPS,
-  HOLIDAY_COLOR,
-  LS_HOLIDAY_OFFSETS,
-  buildHolidayMap,
-  addDays,
-} from './holidays';
+  defaultFinConfig,
+  LS_FIN_CYCLE_CONFIG,
+  computeFinCycleEvents,
+  buildFinCycleMap,
+} from './financialCycles';
+import type { FinCycleConfig } from './financialCycles';
 
 interface FinanceEvent {
   id: string;
@@ -103,10 +105,27 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
     });
   }, []);
 
-  /** Flat date → Holiday map, rebuilt whenever offsets change */
-  const holidayMap = useMemo(
-    () => buildHolidayMap(HOLIDAY_GROUPS, holidayOffsets),
-    [holidayOffsets]
+  // ── Holiday data (AlAdhan API + static fallback) ───────────────────
+  const { holidayMap, eidFitrDates } = useHolidayData(holidayOffsets);
+
+  // ── Financial cycle config + pulse strip ──────────────────────────
+  const [finConfig, setFinConfig] = useState<FinCycleConfig>(() =>
+    lsGet<FinCycleConfig>(LS_FIN_CYCLE_CONFIG, defaultFinConfig())
+  );
+  const [showFinSettings, setShowFinSettings] = useState(false);
+
+  const saveFinConfig = useCallback((patch: Partial<FinCycleConfig>) => {
+    setFinConfig((prev) => {
+      const next = { ...prev, ...patch };
+      lsSet(LS_FIN_CYCLE_CONFIG, next);
+      return next;
+    });
+  }, []);
+
+  /** Upcoming events within 60 days — for the Pulse Strip */
+  const upcomingFinEvents = useMemo(
+    () => computeFinCycleEvents(finConfig, eidFitrDates, today, 60),
+    [finConfig, eidFitrDates, today]
   );
 
   // ── Snapshot summaries (for battery indicator) ──────────────────────
@@ -184,6 +203,20 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
+
+  /** Date → FinCycleEvent[] map for visible month (±15 days) — cell right-border */
+  const finCycleMap = useMemo(
+    () =>
+      buildFinCycleMap(
+        computeFinCycleEvents(
+          finConfig,
+          eidFitrDates,
+          `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`,
+          45
+        )
+      ),
+    [finConfig, eidFitrDates, currentDate]
+  );
 
   const [expenses] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
   const [transactions] = useState<Transaction[]>(() => lsGet(KEYS.transactions, []));
@@ -450,6 +483,12 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                 ? `2px solid ${HOLIDAY_COLOR[holiday.type]}`
                 : undefined;
 
+              // ── Right border for financial cycle events ──
+              const finEvents = finCycleMap[dateStr];
+              const cellBorderRight = finEvents?.[0]
+                ? `3px solid ${finEvents[0].borderColor}`
+                : undefined;
+
               return (
                 <div
                   key={day}
@@ -459,6 +498,7 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                     background: cellBg,
                     borderTop: cellBorderTop,
                     borderBottom: cellBorderBottom,
+                    borderRight: cellBorderRight,
                     boxShadow: isSelected ? 'inset 0 0 0 2px var(--gold)' : undefined,
                     opacity: shiftType === 'off' ? 0.72 : 1,
                   }}
@@ -492,6 +532,15 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                   {holiday && (
                     <span className="cal-cell-holiday" title={holiday.name}>
                       {holiday.icon}
+                    </span>
+                  )}
+                  {/* Financial event icon — bottom-right corner */}
+                  {finEvents && finEvents.length > 0 && (
+                    <span
+                      className="cal-cell-fin"
+                      title={finEvents.map((e) => e.label).join(' · ')}
+                    >
+                      {finEvents[0].icon}
                     </span>
                   )}
                   {/* Battery indicator for past days with snapshots */}
@@ -531,7 +580,87 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
             <span className="cal-shift-legend__item cal-shift-legend__item--morning">☀️ صباحي</span>
             <span className="cal-shift-legend__item cal-shift-legend__item--evening">🌙 مسائي</span>
             <span className="cal-shift-legend__item cal-shift-legend__item--off">🏖️ إجازة</span>
+            <button
+              className="cal-fin-settings-btn"
+              onClick={() => setShowFinSettings((v) => !v)}
+              title="إعدادات نبضة المال"
+            >
+              {showFinSettings ? '×' : '⚙️'}
+            </button>
           </div>
+
+          {/* ── Financial settings panel ── */}
+          {showFinSettings && (
+            <div className="cal-fin-settings">
+              <h4 className="cal-fin-settings__title">⚙️ إعدادات نبضة المال</h4>
+              {(
+                [
+                  { key: 'govSalaryEnabled', label: '🏙️ رواتب القطاع الحكومي (27 ميلادي)' },
+                  { key: 'gosiSalaryEnabled', label: '👴 معاشات GOSI (1 ميلادي)' },
+                  { key: 'quotaCloseEnabled', label: '📊 إغلاق الحصة المبيعاتية (آخر الشهر)' },
+                  { key: 'eidBonusEnabled', label: '🎁 موسم مكافأة العيد' },
+                ] as const
+              ).map(({ key, label }) => (
+                <label key={key} className="cal-fin-settings__row">
+                  <input
+                    type="checkbox"
+                    checked={finConfig[key]}
+                    onChange={(e) => saveFinConfig({ [key]: e.target.checked })}
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+              <label className="cal-fin-settings__row">
+                <span>🎁 أيام قبل العيد</span>
+                <input
+                  type="number"
+                  min={7}
+                  max={30}
+                  value={finConfig.eidBonusDaysBefore}
+                  onChange={(e) =>
+                    saveFinConfig({
+                      eidBonusDaysBefore: Math.max(7, Math.min(30, +e.target.value)),
+                    })
+                  }
+                  className="cal-fin-settings__num"
+                />
+                <span>يوم</span>
+              </label>
+            </div>
+          )}
+
+          {/* ── نبضة المال — Financial Pulse Strip ── */}
+          {upcomingFinEvents.length > 0 && (
+            <div className="cal-fin-pulse">
+              {upcomingFinEvents.slice(0, 6).map((ev, idx) => {
+                const diffDays = Math.round(
+                  (new Date(ev.date + 'T00:00:00').getTime() -
+                    new Date(today + 'T00:00:00').getTime()) /
+                    86_400_000
+                );
+                const isToday = diffDays === 0;
+                return (
+                  <div
+                    key={`${ev.type}-${ev.date}-${idx}`}
+                    className="cal-fin-card"
+                    style={{ '--fin-color': ev.color } as React.CSSProperties}
+                    onClick={() => {
+                      const d = new Date(ev.date + 'T00:00:00');
+                      setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                      handleSelectDate(ev.date);
+                    }}
+                    title={ev.bannerText}
+                  >
+                    <span className="cal-fin-card__icon">{ev.icon}</span>
+                    <span className="cal-fin-card__label">{ev.label}</span>
+                    <span className="cal-fin-card__countdown">
+                      {isToday ? '🟢 اليوم' : `${diffDays} يوم`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Selected day tasks */}
           <div className="cal-selected-tasks">
@@ -543,6 +672,18 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
                 month: 'long',
               })}
             </h3>
+            {/* Financial cycle context banner */}
+            {(finCycleMap[selectedDate] ?? []).map((ev) => (
+              <div
+                key={ev.type}
+                className="cal-fin-banner"
+                style={{ '--fin-color': ev.color } as React.CSSProperties}
+              >
+                <span className="cal-fin-banner__icon">{ev.icon}</span>
+                <span className="cal-fin-banner__text">{ev.bannerText}</span>
+              </div>
+            ))}
+
             {/* Holiday banner with adjustment controls */}
             {holidayMap[selectedDate] &&
               (() => {
