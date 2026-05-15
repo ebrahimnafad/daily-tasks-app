@@ -20,9 +20,18 @@ interface AlAdhanCache {
   fetchedAt: number;
 }
 
-/** Approximate Gregorian year → Hijri year */
-function toHijriYear(y: number): number {
-  return Math.floor((y - 622) * (33 / 32)) + 1;
+/**
+ * Approximate Gregorian year + month → Hijri year.
+ * L-10: Pass currentMonth (0-indexed) so the estimate is bumped by 1
+ * in the second half of the Gregorian year, where the Hijri new year
+ * has often already begun. Prevents fetching the wrong Hijri year near
+ * the year boundary (e.g. December → next Hijri year starts in ~June).
+ */
+function toHijriYear(y: number, month: number): number {
+  const base = Math.floor((y - 622) * (33 / 32)) + 1;
+  // If we're in the second half of the Gregorian year the Hijri year
+  // has likely already advanced; add 1 to ensure we fetch the right year.
+  return month >= 6 ? base + 1 : base;
 }
 
 /** AlAdhan date DD-MM-YYYY → YYYY-MM-DD */
@@ -65,8 +74,11 @@ export function useHolidayData(holidayOffsets: Record<string, number>): HolidayD
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const currentYear = new Date().getFullYear();
-    const h1 = toHijriYear(currentYear);
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    // L-10: pass month so boundary drift is corrected
+    const h1 = toHijriYear(currentYear, currentMonth);
     Promise.all([fetchHijriYear(h1), fetchHijriYear(h1 + 1)])
       .then(([a, b]) => setEidFromApi(extractEidFitr([...a, ...b])))
       .catch((err) => console.warn('[useHolidayData] AlAdhan offline, using static fallback', err))

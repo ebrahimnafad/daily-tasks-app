@@ -23,6 +23,13 @@ const FinancePage = lazy(() => import('@/features/finance/components/FinancePage
 // ── AppContent — all hooks live here (no early returns allowed above hooks) ──
 function AppContent({ logout }: { logout: () => void }) {
   const [activeTab, setActiveTab] = useState('tasks');
+  // M-5: Lifted here so the selected month/day survive tab switches
+  const [calCurrentDate, setCalCurrentDate] = useState(() => new Date());
+  const [calSelectedDate, setCalSelectedDate] = useState(() => {
+    // initialise to today's local ISO date
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const toasts = useToasts();
   const { onNewDay, onQuota } = toasts;
 
@@ -182,7 +189,15 @@ function AppContent({ logout }: { logout: () => void }) {
             </ErrorBoundary>
 
             <ErrorBoundary level="feature" fallback={<CalendarErrorFallback />}>
-              {activeTab === 'calendar' && <CalendarView tasks={tasks} />}
+              {activeTab === 'calendar' && (
+                <CalendarView
+                  tasks={tasks}
+                  currentDate={calCurrentDate}
+                  setCurrentDate={setCalCurrentDate}
+                  selectedDate={calSelectedDate}
+                  setSelectedDate={setCalSelectedDate}
+                />
+              )}
             </ErrorBoundary>
           </TaskContext.Provider>
 

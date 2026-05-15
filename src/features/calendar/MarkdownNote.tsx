@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { marked } from 'marked';
+import DOMPurify, { type Config as DOMPurifyConfig } from 'dompurify';
 
 // Configure marked: GFM + tables, no async
 marked.use({
@@ -7,21 +8,65 @@ marked.use({
   breaks: true,
 });
 
+// M-8: Tight allow-list — only safe formatting/structural elements.
+// All script tags, event handlers, javascript: URIs, and data: URIs
+// are stripped by DOMPurify before the HTML reaches the DOM.
+const PURIFY_CONFIG: DOMPurifyConfig = {
+  ALLOWED_TAGS: [
+    'p',
+    'br',
+    'b',
+    'strong',
+    'i',
+    'em',
+    'u',
+    's',
+    'del',
+    'ul',
+    'ol',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'code',
+    'table',
+    'thead',
+    'tbody',
+    'tr',
+    'th',
+    'td',
+    'hr',
+    'span',
+    'div',
+    'a',
+  ],
+  ALLOWED_ATTR: ['href', 'title', 'target', 'rel', 'class'],
+  ALLOW_DATA_ATTR: false,
+  // Force all links to be safe: strip javascript: and data: schemes
+  FORCE_BODY: true,
+};
+
 interface MarkdownNoteProps {
   text: string;
 }
 
 /**
- * Renders markdown text to sanitised HTML via `marked`.
- * Tables, bold, italic, lists, code, and blockquotes are all supported.
- * XSS: We only render user's own notes (no third-party content), so
- * dangerouslySetInnerHTML is acceptable here. The content never comes from
- * an untrusted network source.
+ * Renders markdown text to sanitised HTML.
+ * Pipeline: text → marked.parse() → DOMPurify.sanitize() → dangerouslySetInnerHTML.
+ * DOMPurify strips all script tags, event-handler attributes, and non-http(s)
+ * URI schemes before the HTML is inserted into the DOM.
  */
 export default function MarkdownNote({ text }: MarkdownNoteProps) {
   const html = useMemo(() => {
     if (!text.trim()) return '';
-    return marked.parse(text) as string;
+    const raw = marked.parse(text) as string;
+    // M-8: Sanitize — double-cast required: sanitize() returns TrustedHTML|string
+    return DOMPurify.sanitize(raw, PURIFY_CONFIG) as unknown as string;
   }, [text]);
 
   if (!html) {

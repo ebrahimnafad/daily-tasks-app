@@ -10,6 +10,9 @@ import { authFetch } from '@/features/auth/authFetch';
 import useNotesSync from './useNotesSync';
 import useNoteSearch from './useNoteSearch';
 import NotesPanel from './NotesPanel';
+import HistoryPanel from './HistoryPanel';
+import SyncStatusBar from './SyncStatusBar';
+import ConflictDialog from './ConflictDialog';
 import { localDateISO } from '@/lib/date/localDate';
 import {
   computeShift,
@@ -39,6 +42,11 @@ interface FinanceEvent {
 
 interface CalendarPageProps {
   tasks: Task[];
+  // M-5: Lifted to AppContent so state survives tab switches
+  currentDate: Date;
+  setCurrentDate: (d: Date) => void;
+  selectedDate: string;
+  setSelectedDate: (d: string) => void;
 }
 
 const DAYS = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
@@ -57,25 +65,27 @@ const MONTHS = [
   'ديسمبر',
 ];
 
-const SYNC_LABELS: Record<string, string> = {
-  syncing: '🔄 جاري الحفظ...',
-  synced: '✓ محفوظ',
-  offline: '📴 غير متصل',
-  error: '⚠️ خطأ في الحفظ',
-};
-
 // Shift type for a calendar day: 'morning' | 'evening' | 'off'
 type DayShiftType = 'morning' | 'evening' | 'off';
 
-export default function CalendarPage({ tasks }: CalendarPageProps) {
+export default function CalendarPage({
+  tasks,
+  currentDate,
+  setCurrentDate,
+  selectedDate,
+  setSelectedDate,
+}: CalendarPageProps) {
   const { tm } = useTaskContext();
-  const [currentDate, setCurrentDate] = useState(new Date());
   const today = localDateISO();
-  const [selectedDate, setSelectedDate] = useState<string>(today);
 
-  // ── Schedule shift config (read-only, from localStorage) ──────────
-  const schedule = useMemo(() => lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS), []);
-  const shiftEpoch = useMemo(() => lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday()), []);
+  // ── Schedule shift config (reactive to storage changes from other tabs) ──
+  const LS_SCHEDULE_KEY = 'mhm_schedule';
+  const [schedule, setSchedule] = useState<ShiftConfig[]>(() =>
+    lsGet<ShiftConfig[]>(LS_SCHEDULE_KEY, DEFAULT_SHIFTS)
+  );
+  const [shiftEpoch, setShiftEpoch] = useState<string>(() =>
+    lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday())
+  );
 
   /** Classify a calendar date as morning-shift, evening-shift, or off-day */
   const getDayShiftType = useCallback(
@@ -133,7 +143,10 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
   const [selectedSnapshot, setSelectedSnapshot] = useState<DailySnapshot | null>(null);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
 
-  useEffect(() => {
+  // M-7: Extracted so storage listener and manual button can both call it
+  const LS_LAST_SNAP_KEY = 'mhm_last_manual_snapshot_at';
+
+  const refreshSnapSummaries = useCallback(() => {
     authFetch('/api/db?resource=snapshots', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data: { summaries?: SnapshotSummary[] }) => {
@@ -148,6 +161,20 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
         /* offline — silent */
       });
   }, []);
+
+  // Initial load
+  useEffect(() => {
+    refreshSnapSummaries();
+  }, [refreshSnapSummaries]);
+
+  // M-7: Re-fetch when the tasks tab saves a new snapshot
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LS_LAST_SNAP_KEY) refreshSnapSummaries();
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, [refreshSnapSummaries]);
 
   const fetchSnapshot = useCallback(
     async (date: string) => {
@@ -192,7 +219,19 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
   };
 
   // ── Notes sync ──────────────────────────────────────────────────────
-  const { notes, addNote, updateNote, deleteNote, togglePin, syncStatus } = useNotesSync();
+  const {
+    notes,
+    addNote,
+    updateNote,
+    deleteNote,
+    togglePin,
+    syncStatus,
+    syncError,
+    retrySync,
+    conflictState,
+    resolveKeepLocal,
+    resolveUseServer,
+  } = useNotesSync();
 
   // ── Search ──────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState('');
@@ -204,22 +243,46 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
-  /** Date → FinCycleEvent[] map for visible month (±15 days) — cell right-border */
+  /** Date → FinCycleEvent[] map for visible month — cell right-border.
+   * L-11: Window aligned to 60 days from today (same as upcomingFinEvents)
+   * so Pulse Strip events always have matching cell markers. */
   const finCycleMap = useMemo(
     () =>
       buildFinCycleMap(
         computeFinCycleEvents(
           finConfig,
           eidFitrDates,
-          `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-01`,
-          45
+          today, // L-11: anchor from today, not 1st of viewed month
+          60 // L-11: aligned with upcomingFinEvents window
         )
       ),
-    [finConfig, eidFitrDates, currentDate]
+    [finConfig, eidFitrDates, today]
   );
 
-  const [expenses] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
-  const [transactions] = useState<Transaction[]>(() => lsGet(KEYS.transactions, []));
+  const [expenses, setExpenses] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
+  const [transactions, setTransactions] = useState<Transaction[]>(() =>
+    lsGet(KEYS.transactions, [])
+  );
+
+  // M-4: Refresh schedule / expenses / transactions when another tab writes to localStorage
+  useEffect(() => {
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === LS_SCHEDULE_KEY) {
+        setSchedule(lsGet<ShiftConfig[]>(LS_SCHEDULE_KEY, DEFAULT_SHIFTS));
+      }
+      if (e.key === DEFAULT_EPOCH_KEY) {
+        setShiftEpoch(lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday()));
+      }
+      if (e.key === KEYS.expenses) {
+        setExpenses(lsGet<Expense[]>(KEYS.expenses, []));
+      }
+      if (e.key === KEYS.transactions) {
+        setTransactions(lsGet<Transaction[]>(KEYS.transactions, []));
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const financeEventsByDate = useMemo(() => {
     const y = currentDate.getFullYear();
@@ -795,95 +858,24 @@ export default function CalendarPage({ tasks }: CalendarPageProps) {
               onTogglePin={togglePin}
             />
 
-            {/* ── History Panel (past days with snapshot) ── */}
-            {selectedDate < today && (
-              <div className="cal-history">
-                <div className="cal-history__header">
-                  <span className="cal-history__icon">📅</span>
-                  <span className="cal-history__title">سجل الإنجاز</span>
-                  {snapSummaries[selectedDate] && (
-                    <span className="cal-history__badge">
-                      {snapSummaries[selectedDate].progress}%
-                    </span>
-                  )}
-                </div>
+            <HistoryPanel
+              selectedDate={selectedDate}
+              today={today}
+              snapSummaries={snapSummaries}
+              selectedSnapshot={selectedSnapshot}
+              loadingSnapshot={loadingSnapshot}
+              onRefresh={refreshSnapSummaries}
+            />
 
-                {loadingSnapshot && <div className="cal-history__loading">جاري التحميل...</div>}
-
-                {!loadingSnapshot && !selectedSnapshot && !snapSummaries[selectedDate] && (
-                  <div className="cal-history__empty">
-                    لا يوجد سجل محفوظ لهذا اليوم — يتم الحفظ تلقائياً عند استخدام &quot;يوم
-                    جديد&quot;
-                  </div>
-                )}
-
-                {!loadingSnapshot && selectedSnapshot && (
-                  <>
-                    {/* Progress summary bar */}
-                    <div className="cal-history__summary">
-                      <div className="cal-history__prog-row">
-                        <span>
-                          إنجاز {selectedSnapshot.countDone} / {selectedSnapshot.totalOther} مهمة
-                        </span>
-                        <span className="cal-history__prog-pct">{selectedSnapshot.progress}%</span>
-                      </div>
-                      <div className="cal-history__prog-track">
-                        <div
-                          className="cal-history__prog-fill"
-                          style={{
-                            width: `${selectedSnapshot.progress}%`,
-                            background:
-                              selectedSnapshot.progress >= 80
-                                ? '#9bc87a'
-                                : selectedSnapshot.progress >= 50
-                                  ? '#e6a855'
-                                  : '#d97e6a',
-                          }}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Task list */}
-                    <div className="cal-history__tasks">
-                      {selectedSnapshot.tasks.map((t) => {
-                        const isDone =
-                          t.subtasks.length > 0
-                            ? t.subtasks.every((s) => selectedSnapshot.checked[s.id as number])
-                            : !!selectedSnapshot.checked[t.id];
-                        const isSkipped = !!selectedSnapshot.skipped[t.id];
-                        return (
-                          <div
-                            key={t.id}
-                            className={`cal-history__task ${isDone ? 'cal-history__task--done' : ''} ${isSkipped ? 'cal-history__task--skipped' : ''}`}
-                          >
-                            <span className="cal-history__task-state">
-                              {isDone ? '✅' : isSkipped ? '⏩' : '○'}
-                            </span>
-                            <span className="cal-history__task-icon">{t.icon}</span>
-                            <span className="cal-history__task-title">{t.title}</span>
-                            <span className="cal-history__task-cat" style={{ color: t.color }}>
-                              {t.category}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-
-            {/* Sync status */}
-            <div
-              className={`sync-badge ${syncStatus}`}
-              style={{ position: 'static', marginTop: '12px', width: 'fit-content' }}
-              aria-live="polite"
-            >
-              {SYNC_LABELS[syncStatus]}
-            </div>
+            <SyncStatusBar syncStatus={syncStatus} syncError={syncError} onRetry={retrySync} />
           </div>
         </>
       )}
+      <ConflictDialog
+        visible={!!conflictState}
+        onKeepLocal={resolveKeepLocal}
+        onUseServer={resolveUseServer}
+      />
     </div>
   );
 }

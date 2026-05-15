@@ -53,6 +53,19 @@ interface UseNotesSyncReturn {
   deleteNote: (id: string) => void;
   togglePin: (id: string) => void;
   syncStatus: SyncStatus;
+  /** Non-null when the last sync attempt failed. Contains Arabic message. */
+  syncError: string | null;
+  /** Manually re-trigger the sync after a failure. */
+  retrySync: () => void;
+  /**
+   * C-3: Non-null when the server has newer data BUT local also has notes
+   * that are newer than the server timestamp. User must choose explicitly.
+   */
+  conflictState: { serverNotes: CalendarNote[] } | null;
+  /** C-3: Keep local version and push it to the server immediately. */
+  resolveKeepLocal: () => void;
+  /** C-3: Accept the server version, discarding local changes. */
+  resolveUseServer: () => void;
 }
 
 function nanoid(): string {
@@ -62,10 +75,19 @@ function nanoid(): string {
 export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   const [notes, setNotesState] = useState<CalendarNote[]>(() => initialLoad(onQuota));
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+  const [syncError, setSyncError] = useState<string | null>(null);
+  // C-3: holds the server array while user decides which version to keep
+  const [conflictState, setConflictState] = useState<{ serverNotes: CalendarNote[] } | null>(null);
 
   const dbAvailable = useRef(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isMounted = useRef(false);
+  /**
+   * Tracks the last array successfully acknowledged by the server.
+   * On failure we roll back notesState to this snapshot so the UI
+   * never shows data that is only in the local state but not on the server.
+   */
+  const committedRef = useRef<CalendarNote[]>(notes);
 
   // ── Persist helper ────────────────────────────────────────────────────
   const persist = useCallback(
@@ -127,19 +149,35 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   );
 
   // ── Cloud sync ────────────────────────────────────────────────────────
-  const doSync = useCallback(async (currentNotes: CalendarNote[]) => {
-    try {
-      const res = await authFetch('/api/db?resource=notes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ notes: currentNotes }),
-      });
-      if (!res.ok) throw new Error('API error');
-      setSyncStatus('synced');
-    } catch {
-      setSyncStatus(navigator.onLine ? 'error' : 'offline');
-    }
-  }, []);
+  const doSync = useCallback(
+    async (currentNotes: CalendarNote[]) => {
+      try {
+        const res = await authFetch('/api/db?resource=notes', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ notes: currentNotes }),
+        });
+        if (!res.ok) throw new Error('API error');
+        // Success — advance the committed snapshot and clear any error
+        committedRef.current = currentNotes;
+        setSyncStatus('synced');
+        setSyncError(null);
+      } catch {
+        const isOffline = !navigator.onLine;
+        setSyncStatus(isOffline ? 'offline' : 'error');
+        // Roll back UI to the last version the server acknowledged
+        const rollbackTo = committedRef.current;
+        setNotesState(rollbackTo);
+        persist(rollbackTo);
+        setSyncError(
+          isOffline
+            ? 'لا يوجد اتصال بالإنترنت — تم التراجع عن التغييرات الأخيرة. أعد المحاولة عند الاتصال.'
+            : 'فشل حفظ الملاحظات على السيرفر — تم التراجع عن التغيير الأخير. اضغط "إعادة المحاولة" للمحاولة مجدداً.'
+        );
+      }
+    },
+    [persist]
+  );
 
   const scheduleSync = useCallback(
     (currentNotes: CalendarNote[]) => {
@@ -150,6 +188,13 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
     },
     [doSync]
   );
+
+  const retrySync = useCallback(() => {
+    if (!dbAvailable.current) return;
+    setSyncError(null);
+    setSyncStatus('syncing');
+    void doSync(committedRef.current);
+  }, [doSync]);
 
   const loadFromServer = useCallback(async () => {
     try {
@@ -166,15 +211,55 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
       const dbTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
 
       if (dbTime > localTime && Array.isArray(data.notes) && data.notes.length > 0) {
+        // C-3: Before accepting the server version, check if any LOCAL note
+        // has an updatedAt newer than dbTime. If so, the user edited on this
+        // device after the last server write — show a conflict prompt instead
+        // of silently discarding their changes.
+        const localNewerExists = notes.some((n) => {
+          const t = n.updatedAt ? new Date(n.updatedAt).getTime() : 0;
+          return t > dbTime;
+        });
+
+        if (localNewerExists) {
+          // Hold the server version in state; user must choose.
+          setConflictState({ serverNotes: data.notes });
+          setSyncStatus('synced');
+          return; // Do NOT overwrite local state
+        }
+
+        // No conflict — safe to accept server version
         setNotesState(data.notes);
+        committedRef.current = data.notes;
         lsSet(LS_KEY, data.notes, onQuota);
         lsSet(LS_TS_KEY, data.updatedAt!, onQuota);
+      } else {
+        // Local is already up-to-date; commit whatever is currently loaded
+        committedRef.current = notes;
       }
       setSyncStatus('synced');
+      setSyncError(null);
     } catch {
       setSyncStatus('offline');
     }
-  }, [onQuota]);
+  }, [onQuota, notes]);
+
+  // C-3: User chose to keep their local version — push it to the server
+  const resolveKeepLocal = useCallback(() => {
+    setConflictState(null);
+    void doSync(notes);
+  }, [doSync, notes]);
+
+  // C-3: User chose to accept the server version
+  const resolveUseServer = useCallback(() => {
+    if (!conflictState) return;
+    const serverNotes = conflictState.serverNotes;
+    setNotesState(serverNotes);
+    committedRef.current = serverNotes;
+    lsSet(LS_KEY, serverNotes, onQuota);
+    lsSet(LS_TS_KEY, new Date().toISOString(), onQuota);
+    setConflictState(null);
+    setSyncStatus('synced');
+  }, [conflictState, onQuota]);
 
   // Trigger sync whenever notes change (after mount)
   useEffect(() => {
@@ -187,14 +272,14 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes]);
 
-  // Online retry
+  // Online retry — L-9: explicit void to mark intentional fire-and-forget
   useEffect(() => {
     const handle = () => {
       setSyncStatus('syncing');
       if (dbAvailable.current) {
-        doSync(notes);
+        void doSync(notes);
       } else {
-        loadFromServer();
+        void loadFromServer();
       }
     };
     window.addEventListener('online', handle);
@@ -210,5 +295,17 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
     []
   );
 
-  return { notes, addNote, updateNote, deleteNote, togglePin, syncStatus };
+  return {
+    notes,
+    addNote,
+    updateNote,
+    deleteNote,
+    togglePin,
+    syncStatus,
+    syncError,
+    retrySync,
+    conflictState,
+    resolveKeepLocal,
+    resolveUseServer,
+  };
 }

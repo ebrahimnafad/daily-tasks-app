@@ -485,11 +485,74 @@ async function handleSnapshots(req, res, sql) {
   }
 }
 
+// ── M-6: Inline note structure validator (notes resource only) ─────────────
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Validates an individual CalendarNote item.
+ * Returns null on success, or an Arabic error string on failure.
+ */
+function validateNote(item, index) {
+  if (!item || typeof item !== 'object' || Array.isArray(item)) {
+    return `العنصر ${index + 1}: يجب أن يكون كائناً`;
+  }
+  if (typeof item.id !== 'string' || item.id.trim().length === 0) {
+    return `العنصر ${index + 1}: الحقل "id" مطلوب ويجب أن يكون نصاً`;
+  }
+  if (typeof item.date !== 'string' || !ISO_DATE_RE.test(item.date)) {
+    return `العنصر ${index + 1}: الحقل "date" يجب أن يكون بصيغة YYYY-MM-DD`;
+  }
+  if (typeof item.text !== 'string') {
+    return `العنصر ${index + 1}: الحقل "text" مطلوب ويجب أن يكون نصاً`;
+  }
+  if (item.text.length > 4000) {
+    return `العنصر ${index + 1}: الحقل "text" تجاوز الحد المسموح (4000 حرف)`;
+  }
+  if (!Array.isArray(item.tags)) {
+    return `العنصر ${index + 1}: الحقل "tags" يجب أن يكون مصفوفة`;
+  }
+  if (item.tags.some((t) => typeof t !== 'string')) {
+    return `العنصر ${index + 1}: كل عنصر في "tags" يجب أن يكون نصاً`;
+  }
+  if (typeof item.createdAt !== 'string' || item.createdAt.trim().length === 0) {
+    return `العنصر ${index + 1}: الحقل "createdAt" مطلوب`;
+  }
+  if (typeof item.updatedAt !== 'string' || item.updatedAt.trim().length === 0) {
+    return `العنصر ${index + 1}: الحقل "updatedAt" مطلوب`;
+  }
+  if ('isPinned' in item && typeof item.isPinned !== 'boolean') {
+    return `العنصر ${index + 1}: الحقل "isPinned" يجب أن يكون قيمة منطقية (boolean)`;
+  }
+  return null;
+}
+
 async function handleFinance(req, res, sql, finRes) {
   const { method } = req;
 
+  // C-2: Use tagged-template literals (safe, parameterised) instead of raw string
+  // interpolation. Dynamic table names cannot be parameterised in SQL, so we use
+  // an explicit switch to select the correct hard-coded query per resource.
   if (method === 'GET') {
-    const rows = await sql(`SELECT data, updated_at FROM ${finRes.table} WHERE id = 1`);
+    let rows;
+    switch (finRes.table) {
+      case 'finance_income':
+        rows = await sql`SELECT data, updated_at FROM finance_income WHERE id = 1`;
+        break;
+      case 'finance_obligations':
+        rows = await sql`SELECT data, updated_at FROM finance_obligations WHERE id = 1`;
+        break;
+      case 'finance_payments':
+        rows = await sql`SELECT data, updated_at FROM finance_payments WHERE id = 1`;
+        break;
+      case 'finance_goals':
+        rows = await sql`SELECT data, updated_at FROM finance_goals WHERE id = 1`;
+        break;
+      case 'calendar_notes':
+        rows = await sql`SELECT data, updated_at FROM calendar_notes WHERE id = 1`;
+        break;
+      default:
+        return res.status(400).json({ error: `جدول غير معروف: ${finRes.table}` });
+    }
     return res.status(200).json({
       [finRes.field]: rows[0]?.data ?? [],
       updatedAt: rows[0]?.updated_at ?? null,
@@ -505,15 +568,38 @@ async function handleFinance(req, res, sql, finRes) {
     if (data.length > 1000) {
       return res.status(400).json({ error: 'تجاوز الحد المسموح (1000 عنصر)' });
     }
-    await sql(
-      `
-      INSERT INTO ${finRes.table} (id, data, updated_at)
-      VALUES (1, $1::jsonb, NOW())
-      ON CONFLICT (id) DO UPDATE
-        SET data = EXCLUDED.data, updated_at = NOW()
-    `,
-      [JSON.stringify(data)]
-    );
+    const jsonData = JSON.stringify(data);
+    // M-6: Validate note structure before storing (notes resource only)
+    if (finRes.field === 'notes') {
+      for (let i = 0; i < data.length; i++) {
+        const err = validateNote(data[i], i);
+        if (err) return res.status(400).json({ error: `بيانات الملاحظات غير صحيحة: ${err}` });
+      }
+      // Also guard the pinned field alias (CalendarNote uses 'pinned', not 'isPinned')
+      const badPinned = data.find((n) => 'pinned' in n && typeof n.pinned !== 'boolean');
+      if (badPinned) {
+        return res.status(400).json({ error: 'الحقل "pinned" يجب أن يكون قيمة منطقية (boolean)' });
+      }
+    }
+    switch (finRes.table) {
+      case 'finance_income':
+        await sql`INSERT INTO finance_income (id, data, updated_at) VALUES (1, ${jsonData}::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`;
+        break;
+      case 'finance_obligations':
+        await sql`INSERT INTO finance_obligations (id, data, updated_at) VALUES (1, ${jsonData}::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`;
+        break;
+      case 'finance_payments':
+        await sql`INSERT INTO finance_payments (id, data, updated_at) VALUES (1, ${jsonData}::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`;
+        break;
+      case 'finance_goals':
+        await sql`INSERT INTO finance_goals (id, data, updated_at) VALUES (1, ${jsonData}::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`;
+        break;
+      case 'calendar_notes':
+        await sql`INSERT INTO calendar_notes (id, data, updated_at) VALUES (1, ${jsonData}::jsonb, NOW()) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`;
+        break;
+      default:
+        return res.status(400).json({ error: `جدول غير معروف: ${finRes.table}` });
+    }
     return res.status(200).json({ ok: true });
   }
 }
