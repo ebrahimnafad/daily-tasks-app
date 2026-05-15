@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, Suspense, lazy } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
 import './app.css';
 import { useSync } from '@/lib/sync';
 import { useNotifications, useToasts } from '@/shared/hooks';
@@ -26,6 +26,13 @@ function AppContent({ logout }: { logout: () => void }) {
   const toasts = useToasts();
   const { onNewDay, onQuota } = toasts;
 
+  // ── Auto-snapshot ref — always points to the latest shift-filtered snapshot fn ──
+  // Defined before useSync so it can be passed as the 4th arg. The ref itself is
+  // populated after useTaskManager (which provides the correct otherTasks / progress).
+  // Using a ref+stableCallback pattern avoids adding useSync to the re-render cycle.
+  const autoSnapshotFnRef = useRef<() => void>(() => undefined);
+  const stableAutoSnapshot = useCallback(() => autoSnapshotFnRef.current(), []);
+
   const {
     tasks,
     setTasks,
@@ -43,7 +50,7 @@ function AppContent({ logout }: { logout: () => void }) {
     dayStartHour,
     setDayStartHour,
     saveSnapshot,
-  } = useSync(INITIAL_TASKS, onNewDay, onQuota);
+  } = useSync(INITIAL_TASKS, onNewDay, onQuota, stableAutoSnapshot);
 
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 
@@ -61,6 +68,25 @@ function AppContent({ logout }: { logout: () => void }) {
     saveSnapshot
   );
   const { prayersDone, prayerTotal } = tm;
+
+  // ── Keep autoSnapshotFnRef populated with the latest shift-filtered data ──────
+  // No dependency array — intentional. We want this ref to always capture the
+  // freshest render values so the midnight tick never reads stale progress data.
+  // This is the correct data source: same otherTasks/progress/countDone/totalOther
+  // the user sees on screen, not an ad-hoc recomputation over all tasks.
+  useEffect(() => {
+    autoSnapshotFnRef.current = () => {
+      void saveSnapshot({
+        date: getLogicalDateISO(dayStartHour),
+        tasks: tm.otherTasks,
+        checked,
+        skipped,
+        progress: tm.progress,
+        countDone: tm.countDone,
+        totalOther: tm.totalOther,
+      });
+    };
+  });
 
   // ── Dynamic Theme ─────────────────────────────────────────────────────────
   useEffect(() => {

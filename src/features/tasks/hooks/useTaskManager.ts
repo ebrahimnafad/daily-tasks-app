@@ -65,7 +65,17 @@ export default function useTaskManager(
   // ── Shift-aware Reset New Day ──────────────────────────────────────────────
   const resetNewDay = useCallback(() => {
     if (!window.confirm('تصفير المهام لبدء يوم جديد؟')) return;
-    const day = new Date().getDay();
+    // Compute the logical day-of-week: if dayStartHour > 0 and we are before that
+    // hour, we are still on the previous calendar day (same as getLogicalDateISO).
+    // Using raw new Date().getDay() would cause weekly tasks to reset one day early
+    // when the user clicks reset in the pre-dayStartHour window (e.g. 1 AM on Friday
+    // with dayStartHour=2 is logically still Thursday).
+    const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
+    const nowForDay = new Date();
+    if (dayStartHour > 0 && nowForDay.getHours() < dayStartHour) {
+      nowForDay.setDate(nowForDay.getDate() - 1);
+    }
+    const day = nowForDay.getDay();
     const workday = isWorkday(shift, scheduleConfig, day);
     const isStartOfWeek = day === 5; // Friday starts the new week
 

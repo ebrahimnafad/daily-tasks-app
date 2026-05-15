@@ -60,16 +60,19 @@ export function useTaskDerivedState(
       }
       // Monthly task: only visible on the same day-of-month as the anchor date.
       // Falls back to visible when no date is set (safe for pre-existing tasks).
+      // NOTE: append T12:00:00 to force LOCAL-time parsing — bare YYYY-MM-DD strings
+      // are parsed as UTC midnight by the spec, which shifts the date by ±1 day for
+      // users outside UTC and makes getDate()/getDay() return the wrong value.
       if (rec === 'شهري') {
         if (!t.date) return true;
-        const anchor = new Date(t.date);
+        const anchor = new Date(t.date + 'T12:00:00');
         return anchor.getDate() === new Date().getDate();
       }
       // Weekly task: only visible on the same day-of-week as the anchor date.
       // Falls back to visible when no date is set (safe for pre-existing tasks).
       if (rec === 'أسبوعي') {
         if (!t.date) return true;
-        const anchor = new Date(t.date);
+        const anchor = new Date(t.date + 'T12:00:00');
         return anchor.getDay() === new Date().getDay();
       }
       // 'Once' task: hide once it has been checked. The checked state is NOT

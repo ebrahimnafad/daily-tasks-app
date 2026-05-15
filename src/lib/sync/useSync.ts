@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Task, CheckedMap, SubCheckedMap, SyncStatus } from '@/types';
+import type { Task, CheckedMap, SubCheckedMap, SyncStatus, DailySnapshot } from '@/types';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import {
@@ -19,6 +19,45 @@ import { localDateISO } from '@/lib/date/localDate';
 
 /** @deprecated use getLogicalDateISO(dayStartHour) instead */
 export const todayISO = (): string => localDateISO();
+
+// ── Snapshot offline retry queue ────────────────────────────────────────────
+const SNAPSHOT_QUEUE_KEY = 'mhm_snapshot_queue';
+/** localStorage key — epoch ms of the last SUCCESSFUL manual saveSnapshot call.
+ *  Read by the auto-snapshot path to prevent a stale tab from overwriting a
+ *  correct manual snapshot (two-tab race guard). Shared across tabs via localStorage. */
+const LAST_MANUAL_SNAPSHOT_KEY = 'mhm_last_manual_snapshot_at';
+/** Grace window: if a manual snapshot was saved within this many ms, skip auto. */
+const MANUAL_SNAPSHOT_GRACE_MS = 5 * 60 * 1000; // 5 minutes
+
+/** Persist a failed snapshot to the local retry queue (dedup by date). */
+const enqueueSnapshot = (snap: DailySnapshot): void => {
+  const queue = lsGet<DailySnapshot[]>(SNAPSHOT_QUEUE_KEY, []);
+  lsSet(SNAPSHOT_QUEUE_KEY, [...queue.filter((s) => s.date !== snap.date), snap]);
+};
+
+/**
+ * Flush any locally-queued snapshots that failed to POST while offline.
+ * Called when the browser regains connectivity. Each snapshot is retried once;
+ * persistent failures stay in the queue for the next online event.
+ */
+const flushSnapshotQueue = async (): Promise<void> => {
+  const queue = lsGet<DailySnapshot[]>(SNAPSHOT_QUEUE_KEY, []);
+  if (queue.length === 0) return;
+  const remaining: DailySnapshot[] = [];
+  for (const snap of queue) {
+    try {
+      const res = await authFetch('/api/db?resource=snapshot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: snap.date, snapshot: snap }),
+      });
+      if (!res.ok) remaining.push(snap); // server error — keep for next retry
+    } catch {
+      remaining.push(snap); // network error — keep for next retry
+    }
+  }
+  lsSet(SNAPSHOT_QUEUE_KEY, remaining);
+};
 
 interface DailyState {
   checked: CheckedMap;
@@ -153,7 +192,12 @@ export interface UseSyncReturn {
 export default function useSync(
   initialTasks: Task[],
   onNewDay?: () => void,
-  onQuota?: () => void
+  onQuota?: () => void,
+  /** Optional callback called just before the daily state is cleared at midnight.
+   *  When provided, it replaces the internal ad-hoc snapshot computation so the
+   *  caller can supply shift-filtered, recurrence-aware progress data.
+   *  If omitted, the internal query-cache recomputation is used as a fallback. */
+  onAutoSnapshotNeeded?: () => void
 ): UseSyncReturn {
   // ── Day-start hour setting ────────────────────────────────────────
   const [dayStartHour, setDayStartHourState] = useState<number>(() =>
@@ -186,6 +230,8 @@ export default function useSync(
     const handleOnline = () => {
       setIsOnline(true);
       setHasError(false); // clear transient errors on reconnect
+      // Drain any snapshots that failed to POST while offline
+      void flushSnapshotQueue();
       // Re-fetch both queries to sync any missed writes
       if (didMountRef.current) {
         void queryClient.invalidateQueries({ queryKey: ['tasks'] });
@@ -244,6 +290,12 @@ export default function useSync(
     autoSnapshotRef.current = () => {
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (!storedDate) return;
+
+      // Two-tab race guard: if a manual snapshot was saved recently (e.g. the user
+      // clicked Reset in another tab), trust that data and skip the auto-snapshot
+      // so a stale tab does not overwrite the correct shift-filtered snapshot.
+      const lastManual = lsGet<number>(LAST_MANUAL_SNAPSHOT_KEY, 0);
+      if (Date.now() - lastManual < MANUAL_SNAPSHOT_GRACE_MS) return;
       const currentTasks =
         queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ?? [];
       const daily = queryClient.getQueryData<{ daily: DailyState; timestamp: number }>([
@@ -280,7 +332,30 @@ export default function useSync(
             totalOther: totalOtherAuto,
           },
         }),
-      }).catch((err) => console.warn('Auto-snapshot save error:', err));
+      })
+        .then((res) => {
+          if (!res.ok)
+            enqueueSnapshot({
+              date: storedDate,
+              tasks: nonPrayer,
+              checked: daily.checked,
+              skipped: daily.skipped,
+              progress: progressAuto,
+              countDone: countDoneAuto,
+              totalOther: totalOtherAuto,
+            });
+        })
+        .catch(() =>
+          enqueueSnapshot({
+            date: storedDate,
+            tasks: nonPrayer,
+            checked: daily.checked,
+            skipped: daily.skipped,
+            progress: progressAuto,
+            countDone: countDoneAuto,
+            totalOther: totalOtherAuto,
+          })
+        );
     };
   });
 
@@ -291,8 +366,15 @@ export default function useSync(
       const today = getLogicalDateISO(dayStartHour);
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
-        // Auto-save yesterday's snapshot before clearing
-        autoSnapshotRef.current();
+        // Auto-save yesterday's snapshot before clearing.
+        // Prefer the caller's shift-aware callback (correct data) when available;
+        // fall back to the internal query-cache recomputation only as a last resort
+        // since it counts all tasks instead of shift-filtered tasks.
+        if (onAutoSnapshotNeeded) {
+          onAutoSnapshotNeeded();
+        } else {
+          autoSnapshotRef.current();
+        }
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
         lsSet('mhm_checked', {}, onQuota);
         lsSet('mhm_sub_checked', {}, onQuota);
@@ -303,7 +385,7 @@ export default function useSync(
     };
     const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
-  }, [shiftEpoch, schedule, dayStartHour, onNewDay, onQuota, queryClient]);
+  }, [shiftEpoch, schedule, dayStartHour, onNewDay, onQuota, queryClient, onAutoSnapshotNeeded]);
 
   /**
    * Manual override: user toggles shift → we adjust the epoch so the
@@ -595,16 +677,23 @@ export default function useSync(
         ? 'syncing'
         : 'synced';
 
-  const saveSnapshot = useCallback(async (data: import('@/types').DailySnapshot): Promise<void> => {
+  const saveSnapshot = useCallback(async (data: DailySnapshot): Promise<void> => {
     try {
       const res = await authFetch('/api/db?resource=snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: data.date, snapshot: data }),
       });
-      if (!res.ok) console.warn('Snapshot save failed:', res.status);
+      if (!res.ok) {
+        console.warn('Snapshot save failed:', res.status, '— queuing for retry');
+        enqueueSnapshot(data);
+      } else {
+        // Mark successful manual save so other tabs skip their auto-snapshot
+        lsSet(LAST_MANUAL_SNAPSHOT_KEY, Date.now());
+      }
     } catch (err) {
-      console.warn('Snapshot save error (offline?):', err);
+      console.warn('Snapshot save error — queuing for retry (offline?):', err);
+      enqueueSnapshot(data);
     }
   }, []);
 
