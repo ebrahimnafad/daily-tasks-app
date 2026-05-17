@@ -28,5 +28,13 @@
   },
   "settings": {
     "react": { "version": "detect" }
-  }
+  },
+  "overrides": [
+    {
+      "files": ["api/**/*.js", "api/**/*.ts", "scripts/**/*.js", "scripts/**/*.ts"],
+      "env": {
+        "node": true
+      }
+    }
+  ]
 }

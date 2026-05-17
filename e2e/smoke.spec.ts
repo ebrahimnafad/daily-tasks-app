@@ -2,12 +2,12 @@ import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
   // Mock API requests to prevent failures when DB / auth is not configured in test env
-  await page.route('**/api/db**', async (route) => {
+  await page.route('**/api/**', async (route) => {
     const url = route.request().url();
     const method = route.request().method();
 
     // Auth: always return authenticated
-    if (url.includes('resource=auth')) {
+    if (url.includes('/api/auth')) {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
@@ -21,6 +21,13 @@ test.beforeEach(async ({ page }) => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ ok: true }),
+      });
+    } else if (method === 'GET') {
+      // Return empty mock data for other resources
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ok: true }), // the app handles empty arrays/objects
       });
     } else {
       await route.fallback();
