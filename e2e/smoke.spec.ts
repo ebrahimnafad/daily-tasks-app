@@ -1,10 +1,18 @@
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async ({ page }) => {
+  page.on('console', (msg) => console.log('BROWSER CONSOLE:', msg.text()));
+  page.on('pageerror', (err) => console.error('BROWSER ERROR:', err));
+
   // Mock API requests to prevent failures when DB / auth is not configured in test env
-  await page.route('**/api/**', async (route) => {
+  await page.route(/\/api\//, async (route) => {
     const url = route.request().url();
     const method = route.request().method();
+
+    if (url.includes('/src/')) {
+      await route.fallback();
+      return;
+    }
 
     // Auth: always return authenticated
     if (url.includes('/api/auth')) {
@@ -27,7 +35,19 @@ test.beforeEach(async ({ page }) => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ ok: true }), // the app handles empty arrays/objects
+        body: JSON.stringify({
+          ok: true,
+          tasks: [],
+          checked: {},
+          subChecked: {},
+          skipped: {},
+          schedule: [],
+          finance_income: [],
+          finance_obligations: [],
+          finance_payments: [],
+          finance_goals: [],
+          finance_categories: [],
+        }),
       });
     } else {
       await route.fallback();
