@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm run build",
+  "buildCommand": "npm run migrate && vite build",
   "outputDirectory": "dist",
   "headers": [
     {

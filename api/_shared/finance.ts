@@ -19,7 +19,13 @@ import {
   ExpenseCategorySchema,
 } from '../../src/validation/schemas.ts';
 
-export async function handleFinance(req: any, res: any, finRes: any) {
+interface FinRes {
+  table: string;
+  field: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function handleFinance(req: any, res: any, finRes: FinRes) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -39,7 +45,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
     const userId = authPayload.userId;
 
     if (method === 'GET') {
-      let data: any[] = [];
+      let data: Record<string, unknown>[] = [];
 
       switch (finRes.table) {
         case 'finance_income': {
@@ -47,7 +53,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
             .select()
             .from(financeIncomes)
             .where(eq(financeIncomes.userId, userId));
-          data = rows.map((r: any) => ({
+          data = rows.map((r: typeof financeIncomes.$inferSelect) => ({
             id: r.id,
             title: r.title,
             icon: r.icon,
@@ -66,7 +72,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
             .select()
             .from(financeExpenses)
             .where(eq(financeExpenses.userId, userId));
-          data = rows.map((r: any) => ({
+          data = rows.map((r: typeof financeExpenses.$inferSelect) => ({
             id: r.id,
             categoryId: r.categoryId,
             title: r.title,
@@ -93,7 +99,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
             .select()
             .from(financeTransactions)
             .where(eq(financeTransactions.userId, userId));
-          data = rows.map((r: any) => ({
+          data = rows.map((r: typeof financeTransactions.$inferSelect) => ({
             id: r.id,
             expenseId: r.expenseId,
             categoryId: r.categoryId,
@@ -114,7 +120,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
             .select()
             .from(financeGoalsRel)
             .where(eq(financeGoalsRel.userId, userId));
-          data = rows.map((r: any) => ({
+          data = rows.map((r: typeof financeGoalsRel.$inferSelect) => ({
             id: r.id,
             title: r.title,
             icon: r.icon,
@@ -137,7 +143,7 @@ export async function handleFinance(req: any, res: any, finRes: any) {
           // Provide default mapping if properties missing, though z.object allows it mapping logic expects it.
           // In original code it mapped title, color, type from frontend.
           // We map back to what the frontend schema expects:
-          data = rows.map((r: any) => ({
+          data = rows.map((r: typeof financeCategories.$inferSelect) => ({
             id: r.id,
             title: r.name || r.title, // map db 'name' to frontend 'name/title'
             name: r.name || r.title,
@@ -162,7 +168,9 @@ export async function handleFinance(req: any, res: any, finRes: any) {
       let maxUpdatedAt = null;
       if (data.length > 0) {
         maxUpdatedAt = new Date(
-          Math.max(...data.map((d: any) => new Date(d.updatedAt).getTime()))
+          Math.max(
+            ...data.map((d: Record<string, unknown>) => new Date(d.updatedAt as string).getTime())
+          )
         ).toISOString();
       }
 
