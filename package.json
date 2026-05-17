@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "migrate": "drizzle-kit push",
+    "migrate": "node scripts/migrate.js",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
