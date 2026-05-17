@@ -4,18 +4,7 @@
  * Uses in-memory Map (works in serverless environment with single instance)
  */
 
-interface RateLimitConfig {
-  windowMs: number;
-  max: number;
-  message: string;
-}
-
-interface RateLimitEntry {
-  count: number;
-  resetTime: number;
-}
-
-const store = new Map<string, RateLimitEntry>();
+const store = new Map();
 
 function cleanup() {
   const now = Date.now();
@@ -28,11 +17,8 @@ function cleanup() {
 
 setInterval(cleanup, 60000);
 
-export function createLimiter(config: RateLimitConfig) {
-  return (
-    req: { headers: Record<string, string | undefined> },
-    resource: string
-  ): { allowed: boolean; message?: string } => {
+export function createLimiter(config) {
+  return (req, resource) => {
     const ip =
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
       req.headers['x-real-ip'] ||
@@ -71,10 +57,6 @@ export const rateLimiters = {
   }),
 };
 
-export function applyRateLimit(
-  req: { headers: Record<string, string | undefined> },
-  resource: string,
-  limiterName: keyof typeof rateLimiters = 'general'
-): { allowed: boolean; message?: string } {
+export function applyRateLimit(req, resource, limiterName = 'general') {
   return rateLimiters[limiterName](req, resource);
 }

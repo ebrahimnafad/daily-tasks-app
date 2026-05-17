@@ -46,7 +46,7 @@ const flushSnapshotQueue = async (): Promise<void> => {
   const remaining: DailySnapshot[] = [];
   for (const snap of queue) {
     try {
-      const res = await authFetch('/api/db?resource=snapshot', {
+      const res = await authFetch('/api/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: snap.date, snapshot: snap }),
@@ -93,7 +93,7 @@ interface ScheduleResponse {
 
 const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
   try {
-    const res = await authFetch('/api/db?resource=tasks', { cache: 'no-store' });
+    const res = await authFetch('/api/tasks', { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as TasksResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -115,7 +115,7 @@ const fetchDaily = async (
 ): Promise<{ daily: DailyState; timestamp: number }> => {
   const today = getLogicalDateISO(dayStartHour);
   try {
-    const res = await authFetch(`/api/db?resource=daily&date=${today}`, { cache: 'no-store' });
+    const res = await authFetch(`/api/daily?date=${today}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as DailyResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -149,7 +149,7 @@ const fetchDaily = async (
 
 const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
   try {
-    const res = await authFetch('/api/db?resource=schedule', { cache: 'no-store' });
+    const res = await authFetch('/api/schedule', { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as ScheduleResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -317,7 +317,7 @@ export default function useSync(
       const progressAuto =
         totalOtherAuto > 0 ? Math.round((countDoneAuto / totalOtherAuto) * 100) : 0;
 
-      void authFetch('/api/db?resource=snapshot', {
+      void authFetch('/api/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -462,7 +462,7 @@ export default function useSync(
   // ── Mutations ─────────────────────────────────────────────────────────
   const { mutate: updateTasksMut } = useMutation<void, Error, Task[]>({
     mutationFn: async (newTasks) => {
-      const res = await authFetch('/api/db?resource=tasks', {
+      const res = await authFetch('/api/tasks', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ tasks: newTasks }),
@@ -494,7 +494,7 @@ export default function useSync(
 
   const { mutate: updateScheduleMut } = useMutation<void, Error, ShiftConfig[]>({
     mutationFn: async (newSchedule) => {
-      const res = await authFetch('/api/db?resource=schedule', {
+      const res = await authFetch('/api/schedule', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ schedule: newSchedule }),
@@ -531,7 +531,7 @@ export default function useSync(
   const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
     mutationFn: async ({ checked: c, subChecked: sc, skipped: sk }) => {
       const today = getLogicalDateISO(dayStartHour);
-      const res = await authFetch('/api/db?resource=daily', {
+      const res = await authFetch('/api/daily', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: today, checked: c, subChecked: sc, skipped: sk }),
@@ -679,7 +679,7 @@ export default function useSync(
 
   const saveSnapshot = useCallback(async (data: DailySnapshot): Promise<void> => {
     try {
-      const res = await authFetch('/api/db?resource=snapshot', {
+      const res = await authFetch('/api/snapshot', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: data.date, snapshot: data }),

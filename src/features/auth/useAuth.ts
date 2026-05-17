@@ -36,7 +36,7 @@ export function useAuth() {
       );
       return;
     }
-    authFetch('/api/db?resource=auth&action=me')
+    authFetch('/api/auth?action=me')
       .then((r) => r.json())
       .then((data: MeResponse) => {
         if (data.ok && data.username) {
@@ -55,7 +55,7 @@ export function useAuth() {
   /** Returns null on success, or an Arabic error message string on failure */
   const login = useCallback(async (username: string, password: string): Promise<string | null> => {
     try {
-      const res = await fetch('/api/db?resource=auth&action=login', {
+      const res = await fetch('/api/auth?action=login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),

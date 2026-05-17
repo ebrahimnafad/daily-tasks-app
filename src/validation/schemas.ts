@@ -133,6 +133,11 @@ export const TransactionSchema = z.object({
   date: z.string().regex(DATE_REGEX),
   status: z.enum(['paid', 'pending']),
   notes: z.string().max(500).optional(),
+  currencySymbol: z.string().optional(),
+  exchangeRate: z.number().optional(),
+  originalAmount: z.number().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export const IncomeSchema = z.object({

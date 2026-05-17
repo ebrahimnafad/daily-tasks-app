@@ -152,7 +152,7 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   const doSync = useCallback(
     async (currentNotes: CalendarNote[]) => {
       try {
-        const res = await authFetch('/api/db?resource=notes', {
+        const res = await authFetch('/api/notes', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes: currentNotes }),
@@ -198,7 +198,7 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
 
   const loadFromServer = useCallback(async () => {
     try {
-      const res = await authFetch('/api/db?resource=notes', { cache: 'no-store' });
+      const res = await authFetch('/api/notes', { cache: 'no-store' });
       if (!res.ok) {
         setSyncStatus('offline');
         return;

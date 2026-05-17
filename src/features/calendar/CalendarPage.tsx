@@ -147,7 +147,7 @@ export default function CalendarPage({
   const LS_LAST_SNAP_KEY = 'mhm_last_manual_snapshot_at';
 
   const refreshSnapSummaries = useCallback(() => {
-    authFetch('/api/db?resource=snapshots', { cache: 'no-store' })
+    authFetch('/api/snapshots', { cache: 'no-store' })
       .then((r) => r.json())
       .then((data: { summaries?: SnapshotSummary[] }) => {
         if (!Array.isArray(data.summaries)) return;
@@ -189,7 +189,7 @@ export default function CalendarPage({
       }
       setLoadingSnapshot(true);
       try {
-        const r = await authFetch(`/api/db?resource=snapshot&date=${date}`, { cache: 'no-store' });
+        const r = await authFetch(`/api/snapshot?date=${date}`, { cache: 'no-store' });
         const data = (await r.json()) as { snapshot: DailySnapshot | null };
         setSelectedSnapshot(data.snapshot ?? null);
       } catch {

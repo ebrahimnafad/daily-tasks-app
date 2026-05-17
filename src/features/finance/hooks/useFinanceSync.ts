@@ -144,7 +144,7 @@ export default function useFinanceSync(onQuota?: () => void) {
       ];
       const results = await Promise.all(
         resources.map((r) =>
-          fetch(`/api/db?resource=${r.key}`, {
+          fetch(`/api/finance/${r.key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ [r.key]: r.data }),
@@ -170,7 +170,7 @@ export default function useFinanceSync(onQuota?: () => void) {
     try {
       const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
       const responses = await Promise.all(
-        resources.map((r) => fetch(`/api/db?resource=${r}`, { cache: 'no-store' }))
+        resources.map((r) => fetch(`/api/finance/${r}`, { cache: 'no-store' }))
       );
       if (responses.some((r) => !r.ok)) {
         setSyncStatus('offline');
