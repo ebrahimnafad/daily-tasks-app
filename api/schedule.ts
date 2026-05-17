@@ -1,9 +1,11 @@
-import { neon } from '@neondatabase/serverless';
-import { applyRateLimit } from './middleware/rateLimit.js';
-import { setCorsHeaders } from './_shared/cors.js';
-import { requireAuth } from './_shared/auth.js';
+import { applyRateLimit } from './middleware/rateLimit.ts';
+import { setCorsHeaders } from './_shared/cors.ts';
+import { requireAuth } from './_shared/auth.ts';
+import { db } from './_shared/db.ts';
+import { scheduleConfig } from '../src/db/schema.ts';
+import { eq } from 'drizzle-orm';
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -15,11 +17,6 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: rateLimit.message });
   }
 
-  if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: 'DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.' });
-  }
-
-  const sql = neon(process.env.DATABASE_URL);
   const { method } = req;
 
   try {
@@ -27,10 +24,10 @@ export default async function handler(req, res) {
     if (!authPayload) return;
 
     if (method === 'GET') {
-      const rows = await sql`SELECT data, updated_at FROM schedule_config WHERE id = 1`;
+      const rows = await db.select().from(scheduleConfig).where(eq(scheduleConfig.id, 1));
       return res.status(200).json({
         schedule: rows[0]?.data ?? null,
-        updatedAt: rows[0]?.updated_at ?? null,
+        updatedAt: rows[0]?.updatedAt ?? null,
       });
     }
 
@@ -42,17 +39,26 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
       }
 
-      await sql`
-        INSERT INTO schedule_config (id, data, updated_at)
-        VALUES (1, ${JSON.stringify(schedule)}::jsonb, NOW())
-        ON CONFLICT (id) DO UPDATE
-          SET data = EXCLUDED.data, updated_at = NOW()
-      `;
+      await db
+        .insert(scheduleConfig)
+        .values({
+          id: 1,
+          data: schedule,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: scheduleConfig.id,
+          set: {
+            data: schedule,
+            updatedAt: new Date(),
+          },
+        });
+
       return res.status(200).json({ ok: true });
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Schedule Error:', error);
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
   }

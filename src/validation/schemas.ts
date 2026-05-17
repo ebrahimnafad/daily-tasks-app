@@ -1,4 +1,12 @@
 import { z } from 'zod';
+import { createInsertSchema } from 'drizzle-zod';
+import {
+  financeCategories,
+  financeExpenses,
+  financeTransactions,
+  financeIncomes,
+  financeGoalsRel,
+} from '../db/schema';
 
 const VALID_ICONS = [
   '📋',
@@ -96,71 +104,97 @@ const IncomeFrequencySchema = z.enum(['monthly', 'quarterly', 'semi-annual', 'an
 const IncomeTypeSchema = z.enum(['fixed', 'variable']);
 const CurrencySchema = z.enum(['SAR', 'EGP']);
 
-export const ExpenseCategorySchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1).max(50),
-  icon: z.string().emoji().max(2),
-  color: z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح'),
-  monthlyBudget: z.number().positive().max(1000000),
-  isCustom: z.boolean(),
-  order: z.number().int().min(0),
-});
+export const ExpenseCategorySchema = createInsertSchema(financeCategories, {
+  name: (s) => s.min(1).max(50),
+  icon: () => z.string().emoji().max(2),
+  color: () => z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح'),
+  monthlyBudget: () => z.number().positive().max(1000000),
+  isCustom: () => z.boolean(),
+})
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+  })
+  .extend({
+    order: z.number().int().min(0).optional(),
+  });
 
-export const ExpenseSchema = z.object({
-  id: z.string().min(1),
-  categoryId: z.string().min(1),
-  title: z.string().min(1).max(100),
-  icon: z.string().max(2),
-  amount: z.number().positive().max(1000000),
-  frequency: ExpenseFrequencySchema,
-  type: ExpenseTypeSchema,
-  isActive: z.boolean(),
-  dueDay: z.number().int().min(1).max(31).optional(),
-  quarterMonth: z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
-  totalAmount: z.number().positive().optional(),
-  totalInstallments: z.number().int().positive().optional(),
-  endDate: z.string().regex(DATE_REGEX).optional(),
-  seasonMonth: z.number().int().min(1).max(12).optional(),
-  monthlySetAside: z.number().nonnegative().optional(),
-  notes: z.string().max(500).optional(),
-});
+export const ExpenseSchema = createInsertSchema(financeExpenses, {
+  title: (s) => s.min(1).max(100),
+  icon: () => z.string().max(2).optional(),
+  amount: () => z.number().positive().max(1000000),
+  frequency: () => ExpenseFrequencySchema,
+  expenseType: () => ExpenseTypeSchema,
+  isActive: () => z.boolean(),
+  dueDay: () => z.number().int().min(1).max(31).optional(),
+  quarterMonth: () => z.union([z.literal(1), z.literal(2), z.literal(3)]).optional(),
+  totalAmount: () => z.number().positive().optional(),
+  totalInstallments: () => z.number().int().positive().optional(),
+  endDate: () => z.string().regex(DATE_REGEX).optional(),
+  seasonMonth: () => z.number().int().min(1).max(12).optional(),
+  monthlySetAside: () => z.number().nonnegative().optional(),
+  notes: (s) => s.max(500).optional(),
+})
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+    expenseType: true,
+  })
+  .extend({
+    type: ExpenseTypeSchema,
+  });
 
-export const TransactionSchema = z.object({
-  id: z.string().min(1),
-  expenseId: z.string().optional(),
-  categoryId: z.string().min(1),
-  amount: z.number().positive().max(1000000),
-  date: z.string().regex(DATE_REGEX),
-  status: z.enum(['paid', 'pending']),
-  notes: z.string().max(500).optional(),
-  currencySymbol: z.string().optional(),
-  exchangeRate: z.number().optional(),
-  originalAmount: z.number().optional(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-});
+export const TransactionSchema = createInsertSchema(financeTransactions, {
+  amount: () => z.number().positive().max(1000000),
+  transactionDate: () => z.string().regex(DATE_REGEX),
+  status: () => z.enum(['paid', 'pending']),
+  notes: (s) => s.max(500).optional(),
+  currencySymbol: () => z.string().optional(),
+  exchangeRate: () => z.number().optional(),
+  originalAmount: () => z.number().optional(),
+})
+  .omit({
+    userId: true,
+    transactionDate: true,
+  })
+  .extend({
+    date: z.string().regex(DATE_REGEX),
+  });
 
-export const IncomeSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1).max(100),
-  icon: z.string().max(2),
-  amount: z.number().positive().max(10000000),
-  frequency: IncomeFrequencySchema,
-  type: IncomeTypeSchema,
-  isActive: z.boolean(),
-  notes: z.string().max(500).optional(),
-});
+export const IncomeSchema = createInsertSchema(financeIncomes, {
+  title: (s) => s.min(1).max(100),
+  icon: () => z.string().max(2).optional(),
+  amount: () => z.number().positive().max(10000000),
+  frequency: () => IncomeFrequencySchema,
+  incomeType: () => IncomeTypeSchema,
+  isActive: () => z.boolean(),
+  notes: (s) => s.max(500).optional(),
+})
+  .omit({
+    userId: true,
+    createdAt: true,
+    updatedAt: true,
+    incomeType: true,
+  })
+  .extend({
+    type: IncomeTypeSchema,
+  });
 
-export const GoalSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1).max(100),
-  icon: z.string().max(2),
-  targetAmount: z.number().positive().max(10000000),
-  currentSaved: z.number().nonnegative(),
-  deadline: z.string().regex(DATE_REGEX).nullable().optional(),
-  monthlyTarget: z.number().nonnegative().max(1000000),
-  isActive: z.boolean(),
-  notes: z.string().max(500).optional(),
+export const GoalSchema = createInsertSchema(financeGoalsRel, {
+  title: (s) => s.min(1).max(100),
+  icon: () => z.string().max(2).optional(),
+  targetAmount: () => z.number().positive().max(10000000),
+  currentSaved: () => z.number().nonnegative(),
+  deadline: () => z.string().regex(DATE_REGEX).nullable().optional(),
+  monthlyTarget: () => z.number().nonnegative().max(1000000),
+  isActive: () => z.boolean(),
+  notes: (s) => s.max(500).optional(),
+}).omit({
+  userId: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const FinanceSettingsSchema = z.object({

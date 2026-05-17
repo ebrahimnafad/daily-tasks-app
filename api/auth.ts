@@ -17,7 +17,9 @@ export default async function handler(req, res) {
   }
 
   if (!process.env.DATABASE_URL) {
-    return res.status(503).json({ error: 'DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.' });
+    return res
+      .status(503)
+      .json({ error: 'DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.' });
   }
 
   const sql = neon(process.env.DATABASE_URL);
@@ -66,7 +68,10 @@ export default async function handler(req, res) {
       }
       const users = await sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
       if (!users.length) {
-        await bcrypt.compare(password, '$2b$12$invalidhashpadding000000000000000000000000000000000000');
+        await bcrypt.compare(
+          password,
+          '$2b$12$invalidhashpadding000000000000000000000000000000000000'
+        );
         return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
       }
       const user = users[0];

@@ -227,10 +227,13 @@ describe('parseTaskFormSafe', () => {
 });
 
 describe('ExpenseSchema', () => {
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
+  const validCatUUID = '987fcdeb-51a2-43d7-9012-345678901234';
+
   it('should validate valid expense', () => {
     const expense = {
-      id: '1',
-      categoryId: 'cat1',
+      id: validUUID,
+      categoryId: validCatUUID,
       title: 'Rent',
       icon: '🏠',
       amount: 5000,
@@ -244,8 +247,8 @@ describe('ExpenseSchema', () => {
 
   it('should reject negative amount', () => {
     const expense = {
-      id: '1',
-      categoryId: 'cat1',
+      id: validUUID,
+      categoryId: validCatUUID,
       title: 'Rent',
       amount: -100,
       frequency: 'monthly' as const,
@@ -258,8 +261,8 @@ describe('ExpenseSchema', () => {
 
   it('should reject invalid frequency', () => {
     const expense = {
-      id: '1',
-      categoryId: 'cat1',
+      id: validUUID,
+      categoryId: validCatUUID,
       title: 'Rent',
       amount: 5000,
       frequency: 'daily' as const,
@@ -272,9 +275,11 @@ describe('ExpenseSchema', () => {
 });
 
 describe('ExpenseCategorySchema', () => {
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
+
   it('should validate valid category', () => {
     const category = {
-      id: '1',
+      id: validUUID,
       name: 'Housing',
       icon: '🏠',
       color: '#FF5733',
@@ -288,7 +293,7 @@ describe('ExpenseCategorySchema', () => {
 
   it('should reject invalid color', () => {
     const category = {
-      id: '1',
+      id: validUUID,
       name: 'Housing',
       icon: '🏠',
       color: 'red',
@@ -302,9 +307,11 @@ describe('ExpenseCategorySchema', () => {
 });
 
 describe('IncomeSchema', () => {
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
+
   it('should validate valid income', () => {
     const income = {
-      id: '1',
+      id: validUUID,
       title: 'Salary',
       icon: '💰',
       amount: 10000,
@@ -318,9 +325,11 @@ describe('IncomeSchema', () => {
 });
 
 describe('GoalSchema', () => {
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
+
   it('should validate valid goal', () => {
     const goal = {
-      id: '1',
+      id: validUUID,
       title: 'Emergency Fund',
       icon: '🎯',
       targetAmount: 50000,
@@ -334,7 +343,7 @@ describe('GoalSchema', () => {
 
   it('should accept nullable deadline', () => {
     const goal = {
-      id: '1',
+      id: validUUID,
       title: 'Emergency Fund',
       icon: '🎯',
       targetAmount: 50000,
@@ -349,10 +358,13 @@ describe('GoalSchema', () => {
 });
 
 describe('parseSafe helper', () => {
+  const validUUID = '123e4567-e89b-12d3-a456-426614174000';
+  const validCatUUID = '987fcdeb-51a2-43d7-9012-345678901234';
+
   it('should return success with data', () => {
     const result = parseSafe(ExpenseSchema, {
-      id: '1',
-      categoryId: 'cat1',
+      id: validUUID,
+      categoryId: validCatUUID,
       title: 'Rent',
       amount: 5000,
       frequency: 'monthly',
@@ -362,13 +374,13 @@ describe('parseSafe helper', () => {
     });
 
     expect(result.success).toBe(true);
-    expect(result.data.id).toBe('1');
+    if (result.success) expect(result.data.id).toBe(validUUID);
   });
 
   it('should return errors on failure', () => {
     const result = parseSafe(ExpenseSchema, {
-      id: '1',
-      categoryId: 'cat1',
+      id: validUUID,
+      categoryId: validCatUUID,
       title: 'Rent',
       amount: -100,
       frequency: 'monthly',
@@ -377,6 +389,6 @@ describe('parseSafe helper', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.errors.length).toBeGreaterThan(0);
+    if (!result.success) expect(result.errors.length).toBeGreaterThan(0);
   });
 });
