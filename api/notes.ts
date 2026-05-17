@@ -1,8 +1,8 @@
-import { applyRateLimit } from './middleware/rateLimit.ts';
-import { setCorsHeaders } from './_shared/cors.ts';
-import { requireAuth } from './_shared/auth.ts';
-import { db } from './_shared/db.ts';
-import { calendarNotes, calendarNotesRel } from '../src/db/schema.ts';
+import { applyRateLimit } from './middleware/rateLimit.js';
+import { setCorsHeaders } from './_shared/cors.js';
+import { requireAuth } from './_shared/auth.js';
+import { db } from './_shared/db.js';
+import { calendarNotes, calendarNotesRel } from '../src/db/schema.js';
 import { eq, notInArray, and } from 'drizzle-orm';
 
 export default async function handler(req: any, res: any) {

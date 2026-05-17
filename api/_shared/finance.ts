@@ -1,15 +1,15 @@
-import { applyRateLimit } from '../middleware/rateLimit.ts';
-import { setCorsHeaders } from './cors.ts';
-import { requireAuth } from './auth.ts';
+import { applyRateLimit } from '../middleware/rateLimit.js';
+import { setCorsHeaders } from './cors.js';
+import { requireAuth } from './auth.js';
 import { z } from 'zod';
-import { db } from './db.ts';
+import { db } from './db.js';
 import {
   financeIncomes,
   financeExpenses,
   financeTransactions,
   financeGoalsRel,
   financeCategories,
-} from '../../src/db/schema.ts';
+} from '../../src/db/schema.js';
 import { eq, notInArray, and } from 'drizzle-orm';
 import {
   IncomeSchema,
@@ -17,7 +17,7 @@ import {
   TransactionSchema,
   GoalSchema,
   ExpenseCategorySchema,
-} from '../../src/validation/schemas.ts';
+} from '../../src/validation/schemas.js';
 
 interface FinRes {
   table: string;
