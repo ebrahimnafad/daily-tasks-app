@@ -1,8 +1,8 @@
-import { applyRateLimit } from './middleware/rateLimit.ts';
-import { setCorsHeaders } from './_shared/cors.ts';
-import { requireAuth } from './_shared/auth.ts';
-import { db } from './_shared/db.ts';
-import { dailyState } from '../src/db/schema.ts';
+import { applyRateLimit } from './middleware/rateLimit.js';
+import { setCorsHeaders } from './_shared/cors.js';
+import { requireAuth } from './_shared/auth.js';
+import { db } from './_shared/db.js';
+import { dailyState } from '../src/db/schema.js';
 import { eq } from 'drizzle-orm';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;

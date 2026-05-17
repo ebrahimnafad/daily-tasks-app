@@ -1,10 +1,10 @@
-import { applyRateLimit } from './middleware/rateLimit.ts';
-import { setCorsHeaders } from './_shared/cors.ts';
-import { requireAuth } from './_shared/auth.ts';
+import { applyRateLimit } from './middleware/rateLimit.js';
+import { setCorsHeaders } from './_shared/cors.js';
+import { requireAuth } from './_shared/auth.js';
 import { z } from 'zod';
-import { TaskSchema } from '../src/validation/schemas.ts';
-import { db } from './_shared/db.ts';
-import { tasks } from '../src/db/schema.ts';
+import { TaskSchema } from '../src/validation/schemas.js';
+import { db } from './_shared/db.js';
+import { tasks } from '../src/db/schema.js';
 import { eq, inArray, notInArray, and } from 'drizzle-orm';
 
 export default async function handler(req: any, res: any) {
