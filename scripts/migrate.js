@@ -196,8 +196,8 @@ async function ensureSchema(sql) {
 
 async function run() {
   if (!process.env.DATABASE_URL) {
-    console.error('DATABASE_URL is not set. Cannot run migrations.');
-    process.exit(1);
+    console.warn('DATABASE_URL is not set. Skipping migrations.');
+    process.exit(0);
   }
   const sql = neon(process.env.DATABASE_URL);
   try {
