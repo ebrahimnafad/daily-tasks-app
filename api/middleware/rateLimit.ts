@@ -4,21 +4,33 @@
  * Uses in-memory Map (works in serverless environment with single instance)
  */
 
-const store = new Map();
+interface RateLimitEntry {
+  count: number;
+  resetTime: number;
+}
+
+const store = new Map<string, RateLimitEntry>();
 
 function cleanup() {
   const now = Date.now();
-  for (const [key, entry] of store.entries()) {
+  store.forEach((entry, key) => {
     if (entry.resetTime < now) {
       store.delete(key);
     }
-  }
+  });
 }
 
 setInterval(cleanup, 60000);
 
-export function createLimiter(config) {
-  return (req, resource) => {
+interface RateLimitConfig {
+  windowMs: number;
+  max: number;
+  message: string;
+}
+
+export function createLimiter(config: RateLimitConfig) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (req: any, resource: string) => {
     const ip =
       req.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
       req.headers['x-real-ip'] ||
@@ -52,11 +64,16 @@ export const rateLimiters = {
   sheets: createLimiter({ windowMs: 60000, max: 10, message: 'تم تجاوز حد الإرسال. حاول لاحقاً.' }),
   auth: createLimiter({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 5,
+    max: process.env.NODE_ENV === 'development' ? 100 : 5,
     message: 'محاولات تسجيل الدخول كثيرة جداً. حاول بعد 15 دقيقة.',
   }),
 };
 
-export function applyRateLimit(req, resource, limiterName = 'general') {
+export function applyRateLimit(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  req: any,
+  resource: string,
+  limiterName: keyof typeof rateLimiters = 'general'
+) {
   return rateLimiters[limiterName](req, resource);
 }
