@@ -266,6 +266,9 @@ export default function useSync(
   useEffect(() => {
     onSyncErrorRef.current = onSyncError;
   });
+  // Stable ref so updateTasksMut can be called inside the midnight-tick effect
+  // without requiring it to be declared before the effect (avoids hoisting lint error).
+  const updateTasksMutRef = useRef<(tasks: Task[]) => void>(() => void 0);
 
   const notify = (msg: string, type: 'offline' | 'error' | 'warn' = 'error') =>
     onSyncErrorRef.current?.(msg, type);
@@ -438,6 +441,25 @@ export default function useSync(
         } else {
           autoSnapshotRef.current();
         }
+        // ── Auto-delete checked one-time tasks at midnight ─────────────
+        // Runs AFTER the snapshot save so history is preserved,
+        // BEFORE the daily state is cleared.
+        const currentTasks =
+          queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ?? [];
+        const yesterdayDaily = queryClient.getQueryData<{
+          daily: DailyState;
+          timestamp: number;
+        }>(['daily', storedDate])?.daily ?? { checked: {}, subChecked: {}, skipped: {} };
+
+        const filteredTasks = currentTasks.filter(
+          (t) => !(t.recurrence === 'مرة واحدة' && !!yesterdayDaily.checked[t.id])
+        );
+        if (filteredTasks.length < currentTasks.length) {
+          queryClient.setQueryData(['tasks'], { tasks: filteredTasks, timestamp: Date.now() });
+          lsSet('mhm_tasks', filteredTasks, onQuota);
+          updateTasksMutRef.current(filteredTasks);
+        }
+
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
         lsSet('mhm_checked', {}, onQuota);
         lsSet('mhm_sub_checked', {}, onQuota);
@@ -568,6 +590,10 @@ export default function useSync(
       setHasError(true);
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
+  });
+  // Keep the midnight-tick ref in sync with the current mutate fn reference
+  useEffect(() => {
+    updateTasksMutRef.current = updateTasksMut;
   });
 
   const { mutate: updateScheduleMut, mutateAsync: updateScheduleMutAsync } = useMutation<
