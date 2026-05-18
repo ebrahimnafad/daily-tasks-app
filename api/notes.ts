@@ -71,48 +71,46 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(400).json({ error: 'تجاوز الحد المسموح (1000 عنصر)' });
       }
 
-      await db.transaction(async (tx) => {
-        if (userId) {
-          const itemIds = data
-            .map((d: Record<string, unknown>) => String(d.id))
-            .filter((id: string) => id !== 'undefined' && id !== 'null');
-          if (itemIds.length > 0) {
-            await tx
-              .delete(calendarNotesRel)
-              .where(
-                and(eq(calendarNotesRel.userId, userId), notInArray(calendarNotesRel.id, itemIds))
-              );
-          } else {
-            await tx.delete(calendarNotesRel).where(eq(calendarNotesRel.userId, userId));
-          }
-
-          for (const item of data) {
-            if (!item.id) continue;
-
-            const insertData = {
-              id: String(item.id),
-              userId: userId,
-              noteDate: item.date || new Date().toISOString(),
-              noteText: item.text || '',
-              isPinned: item.isPinned ?? item.pinned ?? false,
-              tags: item.tags || [],
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
-            };
-
-            await tx
-              .insert(calendarNotesRel)
-              .values(insertData)
-              .onConflictDoUpdate({
-                target: calendarNotesRel.id,
-                set: {
-                  ...insertData,
-                  updatedAt: new Date(),
-                },
-              });
-          }
+      if (userId) {
+        const itemIds = data
+          .map((d: Record<string, unknown>) => String(d.id))
+          .filter((id: string) => id !== 'undefined' && id !== 'null');
+        if (itemIds.length > 0) {
+          await db
+            .delete(calendarNotesRel)
+            .where(
+              and(eq(calendarNotesRel.userId, userId), notInArray(calendarNotesRel.id, itemIds))
+            );
+        } else {
+          await db.delete(calendarNotesRel).where(eq(calendarNotesRel.userId, userId));
         }
-      });
+
+        for (const item of data) {
+          if (!item.id) continue;
+
+          const insertData = {
+            id: String(item.id),
+            userId: userId,
+            noteDate: item.date || new Date().toISOString(),
+            noteText: item.text || '',
+            isPinned: item.isPinned ?? item.pinned ?? false,
+            tags: item.tags || [],
+            createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
+            updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+          };
+
+          await db
+            .insert(calendarNotesRel)
+            .values(insertData)
+            .onConflictDoUpdate({
+              target: calendarNotesRel.id,
+              set: {
+                ...insertData,
+                updatedAt: new Date(),
+              },
+            });
+        }
+      }
 
       return res.status(200).json({ ok: true });
     }
