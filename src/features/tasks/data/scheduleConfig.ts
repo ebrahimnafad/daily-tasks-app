@@ -71,21 +71,20 @@ export interface ShiftConfig {
 
 // ── Time Blocks ───────────────────────────────────────────────────
 
+// ── Canonical block IDs — shared across both shifts ──────────────
+// Same three IDs exist in morning and evening (different hours, same semantics).
+// Tasks assigned to these blocks appear in the correct block regardless of which
+// shift is active — no cross-shift drift.
 const MORNING_BLOCKS: TimeBlock[] = [
-  { id: 'pre-fajr', label: 'قبل الفجر', icon: '🌙', startHour: 4, endHour: 5 },
-  { id: 'work-early', label: 'بداية الدوام', icon: '💼', startHour: 5, endHour: 9 },
-  { id: 'work-main', label: 'الدوام الرئيسي', icon: '🤝', startHour: 9, endHour: 13.5 },
-  { id: 'family', label: 'وقت العائلة', icon: '👨‍👩‍👦', startHour: 14, endHour: 19 },
-  { id: 'walking', label: 'المشي', icon: '🚶', startHour: 19, endHour: 20.5, isOptional: true },
-  { id: 'rest', label: 'الراحة والنوم', icon: '😴', startHour: 21, endHour: 4, isRest: true },
+  { id: 'work', label: 'وقت العمل', icon: '💼', startHour: 5, endHour: 13.5 },
+  { id: 'family', label: 'وقت العائلة', icon: '👨‍👩‍👦', startHour: 14, endHour: 21 },
+  { id: 'rest-sleep', label: 'الراحة والنوم', icon: '😴', startHour: 21, endHour: 4, isRest: true },
 ];
 
 const EVENING_BLOCKS: TimeBlock[] = [
-  { id: 'sleep', label: 'النوم والراحة', icon: '😴', startHour: 3, endHour: 12, isRest: true },
+  { id: 'rest-sleep', label: 'النوم والراحة', icon: '😴', startHour: 3, endHour: 12, isRest: true },
   { id: 'family', label: 'وقت العائلة', icon: '👨‍👩‍👦', startHour: 12, endHour: 18 },
-  { id: 'work-prep', label: 'بداية الدوام', icon: '📧', startHour: 18, endHour: 19 },
-  { id: 'work-coding', label: 'وقت البرمجة', icon: '💻', startHour: 19, endHour: 24 }, // midnight
-  { id: 'work-late', label: 'آخر الدوام', icon: '📋', startHour: 0.5, endHour: 2.5 },
+  { id: 'work', label: 'وقت العمل', icon: '💼', startHour: 18, endHour: 2.5 },
 ];
 
 // ── Default Shifts ─────────────────────────────────────────────────
@@ -226,19 +225,44 @@ export function getCurrentBlockId(
 
 // ── Legacy time → block mapping (for migration) ───────────────────
 
+// ── Legacy time-label → canonical block ID mapping ───────────────
+// Used during task import/migration for tasks that still carry the old
+// Arabic time-of-day string in `task.time`. Maps to canonical block IDs.
 export const LEGACY_TIME_TO_BLOCK: Record<string, string> = {
-  'الصباح الباكر': 'work-early',
-  الصباح: 'work-early',
-  الضحى: 'work-main',
-  'قبل الظهر': 'work-main',
+  'الصباح الباكر': 'work',
+  الصباح: 'work',
+  الضحى: 'work',
+  'قبل الظهر': 'work',
   الظهر: 'family',
   'بعد الظهر': 'family',
   العصر: 'family',
   'بعد العصر': 'family',
-  المغرب: 'walking',
-  'بين المغرب والعشاء': 'walking',
-  العشاء: 'rest',
-  الليل: 'rest',
+  المغرب: 'family',
+  'بين المغرب والعشاء': 'family',
+  العشاء: 'rest-sleep',
+  الليل: 'rest-sleep',
   'طوال اليوم': 'prayer',
-  المساء: 'walking',
+  المساء: 'family',
+};
+
+// ── Block ID migration map (v1 → v2 canonical IDs) ────────────────
+// Applied once on first app load after the canonical-block redesign.
+// Maps every old default block ID to its canonical replacement.
+export const BLOCK_ID_MIGRATION_V2: Record<string, string> = {
+  // Morning old IDs
+  'pre-fajr': 'anytime', // deleted block — tasks go to unscheduled bucket
+  'work-early': 'work',
+  'work-main': 'work',
+  walking: 'family',
+  rest: 'rest-sleep',
+  // Evening old IDs
+  sleep: 'rest-sleep',
+  'work-prep': 'work',
+  'work-coding': 'work',
+  'work-late': 'work',
+  // Canonical IDs — pass-through (already correct)
+  work: 'work',
+  family: 'family',
+  'rest-sleep': 'rest-sleep',
+  anytime: 'anytime',
 };

@@ -31,7 +31,7 @@ function AppContent({ logout }: { logout: () => void }) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
   const toasts = useToasts();
-  const { onNewDay, onQuota } = toasts;
+  const { onNewDay, onQuota, addSyncToast } = toasts;
 
   // ── Auto-snapshot ref — always points to the latest shift-filtered snapshot fn ──
   // Defined before useSync so it can be passed as the 4th arg. The ref itself is
@@ -57,7 +57,7 @@ function AppContent({ logout }: { logout: () => void }) {
     dayStartHour,
     setDayStartHour,
     saveSnapshot,
-  } = useSync(INITIAL_TASKS, onNewDay, onQuota, stableAutoSnapshot);
+  } = useSync(INITIAL_TASKS, onNewDay, onQuota, stableAutoSnapshot, addSyncToast);
 
   const { notifPerm, requestNotifPerm } = useNotifications(tasks);
 
@@ -124,6 +124,8 @@ function AppContent({ logout }: { logout: () => void }) {
       setSkipped,
       scheduleConfig: schedule,
       setScheduleConfig: setSchedule,
+      tasks,
+      setTasks,
       prayersDone,
       prayerTotal,
       notifPerm,
@@ -139,6 +141,8 @@ function AppContent({ logout }: { logout: () => void }) {
       setSkipped,
       schedule,
       setSchedule,
+      tasks,
+      setTasks,
       prayersDone,
       prayerTotal,
       notifPerm,

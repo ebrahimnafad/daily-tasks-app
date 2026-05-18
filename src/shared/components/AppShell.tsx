@@ -45,7 +45,14 @@ export default function AppShell({
   toasts,
   onLogout,
 }: AppShellProps) {
-  const { newDayToast, quotaError, needRefresh, updateServiceWorker } = toasts;
+  const {
+    newDayToast,
+    quotaError,
+    needRefresh,
+    updateServiceWorker,
+    syncToasts,
+    dismissSyncToast,
+  } = toasts;
 
   return (
     <div
@@ -111,6 +118,72 @@ export default function AppShell({
           ⚠️ ذاكرة المتصفح ممتلئة — لن يتم حفظ التغييرات محلياً
         </div>
       )}
+
+      {/* ── Sync error / offline toasts ─────────────────────────────── */}
+      {syncToasts.map((toast, i) => {
+        const isError = toast.type === 'error';
+        const isOffline = toast.type === 'offline';
+        const color = isError ? '#d97e6a' : isOffline ? '#6e9fcf' : '#c9a84c';
+        const bg = isError
+          ? 'rgba(217,126,106,0.15)'
+          : isOffline
+            ? 'rgba(110,159,207,0.15)'
+            : 'rgba(201,168,76,0.15)';
+        const border = isError
+          ? 'rgba(217,126,106,0.4)'
+          : isOffline
+            ? 'rgba(110,159,207,0.4)'
+            : 'rgba(201,168,76,0.4)';
+        const icon = isError ? '❌' : isOffline ? '📡' : '⚠️';
+        return (
+          <div
+            key={toast.id}
+            role="alert"
+            style={{
+              position: 'fixed',
+              top: `calc(var(--space-lg) + ${i * 64}px)`,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 400,
+              background: bg,
+              border: `1px solid ${border}`,
+              borderRadius: 'var(--radius-md)',
+              padding: 'var(--space-md) var(--space-xl)',
+              color,
+              fontSize: 'var(--font-base)',
+              fontFamily: "'Amiri',serif",
+              backdropFilter: 'blur(8px)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 'var(--space-md)',
+              maxWidth: '90vw',
+              whiteSpace: 'nowrap',
+              animation: 'fadeInDown 0.25s ease',
+            }}
+          >
+            <span>
+              {icon} {toast.message}
+            </span>
+            {isError && (
+              <button
+                onClick={() => dismissSyncToast(toast.id)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color,
+                  cursor: 'pointer',
+                  fontSize: '1rem',
+                  lineHeight: 1,
+                  padding: '0 4px',
+                }}
+                aria-label="إغلاق"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        );
+      })}
 
       {needRefresh && (
         <div

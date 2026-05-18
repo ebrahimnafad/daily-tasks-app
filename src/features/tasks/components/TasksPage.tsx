@@ -19,6 +19,8 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
     requestNotifPerm,
     scheduleConfig,
     setScheduleConfig,
+    tasks,
+    setTasks,
   } = useTaskContext();
   const {
     progress,
@@ -101,6 +103,8 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
         setShift={setShift}
         scheduleConfig={scheduleConfig}
         setScheduleConfig={setScheduleConfig}
+        tasks={tasks}
+        setTasks={setTasks}
       />
 
       {/* Progress */}

@@ -40,20 +40,26 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
       assertPayloadSize(schedule, 'schedule');
       const validSchedule = scheduleDataSchema.parse(schedule);
 
-      await db
-        .insert(scheduleConfig)
-        .values({
+      // Explicit upsert: avoids a Drizzle 0.45.x bug where onConflictDoUpdate
+      // targets the wrong column ("id" instead of "user_id") on tables that have
+      // both a bare `id` field and a primaryKey() defined in the table config.
+      const existing = await db
+        .select({ userId: scheduleConfig.userId })
+        .from(scheduleConfig)
+        .where(eq(scheduleConfig.userId, userId));
+
+      if (existing.length > 0) {
+        await db
+          .update(scheduleConfig)
+          .set({ data: validSchedule, updatedAt: new Date() })
+          .where(eq(scheduleConfig.userId, userId));
+      } else {
+        await db.insert(scheduleConfig).values({
           userId,
           data: validSchedule,
           updatedAt: new Date(),
-        })
-        .onConflictDoUpdate({
-          target: scheduleConfig.userId,
-          set: {
-            data: validSchedule,
-            updatedAt: new Date(),
-          },
         });
+      }
 
       return res.status(200).json({ ok: true });
     }

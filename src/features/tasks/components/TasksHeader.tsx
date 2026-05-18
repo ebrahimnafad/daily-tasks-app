@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { Task } from '@/types';
 import type { ShiftType, ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 import type { NotifPerm } from '@/types';
 import ScheduleSettingsModal from './ScheduleSettingsModal';
@@ -14,6 +15,8 @@ interface TasksHeaderProps {
   setShift: (shift: ShiftType) => void;
   scheduleConfig: ShiftConfig[];
   setScheduleConfig: (config: ShiftConfig[] | ((prev: ShiftConfig[]) => ShiftConfig[])) => void;
+  tasks: Task[];
+  setTasks: (updater: (prev: Task[]) => Task[]) => void;
 }
 
 export default function TasksHeader({
@@ -26,6 +29,8 @@ export default function TasksHeader({
   setShift,
   scheduleConfig,
   setScheduleConfig,
+  tasks,
+  setTasks,
 }: TasksHeaderProps) {
   const { dayStartHour, setDayStartHour } = useTaskContext();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
@@ -142,6 +147,8 @@ export default function TasksHeader({
         onClose={() => setShowScheduleModal(false)}
         dayStartHour={dayStartHour}
         setDayStartHour={setDayStartHour}
+        tasks={tasks}
+        setTasks={setTasks}
       />
     </>
   );

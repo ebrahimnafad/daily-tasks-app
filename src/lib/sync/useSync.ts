@@ -16,6 +16,7 @@ import {
   DAY_START_HOUR_KEY,
 } from '@/features/tasks/data/scheduleConfig';
 import { localDateISO } from '@/lib/date/localDate';
+import { runBlockMigrationV2, isMigrationDone } from '@/lib/migrate/blockMigrationV2';
 
 /** @deprecated use getLogicalDateISO(dayStartHour) instead */
 export const todayISO = (): string => localDateISO();
@@ -229,11 +230,10 @@ export default function useSync(
   initialTasks: Task[],
   onNewDay?: () => void,
   onQuota?: () => void,
-  /** Optional callback called just before the daily state is cleared at midnight.
-   *  When provided, it replaces the internal ad-hoc snapshot computation so the
-   *  caller can supply shift-filtered, recurrence-aware progress data.
-   *  If omitted, the internal query-cache recomputation is used as a fallback. */
-  onAutoSnapshotNeeded?: () => void
+  /** Optional callback called just before the daily state is cleared at midnight. */
+  onAutoSnapshotNeeded?: () => void,
+  /** Non-blocking replacement for alert() — show sync errors as toasts. */
+  onSyncError?: (message: string, type: 'offline' | 'error' | 'warn') => void
 ): UseSyncReturn {
   // ── Day-start hour setting ────────────────────────────────────────
   const [dayStartHour, setDayStartHourState] = useState<number>(() =>
@@ -261,6 +261,14 @@ export default function useSync(
   // always read each other's changes instead of stale query-cache data.
   const pendingDailyRef = useRef<DailyState | null>(null);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Stable ref so onSyncError can be called inside effects without staleness
+  const onSyncErrorRef = useRef(onSyncError);
+  useEffect(() => {
+    onSyncErrorRef.current = onSyncError;
+  });
+
+  const notify = (msg: string, type: 'offline' | 'error' | 'warn' = 'error') =>
+    onSyncErrorRef.current?.(msg, type);
 
   /* eslint-disable */
   useEffect(() => {
@@ -273,9 +281,7 @@ export default function useSync(
       const queue = flushPending();
       if (queue.length > 0) {
         if (hasStaleItems(queue)) {
-          alert(
-            'You have unsynced changes older than 1 hour. Syncing now — please verify your data after reconnection.'
-          );
+          notify('توجد تغييرات غير مزامنة منذ أكثر من ساعة — جارٍ المزامنة الآن', 'warn');
         }
         for (const item of queue) {
           if (item.type === 'tasks') {
@@ -486,6 +492,7 @@ export default function useSync(
   });
   const tasks = tasksResp?.tasks ?? initialTasks;
 
+  // (Migration effect moved below mutations to fix react-hooks/immutability lint)
   const { data: dailyResp, isFetching: fetchingDaily } = useQuery<{
     daily: DailyState;
     timestamp: number;
@@ -553,11 +560,11 @@ export default function useSync(
       const isOffline = !navigator.onLine || isNetworkError(err);
       if (isOffline) {
         enqueuePending('tasks', variables);
-        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        notify('أنت غير متصل — تم حفظ المهام محلياً وستُزامَن عند اتصالك', 'offline');
         return;
       }
       console.error('Tasks sync error:', err);
-      alert(err.message);
+      notify(`خطأ في مزامنة المهام: ${err.message}`, 'error');
       setHasError(true);
       await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
@@ -593,11 +600,11 @@ export default function useSync(
       const isOffline = !navigator.onLine || isNetworkError(err);
       if (isOffline) {
         enqueuePending('schedule', variables);
-        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        notify('أنت غير متصل — تم حفظ الجدول محلياً وسيُزامَن عند اتصالك', 'offline');
         return;
       }
       console.error('Schedule sync error:', err);
-      alert(err.message);
+      notify(`خطأ في مزامنة الجدول: ${err.message}`, 'error');
       setHasError(true);
       await queryClient.invalidateQueries({ queryKey: ['schedule'] });
     },
@@ -642,15 +649,39 @@ export default function useSync(
       const isOffline = !navigator.onLine || isNetworkError(err);
       if (isOffline) {
         enqueuePending('daily', variables);
-        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        notify('أنت غير متصل — تم حفظ الحالة اليومية محلياً وستُزامَن عند اتصالك', 'offline');
         return;
       }
       console.error('Daily sync error:', err);
-      alert(err.message);
+      notify(`خطأ في مزامنة الحالة اليومية: ${err.message}`, 'error');
       setHasError(true);
       await queryClient.invalidateQueries({ queryKey: ['daily', getLogicalDateISO(dayStartHour)] });
     },
   });
+
+  // ── One-time block ID migration (v1 → v2 canonical IDs) ─────────────────
+  // Runs once, immediately after both tasks AND schedule are first loaded
+  // from the server (not from localStorage initial data). Guards itself with
+  // a localStorage flag — subsequent renders are instant no-ops.
+  useEffect(() => {
+    // Skip if already migrated or data not yet from server
+    if (isMigrationDone()) return;
+    if (!tasksResp || !scheduleResp) return;
+    // Only run when we have actual server data (timestamp > 0 means server responded)
+    if (tasksResp.timestamp === 0 && scheduleResp.timestamp === 0) return;
+
+    const {
+      tasks: migratedTasks,
+      schedule: migratedSchedule,
+      changed,
+    } = runBlockMigrationV2(tasks, schedule);
+
+    if (changed) {
+      // Push migrated data to server
+      updateTasksMut(migratedTasks);
+      updateScheduleMut(migratedSchedule);
+    }
+  }, [tasksResp, scheduleResp]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Setters ───────────────────────────────────────────────────────────
   const setTasks = useCallback<Dispatch<SetStateAction<Task[]>>>(

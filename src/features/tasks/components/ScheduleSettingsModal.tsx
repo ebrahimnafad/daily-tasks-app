@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { Task } from '@/types';
 import type { ShiftConfig, TimeBlock } from '@/features/tasks/data/scheduleConfig';
 import '../tasks.css';
 import '../schedule-settings.css';
@@ -24,6 +25,9 @@ interface ScheduleSettingsModalProps {
   onClose: () => void;
   dayStartHour: number;
   setDayStartHour: (hour: number) => void;
+  /** Needed for orphan-task cleanup when a block is deleted. */
+  tasks: Task[];
+  setTasks: (updater: (prev: Task[]) => Task[]) => void;
 }
 
 export default function ScheduleSettingsModal({
@@ -33,10 +37,15 @@ export default function ScheduleSettingsModal({
   onClose,
   dayStartHour,
   setDayStartHour,
+  tasks,
+  setTasks,
 }: ScheduleSettingsModalProps) {
   const [editingSchedule, setEditingSchedule] = useState<ShiftConfig[]>(schedule);
   const [selectedShiftId, setSelectedShiftId] = useState<string>(schedule[0]?.id || 'morning');
   const [selectedDay, setSelectedDay] = useState<'default' | number>('default');
+  // Cross-shift block creation: which shifts the new block will be added to
+  const [pendingShifts, setPendingShifts] = useState<string[]>([selectedShiftId]);
+  const [showShiftPicker, setShowShiftPicker] = useState(false);
 
   if (!isOpen) return null;
 
@@ -49,26 +58,51 @@ export default function ScheduleSettingsModal({
     );
   };
 
+  // Generate a stable short ID for new blocks (NOT Date.now() — must be
+  // identical across shifts for cross-shift matching to work)
+  const genBlockId = () => 'block-' + Math.random().toString(36).slice(2, 8);
+
+  /** Add a new block to all shifts in `pendingShifts`, with the same ID. */
   const handleAddBlock = () => {
+    const id = genBlockId();
     const newBlock: TimeBlock = {
-      id: `block-${Date.now()}`,
+      id,
       label: 'كتلة جديدة',
       icon: '📌',
       startHour: 0,
       endHour: 1,
     };
-    if (selectedDay === 'default') {
-      handleUpdateShift({ blocks: [...selectedShift.blocks, newBlock] });
-    } else {
-      const overrides = selectedShift.dayOverrides?.[selectedDay] || [];
-      handleUpdateShift({
-        dayOverrides: { ...selectedShift.dayOverrides, [selectedDay]: [...overrides, newBlock] },
-      });
-    }
+    setEditingSchedule((prev) =>
+      prev.map((s) => {
+        if (!pendingShifts.includes(s.id)) return s;
+        if (selectedDay === 'default') {
+          return { ...s, blocks: [...s.blocks, newBlock] };
+        }
+        const overrides = s.dayOverrides?.[selectedDay as number] || [];
+        return {
+          ...s,
+          dayOverrides: {
+            ...s.dayOverrides,
+            [selectedDay as number]: [...overrides, newBlock],
+          },
+        };
+      })
+    );
+    setShowShiftPicker(false);
+    // Reset pending shifts back to only the current selected shift
+    setPendingShifts([selectedShiftId]);
   };
 
+  /** Delete a block and reassign any orphaned tasks to 'anytime'. */
   const handleDeleteBlock = (blockId: string) => {
     if (!window.confirm('حذف هذه الكتلة الزمنية؟')) return;
+    // Reassign tasks that reference this block to 'anytime' before removing the block
+    const orphanCount = tasks.filter((t) => t.timeBlock === blockId).length;
+    if (orphanCount > 0) {
+      setTasks((prev) =>
+        prev.map((t) => (t.timeBlock === blockId ? { ...t, timeBlock: 'anytime' } : t))
+      );
+    }
     if (selectedDay === 'default') {
       handleUpdateShift({
         blocks: selectedShift.blocks.filter((b) => b.id !== blockId),
@@ -373,7 +407,9 @@ export default function ScheduleSettingsModal({
               ))}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+            <div
+              style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', flexWrap: 'wrap' }}
+            >
               {selectedDay !== 'default' && !selectedShift.dayOverrides?.[selectedDay] && (
                 <button className="btn-cancel" onClick={handleCustomizeDay}>
                   تخصيص هذا اليوم
@@ -389,9 +425,80 @@ export default function ScheduleSettingsModal({
                 </button>
               )}
               {(selectedDay === 'default' || selectedShift.dayOverrides?.[selectedDay]) && (
-                <button className="ss-add-btn" onClick={handleAddBlock}>
-                  + إضافة كتلة
-                </button>
+                <>
+                  {showShiftPicker ? (
+                    // Inline shift picker shown before confirming block addition
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        background: 'rgba(var(--gold-rgb), 0.07)',
+                        border: '1px solid rgba(var(--gold-rgb), 0.2)',
+                        borderRadius: 'var(--radius-md)',
+                        padding: '6px 12px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <span
+                        style={{ fontSize: 'var(--font-sm)', color: 'rgba(var(--gold-rgb), 0.7)' }}
+                      >
+                        أضف إلى:
+                      </span>
+                      {editingSchedule.map((s) => (
+                        <label
+                          key={s.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            cursor: 'pointer',
+                            fontSize: 'var(--font-sm)',
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={pendingShifts.includes(s.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setPendingShifts((p) => [...p, s.id]);
+                              } else {
+                                // Always keep at least one shift checked
+                                if (pendingShifts.length > 1) {
+                                  setPendingShifts((p) => p.filter((id) => id !== s.id));
+                                }
+                              }
+                            }}
+                          />
+                          {s.icon} {s.label}
+                        </label>
+                      ))}
+                      <button className="ss-add-btn" onClick={handleAddBlock}>
+                        تأكيد
+                      </button>
+                      <button
+                        className="btn-cancel"
+                        style={{ padding: '4px 10px' }}
+                        onClick={() => {
+                          setShowShiftPicker(false);
+                          setPendingShifts([selectedShiftId]);
+                        }}
+                      >
+                        إلغاء
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      className="ss-add-btn"
+                      onClick={() => {
+                        setPendingShifts([selectedShiftId]);
+                        setShowShiftPicker(true);
+                      }}
+                    >
+                      + إضافة كتلة
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </div>

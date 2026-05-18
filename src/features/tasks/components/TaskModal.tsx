@@ -58,9 +58,30 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
   const currentShift = form.shifts?.[0] || 'morning';
   const shiftConfig = schedule?.find((s) => s.id === currentShift);
   const currentDayOfWeek = new Date().getDay();
-  // Match the runtime lookup in useTaskDerivedState — use day overrides when present
-  const availableBlocks =
-    shiftConfig?.dayOverrides?.[currentDayOfWeek] || shiftConfig?.blocks || [];
+
+  // Case 4: when task spans both shifts, only show blocks whose ID exists in both
+  const availableBlocks = (() => {
+    const selectedShifts = form.shifts ?? [currentShift];
+    if (selectedShifts.length <= 1) {
+      // Single shift — use that shift's blocks (with day override)
+      return shiftConfig?.dayOverrides?.[currentDayOfWeek] ?? shiftConfig?.blocks ?? [];
+    }
+    // Both shifts selected — compute intersection by block ID
+    const allShiftBlocks = selectedShifts.map((sid) => {
+      const cfg = schedule?.find((s) => s.id === sid);
+      return cfg?.dayOverrides?.[currentDayOfWeek] ?? cfg?.blocks ?? [];
+    });
+    const [first, ...rest] = allShiftBlocks;
+    const sharedIds = new Set(
+      first
+        .filter((b) => rest.every((blocks) => blocks.some((rb) => rb.id === b.id)))
+        .map((b) => b.id)
+    );
+    return first.filter((b) => sharedIds.has(b.id));
+  })();
+
+  // Case 3: weekly/monthly tasks are forced to 'anytime' at save time
+  const blockPickerDisabled = form.recurrence === 'أسبوعي' || form.recurrence === 'شهري';
 
   useEffect(() => {
     const t = setTimeout(() => titleInput.current?.focus(), 50);
@@ -209,24 +230,57 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
               ))}
             </select>
           </div>
-          <div className="tm-col">
-            <label className="form-label" htmlFor="task-time">
-              الوقت
-            </label>
-            <select
-              id="task-time"
-              className="form-select"
-              value={form.timeBlock}
-              onChange={(e) => onFormField('timeBlock', e.target.value)}
-            >
-              <option value="anytime">مهام أخرى (بدون وقت محدد)</option>
-              {availableBlocks.map((b: TimeBlock) => (
-                <option key={b.id} value={b.id}>
-                  {b.label}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Case 3: hidden for weekly/monthly (block is forced to 'anytime' at save) */}
+          {/* Case 1: read-only in edit mode so block can never be changed after creation */}
+          {!blockPickerDisabled && (
+            <div className="tm-col">
+              <label className="form-label" htmlFor="task-time">
+                الوقت
+              </label>
+              {modal.mode === 'edit' ? (
+                <div
+                  className="form-select"
+                  style={{
+                    opacity: 0.65,
+                    cursor: 'default',
+                    userSelect: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  title="لا يمكن تغيير الكتلة بعد إنشاء المهمة"
+                >
+                  {availableBlocks.find((b) => b.id === form.timeBlock)?.label ??
+                    (form.timeBlock === 'anytime' ? 'مهام أخرى (بدون وقت محدد)' : form.timeBlock)}
+                  <span style={{ marginRight: 'auto', fontSize: '0.75em', opacity: 0.6 }}>🔒</span>
+                </div>
+              ) : (
+                <select
+                  id="task-time"
+                  className="form-select"
+                  value={form.timeBlock}
+                  onChange={(e) => onFormField('timeBlock', e.target.value)}
+                >
+                  <option value="anytime">مهام أخرى (بدون وقت محدد)</option>
+                  {availableBlocks.map((b: TimeBlock) => (
+                    <option key={b.id} value={b.id}>
+                      {b.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+          {blockPickerDisabled && (
+            <div className="tm-col">
+              <label className="form-label">الوقت</label>
+              <div
+                className="form-select"
+                style={{ opacity: 0.5, cursor: 'default', fontSize: 'var(--font-sm)' }}
+              >
+                المهام الأسبوعية/الشهرية لا ترتبط بكتلة زمنية
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="tm-row-xl">

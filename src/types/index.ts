@@ -181,6 +181,10 @@ export interface TaskContextValue {
   setSkipped: Dispatch<SetStateAction<CheckedMap>>;
   scheduleConfig: ShiftConfig[];
   setScheduleConfig: Dispatch<SetStateAction<ShiftConfig[]>>;
+  /** Raw task list — all tasks, not filtered by shift */
+  tasks: Task[];
+  /** Direct setter (sync to server) — use sparingly, prefer tm actions */
+  setTasks: Dispatch<SetStateAction<Task[]>>;
   prayersDone: number;
   prayerTotal: number;
   notifPerm: NotifPerm;

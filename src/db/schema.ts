@@ -61,7 +61,6 @@ export const scheduleConfig = pgTable(
     userId: integer('user_id')
       .references(() => users.id)
       .notNull(),
-    id: integer('id').default(1),
     data: jsonb('data').notNull().default([]),
     clientId: uuid('client_id').defaultRandom(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),

@@ -9,7 +9,10 @@ export interface JwtPayload {
 }
 
 export const getJwtSecret = () => {
-  const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars!!';
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    throw new Error('JWT_SECRET env var is not set. Set it in .env.local or Vercel dashboard.');
+  }
   return new TextEncoder().encode(secret);
 };
 
