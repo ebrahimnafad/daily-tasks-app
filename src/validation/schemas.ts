@@ -85,22 +85,24 @@ export const TaskSchema = createInsertSchema(tasks, {
     targetDate: true,
   })
   .extend({
+    id: z.number().int().optional(),
     date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
     time: z.string().nullish(),
     createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
     updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
   });
 
-export const TaskFormSchema = z.object({
-  icon: z.enum(VALID_ICONS),
-  title: z.string().min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
-  category: z.string().min(1).max(50),
-  color: z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح').or(z.string().regex(VAR_COLOR_REGEX)),
-  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل'),
-  timeBlock: z.string().max(50),
-  isWarning: z.boolean(),
-  recurrence: z.string().min(1).max(50),
-  date: z.string().regex(DATE_REGEX).or(z.literal('')).optional(),
+export const TaskFormSchema = TaskSchema.pick({
+  icon: true,
+  title: true,
+  category: true,
+  color: true,
+  shifts: true,
+  timeBlock: true,
+  isWarning: true,
+  recurrence: true,
+  date: true,
+}).extend({
   alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).optional(),
   blockers: z.array(z.string().max(200)),
   helpers: z.array(z.string().max(200)),
