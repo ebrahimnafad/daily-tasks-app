@@ -1,29 +1,36 @@
 import { SignJWT, jwtVerify } from 'jose';
 
+export interface JwtPayload {
+  userId: number;
+  username: string;
+  iat?: number;
+  exp?: number;
+}
+
 export const getJwtSecret = () => {
   const secret = process.env.JWT_SECRET || 'dev-secret-change-in-production-min-32-chars!!';
   return new TextEncoder().encode(secret);
 };
 
-export async function signToken(payload) {
-  return new SignJWT(payload)
+export async function signToken(payload: JwtPayload) {
+  return new SignJWT(payload as any)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
     .sign(getJwtSecret());
 }
 
-export async function verifyToken(token) {
+export async function verifyToken(token: string): Promise<JwtPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
-    return payload;
+    return payload as unknown as JwtPayload;
   } catch {
     return null;
   }
 }
 
 /** Extracts and verifies the Bearer token. Returns payload or sends 401 and returns null. */
-export async function requireAuth(req, res) {
+export async function requireAuth(req: any, res: any): Promise<JwtPayload | null> {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'غير مصرح — يرجى تسجيل الدخول' });
@@ -35,5 +42,7 @@ export async function requireAuth(req, res) {
     res.status(401).json({ error: 'جلسة منتهية الصلاحية — يرجى تسجيل الدخول مجدداً' });
     return null;
   }
-  return payload;
+  // Ensure userId is a number
+  const typedPayload: JwtPayload = { ...payload, userId: Number(payload.userId) };
+  return typedPayload;
 }

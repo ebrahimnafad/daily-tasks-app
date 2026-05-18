@@ -61,6 +61,9 @@ export const TaskSchema = z.object({
     blockers: z.array(z.string().max(200)).max(10),
     helpers: z.array(z.string().max(200)).max(10),
   }),
+  isPinned: z.boolean().optional(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 
 export const TaskFormSchema = z.object({
@@ -259,26 +262,16 @@ export const snapshotSchema = z
   .passthrough(); // Allowing passthrough to avoid strict breaking changes on older data, or strict() if requested. Wait, the prompt asked for .strict(). I will use strict() but add the fields from DailySnapshot.
 
 // tasks: shifts column
-export const shiftSchema = z
-  .object({
-    id: z.string().optional(),
-    day: z.string().max(20).optional(),
-    startTime: z.string().max(10).optional(),
-    endTime: z.string().max(10).optional(),
-    isOff: z.boolean().optional(),
-    icon: z.string().optional(),
-  })
-  .passthrough();
+export const shiftSchema = z.array(z.enum(['morning', 'evening']));
 
 // tasks: subtasks column
 export const subtaskSchema = z
   .object({
-    id: z.union([z.number(), z.string()]),
-    title: z.string().max(200).optional(),
-    text: z.string().max(200).optional(),
-    checked: z.boolean().optional(),
+    id: z.number().int(),
+    text: z.string().max(200),
+    checked: z.boolean(),
   })
-  .passthrough();
+  .strict();
 
 // schedule: data column
 export const scheduleDataSchema = z.array(

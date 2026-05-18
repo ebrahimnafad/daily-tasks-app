@@ -1,9 +1,8 @@
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth } from './_shared/auth.js';
 import { db } from './_shared/db.js';
 import { dailyState } from '../src/db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDate(str: string) {
@@ -19,16 +18,12 @@ export default async function handler(req: any, res: any) {
     return res.status(204).end();
   }
 
-  const rateLimit = applyRateLimit(req, 'daily', 'sync');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
-  }
-
   const { method } = req;
 
   try {
     const authPayload = await requireAuth(req, res);
     if (!authPayload) return;
+    const userId = authPayload.userId;
 
     if (method === 'GET') {
       const date = typeof req.query.date === 'string' ? req.query.date : undefined;
@@ -36,7 +31,10 @@ export default async function handler(req: any, res: any) {
       if (!isValidDate(date))
         return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
 
-      const rows = await db.select().from(dailyState).where(eq(dailyState.date, date));
+      const rows = await db
+        .select()
+        .from(dailyState)
+        .where(and(eq(dailyState.userId, userId), eq(dailyState.date, date)));
 
       return res.status(200).json({
         checked: rows[0]?.checked ?? {},
@@ -67,6 +65,7 @@ export default async function handler(req: any, res: any) {
       await db
         .insert(dailyState)
         .values({
+          userId,
           date: date,
           checked: checked ?? {},
           subChecked: subChecked ?? {},
@@ -74,7 +73,7 @@ export default async function handler(req: any, res: any) {
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
-          target: dailyState.date,
+          target: [dailyState.userId, dailyState.date],
           set: {
             checked: checked ?? {},
             subChecked: subChecked ?? {},
@@ -89,6 +88,7 @@ export default async function handler(req: any, res: any) {
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
   } catch (error: any) {
     console.error('Daily Error:', error);
-    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 }

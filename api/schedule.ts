@@ -43,7 +43,6 @@ const handler = async function handler(req: any, res: any) {
         .insert(scheduleConfig)
         .values({
           userId,
-          id: 1,
           data: validSchedule,
           updatedAt: new Date(),
         })
@@ -61,7 +60,8 @@ const handler = async function handler(req: any, res: any) {
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
   } catch (error: any) {
     console.error('Schedule Error:', error);
-    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 };
 

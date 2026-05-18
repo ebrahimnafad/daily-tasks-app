@@ -145,11 +145,7 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
             color: r.color,
             monthlyBudget: r.monthlyBudget || 0,
             isCustom: r.isCustom || false,
-            order: r.displayOrder || r.sortOrder || 0,
-            type: r.type,
-            isActive: r.isActive,
-            parentId: r.parentId,
-            sortOrder: r.displayOrder || r.sortOrder || 0,
+            order: r.displayOrder || 0,
             createdAt: r.createdAt?.toISOString() || new Date().toISOString(),
             updatedAt: r.updatedAt?.toISOString() || new Date().toISOString(),
           }));
@@ -235,8 +231,8 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
               incomeType: item.type || null,
               isActive: item.isActive ?? true,
               notes: item.notes || null,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
 
             await tx
@@ -275,12 +271,12 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
               quarterMonth: item.quarterMonth || null,
               totalAmount: item.totalAmount ? String(item.totalAmount) : null,
               totalInstallments: item.totalInstallments || null,
-              endDate: item.endDate ? new Date(item.endDate) : null,
+              endDate: item.endDate ? new Date(item.endDate as string) : null,
               seasonMonth: item.seasonMonth || null,
               monthlySetAside: item.monthlySetAside ? String(item.monthlySetAside) : null,
               notes: item.notes || null,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
 
             await tx
@@ -314,14 +310,14 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
               expenseId: item.expenseId || null,
               categoryId: item.categoryId,
               amount: item.amount ? String(item.amount) : '0',
-              transactionDate: item.date ? new Date(item.date) : new Date(),
+              transactionDate: item.date ? new Date(item.date as string) : new Date(),
               status: item.status || null,
               notes: item.notes || null,
               currencySymbol: item.currencySymbol || null,
               exchangeRate: item.exchangeRate ? String(item.exchangeRate) : null,
               originalAmount: item.originalAmount ? String(item.originalAmount) : null,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
 
             await tx
@@ -353,12 +349,12 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
               icon: item.icon || null,
               targetAmount: item.targetAmount ? String(item.targetAmount) : '0',
               currentSaved: item.currentSaved ? String(item.currentSaved) : '0',
-              deadline: item.deadline ? new Date(item.deadline) : null,
+              deadline: item.deadline ? new Date(item.deadline as string) : null,
               monthlyTarget: item.monthlyTarget ? String(item.monthlyTarget) : null,
               isActive: item.isActive ?? true,
               notes: item.notes || null,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
 
             await tx
@@ -392,8 +388,8 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
               monthlyBudget: item.monthlyBudget ? String(item.monthlyBudget) : null,
               isCustom: item.isCustom ?? false,
               displayOrder: item.order || item.sortOrder || 0,
-              createdAt: item.createdAt ? new Date(item.createdAt) : new Date(),
-              updatedAt: item.updatedAt ? new Date(item.updatedAt) : new Date(),
+              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
 
             await tx

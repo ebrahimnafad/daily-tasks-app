@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth, signToken } from './_shared/auth.js';
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -98,8 +98,9 @@ export default async function handler(req, res) {
     }
 
     return res.status(400).json({ error: 'إجراء auth غير معروف' });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Auth Error:', error);
-    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 }

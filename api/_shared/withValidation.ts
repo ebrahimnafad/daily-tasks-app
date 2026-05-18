@@ -1,7 +1,5 @@
 import { ZodError } from 'zod';
-import type { NextApiRequest, NextApiResponse } from 'next';
-
-type Handler = (req: NextApiRequest, res: NextApiResponse) => Promise<void>;
+type Handler = (req: any, res: any) => Promise<void>;
 
 export function withValidation(handler: Handler): Handler {
   return async (req, res) => {

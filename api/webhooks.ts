@@ -17,7 +17,7 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-function setCorsHeaders(req, res) {
+function setCorsHeaders(req: any, res: any) {
   const origin = req.headers.origin;
 
   if (!origin) {
@@ -37,7 +37,7 @@ function setCorsHeaders(req, res) {
 }
 
 // ── Payload Validation ────────────────────────────────────────────────────
-function validateSheetsPayload(payload) {
+function validateSheetsPayload(payload: any) {
   if (!payload || typeof payload !== 'object') return false;
 
   const requiredFields = [
@@ -55,7 +55,7 @@ function validateSheetsPayload(payload) {
   return true;
 }
 
-export default async function handler(req, res) {
+export default async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -98,8 +98,9 @@ export default async function handler(req, res) {
 
       console.log('Successfully forwarded to Google Sheets');
       return res.status(200).json({ ok: true });
-    } catch (error) {
-      console.error('Failed to send to Google Sheets:', error.message);
+    } catch (error: any) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to send to Google Sheets:', message);
       return res.status(500).json({ error: 'Failed to process request' });
     }
   }

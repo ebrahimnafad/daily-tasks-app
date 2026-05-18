@@ -6,7 +6,7 @@ export const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-export function setCorsHeaders(req, res) {
+export function setCorsHeaders(req: any, res: any) {
   const origin = req.headers.origin;
 
   if (!origin) {

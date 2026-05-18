@@ -104,7 +104,7 @@ const handler = async function handler(req: any, res: any) {
       for (const task of incomingTasks) {
         if (task.shifts) {
           assertPayloadSize(task.shifts, 'shifts');
-          task.shifts = z.array(shiftSchema).parse(task.shifts);
+          task.shifts = shiftSchema.parse(task.shifts);
         }
         if (task.subtasks) {
           assertPayloadSize(task.subtasks, 'subtasks');
@@ -228,7 +228,8 @@ const handler = async function handler(req: any, res: any) {
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
   } catch (error: any) {
     console.error('Tasks Error:', error);
-    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 };
 
