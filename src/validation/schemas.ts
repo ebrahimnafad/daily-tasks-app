@@ -39,7 +39,7 @@ const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^\d{2}:\d{2}$/;
 
 export const TaskSchema = z.object({
-  id: z.number().int().positive(),
+  id: z.number().int().optional(),
   icon: z.enum(VALID_ICONS),
   title: z.string().min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
   category: z.string().min(1).max(50),
@@ -274,15 +274,35 @@ export const subtaskSchema = z
   .strict();
 
 // schedule: data column
+// If client sends an array of shift objects:
 export const scheduleDataSchema = z.array(
   z
     .object({
-      id: z.string().optional(),
-      day: z.string().max(20).optional(),
-      startTime: z.string().max(10).optional(),
-      endTime: z.string().max(10).optional(),
-      isOff: z.boolean().optional(),
-      icon: z.string().optional(),
+      id: z.string(),
+      icon: z.string(),
+      label: z.string(),
+      blocks: z.array(
+        z
+          .object({
+            id: z.string(),
+            icon: z.string(),
+            label: z.string(),
+            startHour: z.number(),
+            endHour: z.number(),
+            isRest: z.boolean().optional(),
+          })
+          .strict()
+      ),
+      offDays: z.array(z.number()).optional(),
+      offDayLabel: z.string().optional(),
+      weekStartHour: z.number().optional(),
+      fridaySchedule: z
+        .object({
+          start: z.number(),
+          end: z.number(),
+          label: z.string(),
+        })
+        .optional(),
     })
-    .passthrough()
+    .strict()
 );
