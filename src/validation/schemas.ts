@@ -6,6 +6,8 @@ import {
   financeTransactions,
   financeIncomes,
   financeGoalsRel,
+  tasks,
+  calendarNotesRel,
 } from '../db/schema.js';
 
 const VALID_ICONS = [
@@ -38,39 +40,56 @@ const VAR_COLOR_REGEX = /^var\(.+\)$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 const TIME_REGEX = /^\d{2}:\d{2}$/;
 
-export const TaskSchema = z.object({
-  id: z.number().int().optional(),
-  icon: z.enum(VALID_ICONS),
-  title: z.string().min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
-  category: z.string().min(1).max(50),
-  color: z.string().regex(HEX_COLOR_REGEX, 'لون غير صالح').or(z.string().regex(VAR_COLOR_REGEX)),
-  shifts: z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل'),
-  timeBlock: z.string().max(50),
-  isWarning: z.boolean(),
-  recurrence: z.string().min(1).max(50),
-  date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
-  alertTime: z.string().max(20).nullable().optional(),
-  isPrayerTask: z.boolean(),
-  subtasks: z.array(
+export const TaskSchema = createInsertSchema(tasks, {
+  title: (s) => s.min(1, 'اسم المهمة مطلوب').max(200, 'اسم المهمة طويل جداً'),
+  icon: () => z.enum(VALID_ICONS).nullable().optional(),
+  category: (s) => s.min(1).max(50).nullable().optional(),
+  color: () =>
+    z
+      .string()
+      .regex(HEX_COLOR_REGEX, 'لون غير صالح')
+      .or(z.string().regex(VAR_COLOR_REGEX))
+      .nullable()
+      .optional(),
+  shifts: () =>
+    z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل').nullable().optional(),
+  timeBlock: (s) => s.max(50).nullable().optional(),
+  recurrence: (s) => s.min(1).max(50).nullable().optional(),
+  alertTime: (s) => s.max(20).nullable().optional(),
+  subtasks: () =>
+    z
+      .array(
+        z
+          .object({
+            id: z.union([z.string(), z.number()]),
+            text: z.string().min(1).max(200),
+            alertTime: z.string().max(20).nullable().optional(),
+          })
+          .strict()
+      )
+      .nullable()
+      .optional(),
+  brief: () =>
     z
       .object({
-        id: z.union([z.string(), z.number()]),
-        text: z.string().min(1).max(200),
-        alertTime: z.string().max(20).nullable().optional(),
+        blockers: z.array(z.string().max(200)).max(10).optional(),
+        helpers: z.array(z.string().max(200)).max(10).optional(),
       })
       .strict()
-  ),
-  brief: z
-    .object({
-      blockers: z.array(z.string().max(200)).max(10),
-      helpers: z.array(z.string().max(200)).max(10),
-    })
-    .strict(),
-  isPinned: z.boolean().optional(),
-  time: z.string().nullish(),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
-});
+      .nullable()
+      .optional(),
+})
+  .omit({
+    userId: true,
+    deletedAt: true,
+    targetDate: true,
+  })
+  .extend({
+    date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
+    time: z.string().nullish(),
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
+  });
 
 export const TaskFormSchema = z.object({
   icon: z.enum(VALID_ICONS),
@@ -314,15 +333,19 @@ export const scheduleDataSchema = z.array(
     .strict()
 );
 
-export const NoteSchema = z
-  .object({
-    id: z.union([z.string(), z.number()]),
+export const NoteSchema = createInsertSchema(calendarNotesRel, {
+  tags: () => z.array(z.string().max(50)).max(20).nullable().optional(),
+})
+  .omit({
+    userId: true,
+    noteDate: true,
+    noteText: true,
+  })
+  .extend({
+    id: z.union([z.string(), z.number()]).optional(),
     date: z.string().regex(DATE_REGEX).optional(),
     text: z.string().max(5000).optional(),
-    isPinned: z.boolean().optional(),
     pinned: z.boolean().optional(),
-    tags: z.array(z.string().max(50)).max(20).optional(),
-    createdAt: z.string().optional(),
-    updatedAt: z.string().optional(),
-  })
-  .strict();
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
+  });
