@@ -208,7 +208,13 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
             : new Date(),
         };
 
-        await db.insert(tasks).values(insertData);
+        await db
+          .insert(tasks)
+          .values(insertData)
+          .onConflictDoUpdate({
+            target: tasks.id,
+            set: { ...insertData, updatedAt: new Date() },
+          });
       }
 
       const savedRows = await db
