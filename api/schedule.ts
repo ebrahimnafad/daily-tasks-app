@@ -1,20 +1,16 @@
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth } from './_shared/auth.js';
 import { db } from './_shared/db.js';
 import { scheduleConfig } from '../src/db/schema.js';
 import { eq } from 'drizzle-orm';
+import { withValidation } from './_shared/withValidation.js';
+import { scheduleDataSchema, assertPayloadSize } from '../src/validation/schemas.js';
 
-export default async function handler(req: any, res: any) {
+const handler = async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, 'schedule', 'general');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   const { method } = req;
@@ -22,9 +18,10 @@ export default async function handler(req: any, res: any) {
   try {
     const authPayload = await requireAuth(req, res);
     if (!authPayload) return;
+    const userId = authPayload.userId;
 
     if (method === 'GET') {
-      const rows = await db.select().from(scheduleConfig).where(eq(scheduleConfig.id, 1));
+      const rows = await db.select().from(scheduleConfig).where(eq(scheduleConfig.userId, userId));
       return res.status(200).json({
         schedule: rows[0]?.data ?? null,
         updatedAt: rows[0]?.updatedAt ?? null,
@@ -39,17 +36,21 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
       }
 
+      assertPayloadSize(schedule, 'schedule');
+      const validSchedule = scheduleDataSchema.parse(schedule);
+
       await db
         .insert(scheduleConfig)
         .values({
+          userId,
           id: 1,
-          data: schedule,
+          data: validSchedule,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
-          target: scheduleConfig.id,
+          target: scheduleConfig.userId,
           set: {
-            data: schedule,
+            data: validSchedule,
             updatedAt: new Date(),
           },
         });
@@ -62,4 +63,6 @@ export default async function handler(req: any, res: any) {
     console.error('Schedule Error:', error);
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
   }
-}
+};
+
+export default withValidation(handler as any);

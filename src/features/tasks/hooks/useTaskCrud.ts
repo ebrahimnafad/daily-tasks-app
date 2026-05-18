@@ -161,7 +161,7 @@ export function useTaskCrud(
       },
     };
     if (modal.mode === 'add') {
-      const newId = Date.now();
+      const newId = -Date.now();
       setTasks((p) => [...p, { id: newId, isPrayerTask: false, subtasks: [], ...patch }]);
     } else {
       setTasks((p) =>

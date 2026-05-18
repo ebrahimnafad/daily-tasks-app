@@ -7,10 +7,10 @@ import {
   uuid,
   date,
   integer,
-  bigint,
   boolean,
   numeric,
   index,
+  primaryKey,
 } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
@@ -23,7 +23,10 @@ export const users = pgTable('users', {
 export const dailyState = pgTable(
   'daily_state',
   {
-    date: date('date').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    date: date('date').notNull(),
     checked: jsonb('checked').default({}),
     subChecked: jsonb('sub_checked').default({}),
     skipped: jsonb('skipped').default({}),
@@ -31,6 +34,7 @@ export const dailyState = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.date] }),
     updatedAtIndex: index('idx_daily_state_updated_at').on(table.updatedAt),
   })
 );
@@ -38,11 +42,15 @@ export const dailyState = pgTable(
 export const dailySnapshots = pgTable(
   'daily_snapshots',
   {
-    date: date('date').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    date: date('date').notNull(),
     snapshot: jsonb('snapshot').notNull().default({}),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
+    pk: primaryKey({ columns: [table.userId, table.date] }),
     dateIndex: index('idx_daily_snapshots_date').on(table.date),
   })
 );
@@ -50,18 +58,22 @@ export const dailySnapshots = pgTable(
 export const scheduleConfig = pgTable(
   'schedule_config',
   {
-    id: integer('id').primaryKey().default(1),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    id: integer('id').default(1),
     data: jsonb('data').notNull().default([]),
     clientId: uuid('client_id').defaultRandom(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
+    pk: primaryKey({ columns: [table.userId] }),
     updatedAtIndex: index('idx_schedule_updated_at').on(table.updatedAt),
   })
 );
 
 export const tasks = pgTable('tasks', {
-  id: bigint('id', { mode: 'number' }).primaryKey(),
+  id: serial('id').primaryKey(),
   userId: integer('user_id')
     .references(() => users.id)
     .notNull(),
@@ -81,6 +93,7 @@ export const tasks = pgTable('tasks', {
   brief: jsonb('brief').default({}),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const financeIncomes = pgTable('finance_incomes', {

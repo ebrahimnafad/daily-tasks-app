@@ -1,22 +1,22 @@
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth } from './_shared/auth.js';
 import { z } from 'zod';
-import { TaskSchema } from '../src/validation/schemas.js';
+import {
+  TaskSchema,
+  shiftSchema,
+  subtaskSchema,
+  assertPayloadSize,
+} from '../src/validation/schemas.js';
 import { db } from './_shared/db.js';
 import { tasks } from '../src/db/schema.js';
-import { eq, inArray, notInArray, and } from 'drizzle-orm';
+import { eq, inArray, isNull, isNotNull, gte, and } from 'drizzle-orm';
+import { withValidation } from './_shared/withValidation.js';
 
-export default async function handler(req: any, res: any) {
+const handler = async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, 'tasks', 'sync');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   const { method } = req;
@@ -27,7 +27,24 @@ export default async function handler(req: any, res: any) {
     const userId = authPayload.userId;
 
     if (method === 'GET') {
-      const rows = await db.select().from(tasks).where(eq(tasks.userId, userId));
+      if (req.query.deleted === 'true') {
+        const deletedRows = await db
+          .select()
+          .from(tasks)
+          .where(
+            and(
+              eq(tasks.userId, userId),
+              isNotNull(tasks.deletedAt),
+              gte(tasks.deletedAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+            )
+          );
+        return res.status(200).json({ tasks: deletedRows });
+      }
+
+      const rows = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.userId, userId), isNull(tasks.deletedAt)));
 
       const tasksResponse = rows.map((r: any) => ({
         id: r.id,
@@ -77,55 +94,135 @@ export default async function handler(req: any, res: any) {
         return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
       }
 
-      await db.transaction(async (tx) => {
-        const taskIds = incomingTasks.map((tk: any) => tk.id).filter((id: any) => id != null);
+      if (incomingTasks.length === 0 && !body.confirmClear) {
+        return res.status(400).json({
+          error: 'Empty task array rejected. Pass confirmClear: true to wipe all tasks.',
+        });
+      }
 
-        if (taskIds.length > 0) {
-          await tx
-            .delete(tasks)
-            .where(and(eq(tasks.userId, userId), notInArray(tasks.id, taskIds)));
-        } else {
-          await tx.delete(tasks).where(eq(tasks.userId, userId));
+      // JSONB Validation & Size Hardening
+      for (const task of incomingTasks) {
+        if (task.shifts) {
+          assertPayloadSize(task.shifts, 'shifts');
+          task.shifts = z.array(shiftSchema).parse(task.shifts);
         }
-
-        for (const task of incomingTasks) {
-          if (task.id == null) continue;
-
-          const insertData = {
-            id: task.id,
-            userId: userId,
-            icon: task.icon || null,
-            title: task.title || '',
-            category: task.category || null,
-            color: task.color || null,
-            shifts: task.shifts || [],
-            timeBlock: task.timeBlock || null,
-            isWarning: task.isWarning || false,
-            recurrence: task.recurrence || null,
-            targetDate: task.date || null,
-            alertTime: task.alertTime || null,
-            isPrayerTask: task.isPrayerTask || false,
-            isPinned: task.isPinned || false,
-            subtasks: task.subtasks || [],
-            brief: task.brief || {},
-            createdAt: task.createdAt ? new Date(task.createdAt) : new Date(),
-            updatedAt: task.updatedAt ? new Date(task.updatedAt) : new Date(),
-          };
-
-          await tx
-            .insert(tasks)
-            .values(insertData)
-            .onConflictDoUpdate({
-              target: tasks.id,
-              set: {
-                ...insertData,
-                updatedAt: new Date(),
-              },
-            });
+        if (task.subtasks) {
+          assertPayloadSize(task.subtasks, 'subtasks');
+          task.subtasks = z.array(subtaskSchema).parse(task.subtasks);
         }
-      });
+        if (task.brief) {
+          assertPayloadSize(task.brief, 'brief');
+        }
+      }
 
-      return res.status(200).json({ ok: true });
+      const toUpsert = incomingTasks.filter((t) => t.id && t.id > 0);
+      const toInsert = incomingTasks.filter((t) => !t.id || t.id < 0);
+
+      const incomingPositiveIds = toUpsert.map((t) => t.id);
+      const existing = await db
+        .select({ id: tasks.id })
+        .from(tasks)
+        .where(and(eq(tasks.userId, userId), isNull(tasks.deletedAt)));
+
+      const toDelete = existing
+        .map((r) => r.id)
+        .filter((id) => !incomingPositiveIds.includes(id as number));
+
+      if (toDelete.length > 0) {
+        await db
+          .update(tasks)
+          .set({ deletedAt: new Date() })
+          .where(and(eq(tasks.userId, userId), inArray(tasks.id, toDelete)));
+      }
+
+      for (const task of toUpsert) {
+        const { id, ...taskData } = task;
+
+        const insertData = {
+          id: id,
+          userId: userId,
+          icon: taskData.icon || null,
+          title: taskData.title || '',
+          category: taskData.category || null,
+          color: taskData.color || null,
+          shifts: taskData.shifts || [],
+          timeBlock: taskData.timeBlock || null,
+          isWarning: taskData.isWarning || false,
+          recurrence: taskData.recurrence || null,
+          targetDate: taskData.date || null,
+          alertTime: taskData.alertTime || null,
+          isPrayerTask: taskData.isPrayerTask || false,
+          isPinned: taskData.isPinned || false,
+          subtasks: taskData.subtasks || [],
+          brief: taskData.brief || {},
+          createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
+          updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
+        };
+
+        await db
+          .insert(tasks)
+          .values(insertData)
+          .onConflictDoUpdate({
+            target: tasks.id,
+            set: {
+              ...insertData,
+              updatedAt: new Date(),
+            },
+          });
+      }
+
+      for (const task of toInsert) {
+        const { id: _discard, ...taskData } = task;
+
+        const insertData = {
+          userId: userId,
+          icon: taskData.icon || null,
+          title: taskData.title || '',
+          category: taskData.category || null,
+          color: taskData.color || null,
+          shifts: taskData.shifts || [],
+          timeBlock: taskData.timeBlock || null,
+          isWarning: taskData.isWarning || false,
+          recurrence: taskData.recurrence || null,
+          targetDate: taskData.date || null,
+          alertTime: taskData.alertTime || null,
+          isPrayerTask: taskData.isPrayerTask || false,
+          isPinned: taskData.isPinned || false,
+          subtasks: taskData.subtasks || [],
+          brief: taskData.brief || {},
+          createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
+          updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
+        };
+
+        await db.insert(tasks).values(insertData);
+      }
+
+      const savedRows = await db
+        .select()
+        .from(tasks)
+        .where(and(eq(tasks.userId, userId), isNull(tasks.deletedAt)));
+
+      const tasksResponse = savedRows.map((r: any) => ({
+        id: r.id,
+        icon: r.icon,
+        title: r.title,
+        category: r.category,
+        color: r.color,
+        shifts: r.shifts || [],
+        timeBlock: r.timeBlock,
+        isWarning: r.isWarning,
+        recurrence: r.recurrence,
+        date: r.targetDate,
+        alertTime: r.alertTime,
+        isPrayerTask: r.isPrayerTask,
+        isPinned: r.isPinned,
+        subtasks: r.subtasks || [],
+        brief: r.brief || {},
+        createdAt: r.createdAt?.toISOString() || new Date().toISOString(),
+        updatedAt: r.updatedAt?.toISOString() || new Date().toISOString(),
+      }));
+
+      return res.status(200).json({ ok: true, tasks: tasksResponse });
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
@@ -133,4 +230,6 @@ export default async function handler(req: any, res: any) {
     console.error('Tasks Error:', error);
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
   }
-}
+};
+
+export default withValidation(handler as any);

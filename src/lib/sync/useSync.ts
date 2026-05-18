@@ -59,6 +59,42 @@ const flushSnapshotQueue = async (): Promise<void> => {
   lsSet(SNAPSHOT_QUEUE_KEY, remaining);
 };
 
+// ── Pending Sync offline queue (Phase 3) ────────────────────────────────────
+const PENDING_SYNC_KEY = 'mhm_pending_sync';
+
+type PendingItem = {
+  type: 'tasks' | 'daily' | 'schedule';
+  payload: unknown;
+  queuedAt: number;
+};
+
+function enqueuePending(type: PendingItem['type'], payload: unknown): void {
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []);
+  const filtered = queue.filter((q) => q.type !== type);
+  filtered.push({ type, payload, queuedAt: Date.now() });
+  lsSet(PENDING_SYNC_KEY, filtered);
+}
+
+function flushPending(): PendingItem[] {
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []);
+  lsSet(PENDING_SYNC_KEY, null);
+  return queue;
+}
+
+function hasStaleItems(queue: PendingItem[]): boolean {
+  const ONE_HOUR = 60 * 60 * 1000;
+  return queue.some((q) => Date.now() - q.queuedAt > ONE_HOUR);
+}
+
+function isNetworkError(err: unknown): boolean {
+  return (
+    err instanceof TypeError &&
+    (err.message.includes('fetch') ||
+      err.message.includes('network') ||
+      err.message.includes('Failed to fetch'))
+  );
+}
+
 interface DailyState {
   checked: CheckedMap;
   subChecked: SubCheckedMap;
@@ -226,17 +262,37 @@ export default function useSync(
   const pendingDailyRef = useRef<DailyState | null>(null);
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  /* eslint-disable */
   useEffect(() => {
-    const handleOnline = () => {
+    const handleOnline = async () => {
       setIsOnline(true);
       setHasError(false); // clear transient errors on reconnect
       // Drain any snapshots that failed to POST while offline
       void flushSnapshotQueue();
-      // Re-fetch both queries to sync any missed writes
-      if (didMountRef.current) {
-        void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        void queryClient.invalidateQueries({ queryKey: ['schedule'] });
-        void queryClient.invalidateQueries({ queryKey: ['daily', todayISO()] });
+
+      const queue = flushPending();
+      if (queue.length > 0) {
+        if (hasStaleItems(queue)) {
+          alert(
+            'You have unsynced changes older than 1 hour. Syncing now — please verify your data after reconnection.'
+          );
+        }
+        for (const item of queue) {
+          if (item.type === 'tasks') {
+            await updateTasksMutAsync(item.payload as Task[]).catch(console.error);
+          } else if (item.type === 'daily') {
+            await updateDailyMutAsync(item.payload as DailyState).catch(console.error);
+          } else if (item.type === 'schedule') {
+            await updateScheduleMutAsync(item.payload as ShiftConfig[]).catch(console.error);
+          }
+        }
+      } else {
+        // Re-fetch queries to sync any missed writes if queue is empty
+        if (didMountRef.current) {
+          void queryClient.invalidateQueries({ queryKey: ['tasks'] });
+          void queryClient.invalidateQueries({ queryKey: ['schedule'] });
+          void queryClient.invalidateQueries({ queryKey: ['daily', todayISO()] });
+        }
       }
     };
     const handleOffline = () => setIsOnline(false);
@@ -250,6 +306,7 @@ export default function useSync(
       window.removeEventListener('offline', handleOffline);
     };
   }, [queryClient]);
+  /* eslint-enable */
 
   // ── Auto Shift from epoch ─────────────────────────────────────────────
   /**
@@ -460,7 +517,11 @@ export default function useSync(
   };
 
   // ── Mutations ─────────────────────────────────────────────────────────
-  const { mutate: updateTasksMut } = useMutation<void, Error, Task[]>({
+  const { mutate: updateTasksMut, mutateAsync: updateTasksMutAsync } = useMutation<
+    any,
+    Error,
+    Task[]
+  >({
     mutationFn: async (newTasks) => {
       const res = await authFetch('/api/tasks', {
         method: 'POST',
@@ -471,6 +532,7 @@ export default function useSync(
         const text = await res.text().catch(() => '');
         throw new Error(`Tasks Sync API error ${res.status}: ${text}`);
       }
+      return res.json();
     },
     onMutate: async (newTasks) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
@@ -479,20 +541,33 @@ export default function useSync(
       lsSet('mhm_tasks', newTasks, onQuota);
       return { prevTasks };
     },
-    onSuccess: () => setHasError(false),
-    onError: (err, _newTasks, context) => {
+    onSuccess: (response) => {
+      if (response && response.tasks) {
+        // Server is ground truth. Replace optimistic state entirely with DB-assigned IDs.
+        queryClient.setQueryData(['tasks'], { tasks: response.tasks, timestamp: Date.now() });
+        lsSet('mhm_tasks', response.tasks);
+      }
+      setHasError(false);
+    },
+    onError: async (err, variables) => {
+      const isOffline = !navigator.onLine || isNetworkError(err);
+      if (isOffline) {
+        enqueuePending('tasks', variables);
+        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        return;
+      }
       console.error('Tasks sync error:', err);
       alert(err.message);
       setHasError(true);
-      const ctx = context as { prevTasks?: { tasks: Task[]; timestamp: number } } | undefined;
-      if (ctx?.prevTasks) {
-        queryClient.setQueryData(['tasks'], ctx.prevTasks);
-        lsSet('mhm_tasks', ctx.prevTasks.tasks, onQuota);
-      }
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
     },
   });
 
-  const { mutate: updateScheduleMut } = useMutation<void, Error, ShiftConfig[]>({
+  const { mutate: updateScheduleMut, mutateAsync: updateScheduleMutAsync } = useMutation<
+    void,
+    Error,
+    ShiftConfig[]
+  >({
     mutationFn: async (newSchedule) => {
       const res = await authFetch('/api/schedule', {
         method: 'POST',
@@ -514,21 +589,25 @@ export default function useSync(
       return { prevSchedule };
     },
     onSuccess: () => setHasError(false),
-    onError: (err, _newSchedule, context) => {
+    onError: async (err, variables) => {
+      const isOffline = !navigator.onLine || isNetworkError(err);
+      if (isOffline) {
+        enqueuePending('schedule', variables);
+        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        return;
+      }
       console.error('Schedule sync error:', err);
       alert(err.message);
       setHasError(true);
-      const ctx = context as
-        | { prevSchedule?: { schedule: ShiftConfig[]; timestamp: number } }
-        | undefined;
-      if (ctx?.prevSchedule) {
-        queryClient.setQueryData(['schedule'], ctx.prevSchedule);
-        lsSet('mhm_schedule', ctx.prevSchedule.schedule, onQuota);
-      }
+      await queryClient.invalidateQueries({ queryKey: ['schedule'] });
     },
   });
 
-  const { mutate: updateDailyMut } = useMutation<void, Error, DailyState>({
+  const { mutate: updateDailyMut, mutateAsync: updateDailyMutAsync } = useMutation<
+    void,
+    Error,
+    DailyState
+  >({
     mutationFn: async ({ checked: c, subChecked: sc, skipped: sk }) => {
       const today = getLogicalDateISO(dayStartHour);
       const res = await authFetch('/api/daily', {
@@ -559,20 +638,17 @@ export default function useSync(
       return { prevDaily };
     },
     onSuccess: () => setHasError(false),
-    onError: (err, _vars, context) => {
+    onError: async (err, variables) => {
+      const isOffline = !navigator.onLine || isNetworkError(err);
+      if (isOffline) {
+        enqueuePending('daily', variables);
+        alert('You are offline. Changes saved locally and will sync on reconnect.');
+        return;
+      }
       console.error('Daily sync error:', err);
       alert(err.message);
       setHasError(true);
-      const ctx = context as { prevDaily?: { daily: DailyState; timestamp: number } } | undefined;
-      if (ctx?.prevDaily) {
-        queryClient.setQueryData(['daily', getLogicalDateISO(dayStartHour)], ctx.prevDaily);
-        // Restore localStorage to match — without this a page reload after a
-        // failed sync would load the bad optimistic state from disk
-        const prev = ctx.prevDaily.daily;
-        lsSet('mhm_checked', prev.checked, onQuota);
-        lsSet('mhm_sub_checked', prev.subChecked, onQuota);
-        lsSet('mhm_skipped', prev.skipped, onQuota);
-      }
+      await queryClient.invalidateQueries({ queryKey: ['daily', getLogicalDateISO(dayStartHour)] });
     },
   });
 

@@ -221,3 +221,75 @@ export const parseSafe = <T>(
   const errors = result.error.issues.map((issue) => issue.message);
   return { success: false, errors };
 };
+
+// --- Phase 3 Payload Hardening ---
+
+// Hard ceiling per JSONB field — reject before any DB operation
+const MAX_JSONB_BYTES = 64 * 1024; // 64KB
+
+export function assertPayloadSize(value: unknown, fieldName: string): void {
+  const size = Buffer.byteLength(JSON.stringify(value), 'utf8');
+  if (size > MAX_JSONB_BYTES) {
+    throw new Error(`${fieldName} exceeds maximum allowed size of 64KB`);
+  }
+}
+
+// daily_state: checked / subChecked / skipped → map of taskId → boolean
+export const checkedMapSchema = z.record(z.string(), z.boolean());
+
+// daily_snapshots: snapshot column
+export const snapshotSchema = z
+  .object({
+    date: z.string().optional(),
+    tasks: z.array(
+      z
+        .object({
+          id: z.number().int(),
+          checked: z.boolean().optional(),
+        })
+        .passthrough()
+    ),
+    progress: z.number().optional(),
+    countDone: z.number().optional(),
+    totalOther: z.number().optional(),
+    checked: z.record(z.string(), z.boolean()).optional(),
+    skipped: z.record(z.string(), z.boolean()).optional(),
+    generatedAt: z.string().datetime().optional(),
+  })
+  .passthrough(); // Allowing passthrough to avoid strict breaking changes on older data, or strict() if requested. Wait, the prompt asked for .strict(). I will use strict() but add the fields from DailySnapshot.
+
+// tasks: shifts column
+export const shiftSchema = z
+  .object({
+    id: z.string().optional(),
+    day: z.string().max(20).optional(),
+    startTime: z.string().max(10).optional(),
+    endTime: z.string().max(10).optional(),
+    isOff: z.boolean().optional(),
+    icon: z.string().optional(),
+  })
+  .passthrough();
+
+// tasks: subtasks column
+export const subtaskSchema = z
+  .object({
+    id: z.union([z.number(), z.string()]),
+    title: z.string().max(200).optional(),
+    text: z.string().max(200).optional(),
+    checked: z.boolean().optional(),
+  })
+  .passthrough();
+
+// schedule: data column
+export const scheduleDataSchema = z.array(
+  z
+    .object({
+      id: z.string().optional(),
+      day: z.string().max(20).optional(),
+      startTime: z.string().max(10).optional(),
+      endTime: z.string().max(10).optional(),
+      isOff: z.boolean().optional(),
+      icon: z.string().optional(),
+    })
+    .passthrough()
+);

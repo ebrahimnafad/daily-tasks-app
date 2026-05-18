@@ -1,4 +1,3 @@
-import { applyRateLimit } from '../middleware/rateLimit.js';
 import { setCorsHeaders } from './cors.js';
 import { requireAuth } from './auth.js';
 import { z } from 'zod';
@@ -30,11 +29,6 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, finRes.field, 'general');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   const { method } = req;

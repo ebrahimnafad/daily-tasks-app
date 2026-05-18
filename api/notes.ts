@@ -1,4 +1,3 @@
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth } from './_shared/auth.js';
 import { db } from './_shared/db.js';
@@ -10,11 +9,6 @@ export default async function handler(req: any, res: any) {
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, 'notes', 'general');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   const { method } = req;

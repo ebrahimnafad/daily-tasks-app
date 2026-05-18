@@ -31,7 +31,7 @@ export default async function handler(req: any, res: any) {
     if (!authPayload) return;
 
     if (method === 'GET') {
-      const { date } = req.query;
+      const date = typeof req.query.date === 'string' ? req.query.date : undefined;
       if (!date) return res.status(400).json({ error: 'date مطلوب' });
       if (!isValidDate(date))
         return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });

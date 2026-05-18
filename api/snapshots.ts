@@ -1,9 +1,10 @@
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth } from './_shared/auth.js';
 import { db } from './_shared/db.js';
 import { dailySnapshots } from '../src/db/schema.js';
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and } from 'drizzle-orm';
+import { withValidation } from './_shared/withValidation.js';
+import { snapshotSchema, assertPayloadSize } from '../src/validation/schemas.js';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDate(str: string) {
@@ -12,16 +13,11 @@ function isValidDate(str: string) {
   return d instanceof Date && !isNaN(d.getTime());
 }
 
-export default async function handler(req: any, res: any) {
+const handler = async function handler(req: any, res: any) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, 'snapshots', 'general');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   const { method } = req;
@@ -29,6 +25,7 @@ export default async function handler(req: any, res: any) {
   try {
     const authPayload = await requireAuth(req, res);
     if (!authPayload) return;
+    const userId = authPayload.userId;
 
     if (method === 'GET') {
       const { date } = req.query;
@@ -37,7 +34,10 @@ export default async function handler(req: any, res: any) {
         // Single snapshot
         if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
 
-        const rows = await db.select().from(dailySnapshots).where(eq(dailySnapshots.date, date));
+        const rows = await db
+          .select()
+          .from(dailySnapshots)
+          .where(and(eq(dailySnapshots.userId, userId), eq(dailySnapshots.date, date)));
         return res.status(200).json({
           snapshot: rows[0]?.snapshot ?? null,
           updatedAt: rows[0]?.updatedAt ?? null,
@@ -52,6 +52,7 @@ export default async function handler(req: any, res: any) {
             total_other: sql<string>`${dailySnapshots.snapshot}->>'totalOther'`,
           })
           .from(dailySnapshots)
+          .where(eq(dailySnapshots.userId, userId))
           .orderBy(desc(dailySnapshots.date))
           .limit(365);
 
@@ -72,17 +73,21 @@ export default async function handler(req: any, res: any) {
       if (!date || !snapshot) return res.status(400).json({ error: 'date و snapshot مطلوبان' });
       if (!isValidDate(date)) return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة' });
 
+      assertPayloadSize(snapshot, 'snapshot');
+      const validSnapshot = snapshotSchema.parse(snapshot);
+
       await db
         .insert(dailySnapshots)
         .values({
+          userId,
           date: date,
-          snapshot: snapshot,
+          snapshot: validSnapshot,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
-          target: dailySnapshots.date,
+          target: [dailySnapshots.userId, dailySnapshots.date],
           set: {
-            snapshot: snapshot,
+            snapshot: validSnapshot,
             updatedAt: new Date(),
           },
         });
@@ -95,4 +100,6 @@ export default async function handler(req: any, res: any) {
     console.error('Snapshots Error:', error);
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
   }
-}
+};
+
+export default withValidation(handler as any);

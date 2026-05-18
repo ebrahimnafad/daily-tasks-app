@@ -1,6 +1,5 @@
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
-import { applyRateLimit } from './middleware/rateLimit.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth, signToken } from './_shared/auth.js';
 
@@ -9,11 +8,6 @@ export default async function handler(req, res) {
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
-  }
-
-  const rateLimit = applyRateLimit(req, 'auth', 'auth');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
   }
 
   if (!process.env.DATABASE_URL) {

@@ -8,8 +8,6 @@
  * Requires: GOOGLE_SHEETS_WEBHOOK_URL environment variable
  */
 
-import { applyRateLimit } from './middleware/rateLimit.js';
-
 // ── CORS: تقييد الوصول ──────────────────────────────────────────────────
 const ALLOWED_ORIGINS = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
@@ -71,10 +69,6 @@ export default async function handler(req, res) {
   const resource = req.query.resource || 'unknown';
 
   /* ── Rate Limiting ── */
-  const rateLimit = applyRateLimit(req, resource, 'sheets');
-  if (!rateLimit.allowed) {
-    return res.status(429).json({ error: rateLimit.message });
-  }
 
   if (resource === 'send-progress') {
     try {
