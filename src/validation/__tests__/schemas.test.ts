@@ -7,6 +7,7 @@ import {
   ExpenseCategorySchema,
   IncomeSchema,
   GoalSchema,
+  assertPayloadSize,
 } from '../schemas';
 import { z } from 'zod';
 
@@ -396,5 +397,18 @@ describe('parseSafe helper', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) expect(result.errors.length).toBeGreaterThan(0);
+  });
+});
+
+describe('assertPayloadSize', () => {
+  it('should not throw if payload is within limits', () => {
+    expect(() => assertPayloadSize({ test: 'data' }, 'testField')).not.toThrow();
+  });
+
+  it('should throw if payload exceeds 64KB', () => {
+    const largeString = 'a'.repeat(65 * 1024);
+    expect(() => assertPayloadSize({ largeString }, 'largeField')).toThrow(
+      'largeField exceeds maximum allowed size of 64KB'
+    );
   });
 });

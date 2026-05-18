@@ -150,5 +150,21 @@ describe('reconcile', () => {
       expect(result.winner).toBe('merged');
       expect(result.mergedData).toEqual({ task1: true, task2: true });
     });
+
+    it('should prefer local when timestamp is newer', () => {
+      const local: LocalState<Record<string, boolean>> = {
+        data: { task1: true },
+        timestamp: 200,
+      };
+      const remote: RemoteState<Record<string, boolean>> = {
+        data: { task1: false },
+        timestamp: 100,
+      };
+
+      const result = reconcileChecked(local, remote);
+
+      expect(result.winner).toBe('local');
+      expect(result.mergedData).toEqual({ task1: true });
+    });
   });
 });
