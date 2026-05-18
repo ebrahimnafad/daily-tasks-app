@@ -137,85 +137,87 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         .map((r) => r.id)
         .filter((id) => !incomingPositiveIds.includes(id as number));
 
-      if (toDelete.length > 0) {
-        await db
-          .update(tasks)
-          .set({ deletedAt: new Date() })
-          .where(and(eq(tasks.userId, userId), inArray(tasks.id, toDelete)));
-      }
+      await db.transaction(async (tx) => {
+        if (toDelete.length > 0) {
+          await tx
+            .update(tasks)
+            .set({ deletedAt: new Date() })
+            .where(and(eq(tasks.userId, userId), inArray(tasks.id, toDelete)));
+        }
 
-      for (const task of toUpsert) {
-        const { id, ...taskData } = task;
+        for (const task of toUpsert) {
+          const { id, ...taskData } = task;
 
-        const insertData = {
-          id: id,
-          userId: userId,
-          icon: taskData.icon || null,
-          title: taskData.title || '',
-          category: taskData.category || null,
-          color: taskData.color || null,
-          shifts: taskData.shifts || [],
-          timeBlock: taskData.timeBlock || null,
-          isWarning: taskData.isWarning || false,
-          recurrence: taskData.recurrence || null,
-          targetDate: taskData.date || null,
-          alertTime: taskData.alertTime || null,
-          isPrayerTask: taskData.isPrayerTask || false,
-          isPinned: taskData.isPinned || false,
-          subtasks: taskData.subtasks || [],
-          brief: taskData.brief || {},
-          createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
-          updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
-        };
+          const insertData = {
+            id: id,
+            userId: userId,
+            icon: taskData.icon || null,
+            title: taskData.title || '',
+            category: taskData.category || null,
+            color: taskData.color || null,
+            shifts: taskData.shifts || [],
+            timeBlock: taskData.timeBlock || null,
+            isWarning: taskData.isWarning || false,
+            recurrence: taskData.recurrence || null,
+            targetDate: taskData.date || null,
+            alertTime: taskData.alertTime || null,
+            isPrayerTask: taskData.isPrayerTask || false,
+            isPinned: taskData.isPinned || false,
+            subtasks: taskData.subtasks || [],
+            brief: taskData.brief || {},
+            createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
+            updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
+          };
 
-        await db
-          .insert(tasks)
-          .values(insertData)
-          .onConflictDoUpdate({
-            target: tasks.id,
-            set: {
-              ...insertData,
-              updatedAt: new Date(),
-            },
-          });
-      }
+          await tx
+            .insert(tasks)
+            .values(insertData)
+            .onConflictDoUpdate({
+              target: tasks.id,
+              set: {
+                ...insertData,
+                updatedAt: new Date(),
+              },
+            });
+        }
 
-      for (const task of toInsert) {
-        const taskData: Record<string, unknown> = { ...task };
-        delete taskData.id;
+        for (const task of toInsert) {
+          const taskData: Record<string, unknown> = { ...task };
+          delete taskData.id;
 
-        const insertData = {
-          userId: userId,
-          icon: taskData.icon ? String(taskData.icon) : null,
-          title: String(taskData.title || ''),
-          category: taskData.category ? String(taskData.category) : null,
-          color: taskData.color ? String(taskData.color) : null,
-          shifts: (taskData.shifts as string[]) || [],
-          timeBlock: taskData.timeBlock ? String(taskData.timeBlock) : null,
-          isWarning: Boolean(taskData.isWarning || false),
-          recurrence: taskData.recurrence ? String(taskData.recurrence) : null,
-          targetDate: taskData.date ? String(taskData.date) : null,
-          alertTime: taskData.alertTime ? String(taskData.alertTime) : null,
-          isPrayerTask: Boolean(taskData.isPrayerTask || false),
-          isPinned: Boolean(taskData.isPinned || false),
-          subtasks: (taskData.subtasks as Record<string, unknown>[]) || [],
-          brief: (taskData.brief as Record<string, unknown>) || {},
-          createdAt: taskData.createdAt
-            ? new Date(taskData.createdAt as string | number)
-            : new Date(),
-          updatedAt: taskData.updatedAt
-            ? new Date(taskData.updatedAt as string | number)
-            : new Date(),
-        };
+          const insertData = {
+            userId: userId,
+            icon: taskData.icon ? String(taskData.icon) : null,
+            title: String(taskData.title || ''),
+            category: taskData.category ? String(taskData.category) : null,
+            color: taskData.color ? String(taskData.color) : null,
+            shifts: (taskData.shifts as string[]) || [],
+            timeBlock: taskData.timeBlock ? String(taskData.timeBlock) : null,
+            isWarning: Boolean(taskData.isWarning || false),
+            recurrence: taskData.recurrence ? String(taskData.recurrence) : null,
+            targetDate: taskData.date ? String(taskData.date) : null,
+            alertTime: taskData.alertTime ? String(taskData.alertTime) : null,
+            isPrayerTask: Boolean(taskData.isPrayerTask || false),
+            isPinned: Boolean(taskData.isPinned || false),
+            subtasks: (taskData.subtasks as Record<string, unknown>[]) || [],
+            brief: (taskData.brief as Record<string, unknown>) || {},
+            createdAt: taskData.createdAt
+              ? new Date(taskData.createdAt as string | number)
+              : new Date(),
+            updatedAt: taskData.updatedAt
+              ? new Date(taskData.updatedAt as string | number)
+              : new Date(),
+          };
 
-        await db
-          .insert(tasks)
-          .values(insertData)
-          .onConflictDoUpdate({
-            target: tasks.id,
-            set: { ...insertData, updatedAt: new Date() },
-          });
-      }
+          await tx
+            .insert(tasks)
+            .values(insertData)
+            .onConflictDoUpdate({
+              target: tasks.id,
+              set: { ...insertData, updatedAt: new Date() },
+            });
+        }
+      });
 
       const savedRows = await db
         .select()
