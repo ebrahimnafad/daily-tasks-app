@@ -39,6 +39,7 @@
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "vite": "^8.0.10",
+    "ws": "^8.20.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -51,6 +52,7 @@
     "@types/node": "^25.6.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^8.59.2",
     "@typescript-eslint/parser": "^8.59.2",
     "@vitest/coverage-v8": "^4.1.5",
