@@ -48,15 +48,17 @@ export const TaskSchema = z.object({
   timeBlock: z.string().max(50),
   isWarning: z.boolean(),
   recurrence: z.string().min(1).max(50),
-  date: z.string().regex(DATE_REGEX).optional(),
-  alertTime: z.string().regex(TIME_REGEX).optional(),
+  date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
+  alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).nullish(),
   isPrayerTask: z.boolean(),
+  isPinned: z.boolean().nullish(),
+  time: z.string().nullish(),
   subtasks: z.array(
     z
       .object({
         id: z.union([z.string(), z.number()]),
         text: z.string().min(1).max(200),
-        alertTime: z.string().regex(TIME_REGEX).optional(),
+        alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).nullish(),
       })
       .strict()
   ),
