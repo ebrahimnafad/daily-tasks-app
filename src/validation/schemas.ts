@@ -6,7 +6,7 @@ import {
   financeTransactions,
   financeIncomes,
   financeGoalsRel,
-} from '../db/schema';
+} from '../db/schema.js';
 
 const VALID_ICONS = [
   '📋',
