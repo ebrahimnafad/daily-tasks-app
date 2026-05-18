@@ -13,7 +13,9 @@ function isValidDate(str: string) {
   return d instanceof Date && !isNaN(d.getTime());
 }
 
-const handler = async function handler(req: any, res: any) {
+import type { ApiRequest, ApiResponse } from './_shared/types.js';
+
+const handler = async function handler(req: ApiRequest, res: ApiResponse) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -28,7 +30,8 @@ const handler = async function handler(req: any, res: any) {
     const userId = authPayload.userId;
 
     if (method === 'GET') {
-      const { date } = req.query;
+      const dateQuery = req.query.date;
+      const date = Array.isArray(dateQuery) ? dateQuery[0] : dateQuery;
 
       if (date) {
         // Single snapshot
@@ -57,7 +60,7 @@ const handler = async function handler(req: any, res: any) {
           .limit(365);
 
         return res.status(200).json({
-          summaries: rows.map((r: any) => ({
+          summaries: rows.map((r: Record<string, unknown>) => ({
             date: r.date_str,
             progress: Number(r.progress ?? 0),
             countDone: Number(r.count_done ?? 0),
@@ -96,11 +99,11 @@ const handler = async function handler(req: any, res: any) {
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Snapshots Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 };
 
-export default withValidation(handler as any);
+export default withValidation(handler);

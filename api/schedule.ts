@@ -5,8 +5,9 @@ import { scheduleConfig } from '../src/db/schema.js';
 import { eq } from 'drizzle-orm';
 import { withValidation } from './_shared/withValidation.js';
 import { scheduleDataSchema, assertPayloadSize } from '../src/validation/schemas.js';
+import type { ApiRequest, ApiResponse } from './_shared/types.js';
 
-const handler = async function handler(req: any, res: any) {
+const handler = async function handler(req: ApiRequest, res: ApiResponse) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -58,11 +59,11 @@ const handler = async function handler(req: any, res: any) {
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Schedule Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 };
 
-export default withValidation(handler as any);
+export default withValidation(handler);

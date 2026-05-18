@@ -52,15 +52,20 @@ export const TaskSchema = z.object({
   alertTime: z.string().regex(TIME_REGEX).optional(),
   isPrayerTask: z.boolean(),
   subtasks: z.array(
-    z.object({
-      id: z.union([z.string(), z.number()]),
-      text: z.string().min(1).max(200),
-    })
+    z
+      .object({
+        id: z.union([z.string(), z.number()]),
+        text: z.string().min(1).max(200),
+        alertTime: z.string().regex(TIME_REGEX).optional(),
+      })
+      .strict()
   ),
-  brief: z.object({
-    blockers: z.array(z.string().max(200)).max(10),
-    helpers: z.array(z.string().max(200)).max(10),
-  }),
+  brief: z
+    .object({
+      blockers: z.array(z.string().max(200)).max(10),
+      helpers: z.array(z.string().max(200)).max(10),
+    })
+    .strict(),
   isPinned: z.boolean().optional(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
@@ -267,32 +272,33 @@ export const shiftSchema = z.array(z.enum(['morning', 'evening']));
 // tasks: subtasks column
 export const subtaskSchema = z
   .object({
-    id: z.number().int(),
+    id: z.union([z.string(), z.number()]),
     text: z.string().max(200),
-    checked: z.boolean(),
+    alertTime: z.string().regex(TIME_REGEX).optional(),
+  })
+  .strict();
+
+export const timeBlockSchema = z
+  .object({
+    id: z.string(),
+    icon: z.string(),
+    label: z.string(),
+    startHour: z.number(),
+    endHour: z.number(),
+    isRest: z.boolean().optional(),
+    isOptional: z.boolean().optional(),
   })
   .strict();
 
 // schedule: data column
-// If client sends an array of shift objects:
 export const scheduleDataSchema = z.array(
   z
     .object({
       id: z.string(),
       icon: z.string(),
       label: z.string(),
-      blocks: z.array(
-        z
-          .object({
-            id: z.string(),
-            icon: z.string(),
-            label: z.string(),
-            startHour: z.number(),
-            endHour: z.number(),
-            isRest: z.boolean().optional(),
-          })
-          .strict()
-      ),
+      blocks: z.array(timeBlockSchema),
+      dayOverrides: z.record(z.string(), z.array(timeBlockSchema)).optional(),
       offDays: z.array(z.number()).optional(),
       offDayLabel: z.string().optional(),
       weekStartHour: z.number().optional(),
@@ -306,3 +312,16 @@ export const scheduleDataSchema = z.array(
     })
     .strict()
 );
+
+export const NoteSchema = z
+  .object({
+    id: z.union([z.string(), z.number()]),
+    date: z.string().regex(DATE_REGEX).optional(),
+    text: z.string().max(5000).optional(),
+    isPinned: z.boolean().optional(),
+    pinned: z.boolean().optional(),
+    tags: z.array(z.string().max(50)).max(20).optional(),
+    createdAt: z.string().optional(),
+    updatedAt: z.string().optional(),
+  })
+  .strict();

@@ -9,7 +9,8 @@ export const ALLOWED_ORIGINS = [
 ].filter(Boolean);
 
 export function setCorsHeaders(req: ApiRequest, res: ApiResponse) {
-  const origin = req.headers.origin;
+  const originHeader = req.headers.origin;
+  const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
 
   if (!origin) {
     return;

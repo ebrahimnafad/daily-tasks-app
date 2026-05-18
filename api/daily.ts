@@ -3,6 +3,8 @@ import { requireAuth } from './_shared/auth.js';
 import { db } from './_shared/db.js';
 import { dailyState } from '../src/db/schema.js';
 import { eq, and } from 'drizzle-orm';
+import { z } from 'zod';
+import type { ApiRequest, ApiResponse } from './_shared/types.js';
 
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 function isValidDate(str: string) {
@@ -11,7 +13,7 @@ function isValidDate(str: string) {
   return d instanceof Date && !isNaN(d.getTime());
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -52,14 +54,20 @@ export default async function handler(req: any, res: any) {
       if (!isValidDate(date))
         return res.status(400).json({ error: 'صيغة التاريخ غير صحيحة (YYYY-MM-DD)' });
 
-      if (checked !== undefined && (typeof checked !== 'object' || Array.isArray(checked))) {
-        return res.status(400).json({ error: 'checked يجب أن يكون object' });
-      }
-      if (
-        subChecked !== undefined &&
-        (typeof subChecked !== 'object' || Array.isArray(subChecked))
-      ) {
-        return res.status(400).json({ error: 'subChecked يجب أن يكون object' });
+      const checkedMapSchema = z.record(z.string(), z.boolean());
+      let parsedChecked, parsedSubChecked, parsedSkipped;
+
+      try {
+        parsedChecked = checked !== undefined ? checkedMapSchema.parse(checked) : {};
+        parsedSubChecked = subChecked !== undefined ? checkedMapSchema.parse(subChecked) : {};
+        parsedSkipped = skipped !== undefined ? checkedMapSchema.parse(skipped) : {};
+      } catch (e: unknown) {
+        return res
+          .status(400)
+          .json({
+            error: 'بيانات غير صالحة',
+            details: e instanceof Error ? e.message : 'Unknown error',
+          });
       }
 
       await db
@@ -67,17 +75,17 @@ export default async function handler(req: any, res: any) {
         .values({
           userId,
           date: date,
-          checked: checked ?? {},
-          subChecked: subChecked ?? {},
-          skipped: skipped ?? {},
+          checked: parsedChecked,
+          subChecked: parsedSubChecked,
+          skipped: parsedSkipped,
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
           target: [dailyState.userId, dailyState.date],
           set: {
-            checked: checked ?? {},
-            subChecked: subChecked ?? {},
-            skipped: skipped ?? {},
+            checked: parsedChecked,
+            subChecked: parsedSubChecked,
+            skipped: parsedSkipped,
             updatedAt: new Date(),
           },
         });
@@ -86,7 +94,7 @@ export default async function handler(req: any, res: any) {
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Daily Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });

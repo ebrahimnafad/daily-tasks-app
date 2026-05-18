@@ -11,8 +11,9 @@ import { db } from './_shared/db.js';
 import { tasks } from '../src/db/schema.js';
 import { eq, inArray, isNull, isNotNull, gte, and } from 'drizzle-orm';
 import { withValidation } from './_shared/withValidation.js';
+import type { ApiRequest, ApiResponse } from './_shared/types.js';
 
-const handler = async function handler(req: any, res: any) {
+const handler = async function handler(req: ApiRequest, res: ApiResponse) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -46,7 +47,7 @@ const handler = async function handler(req: any, res: any) {
         .from(tasks)
         .where(and(eq(tasks.userId, userId), isNull(tasks.deletedAt)));
 
-      const tasksResponse = rows.map((r: any) => ({
+      const tasksResponse = rows.map((r: Record<string, unknown>) => ({
         id: r.id,
         icon: r.icon,
         title: r.title,
@@ -62,14 +63,22 @@ const handler = async function handler(req: any, res: any) {
         isPinned: r.isPinned,
         subtasks: r.subtasks || [],
         brief: r.brief || {},
-        createdAt: r.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: r.updatedAt?.toISOString() || new Date().toISOString(),
+        createdAt: r.createdAt
+          ? new Date(r.createdAt as string | number | Date).toISOString()
+          : new Date().toISOString(),
+        updatedAt: r.updatedAt
+          ? new Date(r.updatedAt as string | number | Date).toISOString()
+          : new Date().toISOString(),
       }));
 
       let maxUpdatedAt = null;
       if (tasksResponse.length > 0) {
         maxUpdatedAt = new Date(
-          Math.max(...tasksResponse.map((t: any) => new Date(t.updatedAt).getTime()))
+          Math.max(
+            ...tasksResponse.map((t: Record<string, unknown>) =>
+              new Date(t.updatedAt as string).getTime()
+            )
+          )
         ).toISOString();
       }
 
@@ -172,26 +181,31 @@ const handler = async function handler(req: any, res: any) {
       }
 
       for (const task of toInsert) {
-        const { id: _discard, ...taskData } = task;
+        const taskData: Record<string, unknown> = { ...task };
+        delete taskData.id;
 
         const insertData = {
           userId: userId,
-          icon: taskData.icon || null,
-          title: taskData.title || '',
-          category: taskData.category || null,
-          color: taskData.color || null,
-          shifts: taskData.shifts || [],
-          timeBlock: taskData.timeBlock || null,
-          isWarning: taskData.isWarning || false,
-          recurrence: taskData.recurrence || null,
-          targetDate: taskData.date || null,
-          alertTime: taskData.alertTime || null,
-          isPrayerTask: taskData.isPrayerTask || false,
-          isPinned: taskData.isPinned || false,
-          subtasks: taskData.subtasks || [],
-          brief: taskData.brief || {},
-          createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
-          updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
+          icon: taskData.icon ? String(taskData.icon) : null,
+          title: String(taskData.title || ''),
+          category: taskData.category ? String(taskData.category) : null,
+          color: taskData.color ? String(taskData.color) : null,
+          shifts: (taskData.shifts as string[]) || [],
+          timeBlock: taskData.timeBlock ? String(taskData.timeBlock) : null,
+          isWarning: Boolean(taskData.isWarning || false),
+          recurrence: taskData.recurrence ? String(taskData.recurrence) : null,
+          targetDate: taskData.date ? String(taskData.date) : null,
+          alertTime: taskData.alertTime ? String(taskData.alertTime) : null,
+          isPrayerTask: Boolean(taskData.isPrayerTask || false),
+          isPinned: Boolean(taskData.isPinned || false),
+          subtasks: (taskData.subtasks as Record<string, unknown>[]) || [],
+          brief: (taskData.brief as Record<string, unknown>) || {},
+          createdAt: taskData.createdAt
+            ? new Date(taskData.createdAt as string | number)
+            : new Date(),
+          updatedAt: taskData.updatedAt
+            ? new Date(taskData.updatedAt as string | number)
+            : new Date(),
         };
 
         await db.insert(tasks).values(insertData);
@@ -202,7 +216,7 @@ const handler = async function handler(req: any, res: any) {
         .from(tasks)
         .where(and(eq(tasks.userId, userId), isNull(tasks.deletedAt)));
 
-      const tasksResponse = savedRows.map((r: any) => ({
+      const tasksResponse = savedRows.map((r: Record<string, unknown>) => ({
         id: r.id,
         icon: r.icon,
         title: r.title,
@@ -218,19 +232,23 @@ const handler = async function handler(req: any, res: any) {
         isPinned: r.isPinned,
         subtasks: r.subtasks || [],
         brief: r.brief || {},
-        createdAt: r.createdAt?.toISOString() || new Date().toISOString(),
-        updatedAt: r.updatedAt?.toISOString() || new Date().toISOString(),
+        createdAt: r.createdAt
+          ? new Date(r.createdAt as string | number | Date).toISOString()
+          : new Date().toISOString(),
+        updatedAt: r.updatedAt
+          ? new Date(r.updatedAt as string | number | Date).toISOString()
+          : new Date().toISOString(),
       }));
 
       return res.status(200).json({ ok: true, tasks: tasksResponse });
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Tasks Error:', error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 };
 
-export default withValidation(handler as any);
+export default withValidation(handler);

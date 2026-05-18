@@ -518,7 +518,7 @@ export default function useSync(
 
   // ── Mutations ─────────────────────────────────────────────────────────
   const { mutate: updateTasksMut, mutateAsync: updateTasksMutAsync } = useMutation<
-    any,
+    { tasks?: Task[] },
     Error,
     Task[]
   >({

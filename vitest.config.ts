@@ -13,10 +13,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'json', 'html', 'lcov'],
       exclude: ['node_modules/', 'src/test/', '**/*.d.ts', '**/*.config.*'],
-      lines: 80,
-      functions: 80,
-      branches: 75,
-      statements: 80,
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
     },
   },
   resolve: {

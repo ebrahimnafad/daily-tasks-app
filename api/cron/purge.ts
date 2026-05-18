@@ -2,7 +2,9 @@ import { db } from '../_shared/db.js';
 import { tasks } from '../../src/db/schema.js';
 import { and, isNotNull, lt } from 'drizzle-orm';
 
-export default async function handler(req: any, res: any) {
+import type { ApiRequest, ApiResponse } from '../_shared/types.js';
+
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   // Vercel cron sends GET with a cron secret header
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).end();

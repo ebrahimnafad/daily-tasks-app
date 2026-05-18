@@ -13,7 +13,7 @@ try {
   console.log('Running drizzle-kit push...');
   execSync('npx drizzle-kit push', { stdio: 'inherit' });
   console.log('✅ Database migration completed successfully.');
-} catch (error) {
+} catch {
   console.error('❌ Database migration failed.');
   process.exit(1);
 }

@@ -17,8 +17,11 @@ const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-function setCorsHeaders(req: any, res: any) {
-  const origin = req.headers.origin;
+import type { ApiRequest, ApiResponse } from './_shared/types.js';
+
+function setCorsHeaders(req: ApiRequest, res: ApiResponse) {
+  const originHeader = req.headers.origin;
+  const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
 
   if (!origin) {
     return;
@@ -37,9 +40,10 @@ function setCorsHeaders(req: any, res: any) {
 }
 
 // ── Payload Validation ────────────────────────────────────────────────────
-function validateSheetsPayload(payload: any) {
+function validateSheetsPayload(payload: unknown) {
   if (!payload || typeof payload !== 'object') return false;
 
+  const p = payload as Record<string, unknown>;
   const requiredFields = [
     'date',
     'progress',
@@ -49,13 +53,13 @@ function validateSheetsPayload(payload: any) {
     'tasksTotal',
   ];
   for (const field of requiredFields) {
-    if (typeof payload[field] === 'undefined') return false;
+    if (typeof p[field] === 'undefined') return false;
   }
 
   return true;
 }
 
-export default async function handler(req: any, res: any) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -98,7 +102,7 @@ export default async function handler(req: any, res: any) {
 
       console.log('Successfully forwarded to Google Sheets');
       return res.status(200).json({ ok: true });
-    } catch (error: any) {
+    } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Unknown error';
       console.error('Failed to send to Google Sheets:', message);
       return res.status(500).json({ error: 'Failed to process request' });

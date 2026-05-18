@@ -98,7 +98,7 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
             expenseId: r.expenseId,
             categoryId: r.categoryId,
             amount: r.amount,
-            date: r.transactionDate?.toISOString() || new Date().toISOString(),
+            date: r.transactionDate ? String(r.transactionDate) : new Date().toISOString(),
             status: r.status,
             notes: r.notes,
             currencySymbol: r.currencySymbol,
@@ -139,8 +139,8 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           // We map back to what the frontend schema expects:
           data = rows.map((r: typeof financeCategories.$inferSelect) => ({
             id: r.id,
-            title: r.name || r.title, // map db 'name' to frontend 'name/title'
-            name: r.name || r.title,
+            title: r.name, // map db 'name' to frontend 'name/title'
+            name: r.name,
             icon: r.icon,
             color: r.color,
             monthlyBudget: r.monthlyBudget || 0,
@@ -208,7 +208,9 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
       }
 
       await db.transaction(async (tx) => {
-        const itemIds = data.map((d: { id?: unknown }) => d.id).filter((id: unknown) => id != null);
+        const itemIds = data
+          .map((d: Record<string, unknown>) => String(d.id))
+          .filter((id: string) => id !== 'undefined' && id !== 'null');
 
         if (finRes.table === 'finance_income') {
           if (itemIds.length > 0)
@@ -222,15 +224,15 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           for (const item of data) {
             if (!item.id) continue;
             const insertData = {
-              id: item.id,
+              id: String(item.id),
               userId: userId,
-              title: item.title || '',
-              icon: item.icon || null,
+              title: String(item.title || ''),
+              icon: item.icon ? String(item.icon) : null,
               amount: item.amount ? String(item.amount) : '0',
-              frequency: item.frequency || null,
-              incomeType: item.type || null,
-              isActive: item.isActive ?? true,
-              notes: item.notes || null,
+              frequency: item.frequency ? String(item.frequency) : null,
+              incomeType: item.type ? String(item.type) : null,
+              isActive: Boolean(item.isActive ?? true),
+              notes: item.notes ? String(item.notes) : null,
               createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
               updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
@@ -258,23 +260,23 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           for (const item of data) {
             if (!item.id) continue;
             const insertData = {
-              id: item.id,
+              id: String(item.id),
               userId: userId,
-              categoryId: item.categoryId || null,
-              title: item.title || '',
-              icon: item.icon || null,
+              categoryId: item.categoryId ? String(item.categoryId) : null,
+              title: String(item.title || ''),
+              icon: item.icon ? String(item.icon) : null,
               amount: item.amount ? String(item.amount) : '0',
-              frequency: item.frequency || null,
-              expenseType: item.type || null,
-              isActive: item.isActive ?? true,
-              dueDay: item.dueDay || null,
-              quarterMonth: item.quarterMonth || null,
+              frequency: item.frequency ? String(item.frequency) : null,
+              expenseType: item.type ? String(item.type) : null,
+              isActive: Boolean(item.isActive ?? true),
+              dueDay: item.dueDay ? Number(item.dueDay) : null,
+              quarterMonth: item.quarterMonth ? Number(item.quarterMonth) : null,
               totalAmount: item.totalAmount ? String(item.totalAmount) : null,
-              totalInstallments: item.totalInstallments || null,
-              endDate: item.endDate ? new Date(item.endDate as string) : null,
-              seasonMonth: item.seasonMonth || null,
+              totalInstallments: item.totalInstallments ? Number(item.totalInstallments) : null,
+              endDate: item.endDate ? String(item.endDate) : null,
+              seasonMonth: item.seasonMonth ? Number(item.seasonMonth) : null,
               monthlySetAside: item.monthlySetAside ? String(item.monthlySetAside) : null,
-              notes: item.notes || null,
+              notes: item.notes ? String(item.notes) : null,
               createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
               updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
@@ -305,15 +307,15 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           for (const item of data) {
             if (!item.id || !item.categoryId) continue;
             const insertData = {
-              id: item.id,
+              id: String(item.id),
               userId: userId,
-              expenseId: item.expenseId || null,
-              categoryId: item.categoryId,
+              expenseId: item.expenseId ? String(item.expenseId) : null,
+              categoryId: String(item.categoryId),
               amount: item.amount ? String(item.amount) : '0',
-              transactionDate: item.date ? new Date(item.date as string) : new Date(),
-              status: item.status || null,
-              notes: item.notes || null,
-              currencySymbol: item.currencySymbol || null,
+              transactionDate: item.date ? String(item.date) : new Date().toISOString(),
+              status: item.status ? String(item.status) : null,
+              notes: item.notes ? String(item.notes) : null,
+              currencySymbol: item.currencySymbol ? String(item.currencySymbol) : null,
               exchangeRate: item.exchangeRate ? String(item.exchangeRate) : null,
               originalAmount: item.originalAmount ? String(item.originalAmount) : null,
               createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
@@ -343,16 +345,16 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           for (const item of data) {
             if (!item.id) continue;
             const insertData = {
-              id: item.id,
+              id: String(item.id),
               userId: userId,
-              title: item.title || '',
-              icon: item.icon || null,
+              title: String(item.title || ''),
+              icon: item.icon ? String(item.icon) : null,
               targetAmount: item.targetAmount ? String(item.targetAmount) : '0',
               currentSaved: item.currentSaved ? String(item.currentSaved) : '0',
-              deadline: item.deadline ? new Date(item.deadline as string) : null,
+              deadline: item.deadline ? String(item.deadline) : null,
               monthlyTarget: item.monthlyTarget ? String(item.monthlyTarget) : null,
-              isActive: item.isActive ?? true,
-              notes: item.notes || null,
+              isActive: Boolean(item.isActive ?? true),
+              notes: item.notes ? String(item.notes) : null,
               createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
               updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };
@@ -380,14 +382,14 @@ export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: F
           for (const item of data) {
             if (!item.id) continue;
             const insertData = {
-              id: item.id,
+              id: String(item.id),
               userId: userId,
-              name: item.name || item.title || '',
-              icon: item.icon || null,
-              color: item.color || null,
+              name: item.name ? String(item.name) : item.title ? String(item.title) : '',
+              icon: item.icon ? String(item.icon) : null,
+              color: item.color ? String(item.color) : null,
               monthlyBudget: item.monthlyBudget ? String(item.monthlyBudget) : null,
-              isCustom: item.isCustom ?? false,
-              displayOrder: item.order || item.sortOrder || 0,
+              isCustom: Boolean(item.isCustom ?? false),
+              displayOrder: Number(item.order || item.sortOrder || 0),
               createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
               updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
             };

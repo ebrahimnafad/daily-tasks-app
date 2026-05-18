@@ -203,15 +203,19 @@ describe('parseTaskFormSafe', () => {
     const result = parseTaskFormSafe(validForm);
 
     expect(result.success).toBe(true);
-    expect(result.data).toEqual(validForm);
+    if (result.success) {
+      expect(result.data).toEqual(validForm);
+    }
   });
 
   it('should return errors for invalid form', () => {
     const result = parseTaskFormSafe({ ...validForm, title: '' });
 
     expect(result.success).toBe(false);
-    expect(result.errors).toBeDefined();
-    expect(result.errors.length).toBeGreaterThan(0);
+    if (!result.success) {
+      expect(result.errors).toBeDefined();
+      expect(result.errors.length).toBeGreaterThan(0);
+    }
   });
 
   it('should collect multiple errors', () => {
@@ -222,7 +226,9 @@ describe('parseTaskFormSafe', () => {
     });
 
     expect(result.success).toBe(false);
-    expect(result.errors.length).toBeGreaterThanOrEqual(2);
+    if (!result.success) {
+      expect(result.errors.length).toBeGreaterThanOrEqual(2);
+    }
   });
 });
 
