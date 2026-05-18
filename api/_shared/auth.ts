@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import type { ApiRequest, ApiResponse } from './types.js';
 
 export interface JwtPayload {
   userId: number;
@@ -13,7 +14,7 @@ export const getJwtSecret = () => {
 };
 
 export async function signToken(payload: JwtPayload) {
-  return new SignJWT(payload as any)
+  return new SignJWT(payload as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
@@ -30,8 +31,8 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
 }
 
 /** Extracts and verifies the Bearer token. Returns payload or sends 401 and returns null. */
-export async function requireAuth(req: any, res: any): Promise<JwtPayload | null> {
-  const authHeader = req.headers.authorization;
+export async function requireAuth(req: ApiRequest, res: ApiResponse): Promise<JwtPayload | null> {
+  const authHeader = req.headers.authorization as string | undefined;
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'غير مصرح — يرجى تسجيل الدخول' });
     return null;

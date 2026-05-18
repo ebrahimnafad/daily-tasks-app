@@ -1,5 +1,6 @@
 import { setCorsHeaders } from './cors.js';
 import { requireAuth } from './auth.js';
+import type { ApiRequest, ApiResponse } from './types.js';
 import { z } from 'zod';
 import { db } from './db.js';
 import {
@@ -23,8 +24,7 @@ interface FinRes {
   field: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function handleFinance(req: any, res: any, finRes: FinRes) {
+export async function handleFinance(req: ApiRequest, res: ApiResponse, finRes: FinRes) {
   setCorsHeaders(req, res);
 
   if (req.method === 'OPTIONS') {
@@ -208,7 +208,7 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
       }
 
       await db.transaction(async (tx) => {
-        const itemIds = data.map((d: any) => d.id).filter((id: any) => id != null);
+        const itemIds = data.map((d: { id?: unknown }) => d.id).filter((id: unknown) => id != null);
 
         if (finRes.table === 'finance_income') {
           if (itemIds.length > 0)
@@ -410,8 +410,9 @@ export async function handleFinance(req: any, res: any, finRes: FinRes) {
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Finance Error (${finRes.table}):`, error);
-    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: error.message });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });
   }
 }

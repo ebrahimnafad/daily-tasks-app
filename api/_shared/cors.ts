@@ -1,3 +1,5 @@
+import type { ApiRequest, ApiResponse } from './types.js';
+
 export const ALLOWED_ORIGINS = [
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
   process.env.FRONTEND_URL,
@@ -6,7 +8,7 @@ export const ALLOWED_ORIGINS = [
   'http://localhost:3000',
 ].filter(Boolean);
 
-export function setCorsHeaders(req: any, res: any) {
+export function setCorsHeaders(req: ApiRequest, res: ApiResponse) {
   const origin = req.headers.origin;
 
   if (!origin) {

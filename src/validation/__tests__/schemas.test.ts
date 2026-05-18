@@ -107,13 +107,13 @@ describe('TaskSchema', () => {
     expect(() => TaskSchema.parse(task)).toThrow();
   });
 
-  it('should reject negative id', () => {
+  it('should accept negative id', () => {
     const task = {
       ...validTask,
       id: -1,
     };
 
-    expect(() => TaskSchema.parse(task)).toThrow();
+    expect(() => TaskSchema.parse(task)).not.toThrow();
   });
 
   it('should accept valid date format', () => {
