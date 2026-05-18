@@ -51,8 +51,6 @@ export const TaskSchema = z.object({
   date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
   alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).nullish(),
   isPrayerTask: z.boolean(),
-  isPinned: z.boolean().nullish(),
-  time: z.string().nullish(),
   subtasks: z.array(
     z
       .object({
@@ -69,6 +67,7 @@ export const TaskSchema = z.object({
     })
     .strict(),
   isPinned: z.boolean().optional(),
+  time: z.string().nullish(),
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
 });
