@@ -17,7 +17,7 @@ function migrateLegacy(onQuota?: () => void): CalendarNote[] {
     const notes: CalendarNote[] = Object.entries(legacy)
       .filter(([, text]) => typeof text === 'string' && text.trim().length > 0)
       .map(([date, text]) => ({
-        id: `legacy-${date}`,
+        id: crypto.randomUUID(),
         date,
         text: text.trim(),
         createdAt: now,
@@ -36,10 +36,27 @@ function migrateLegacy(onQuota?: () => void): CalendarNote[] {
   }
 }
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function initialLoad(onQuota?: () => void): CalendarNote[] {
   const existing = lsGet<CalendarNote[] | null>(LS_KEY, null);
-  if (Array.isArray(existing) && existing.length > 0) return existing;
-  // Try migration
+  if (Array.isArray(existing) && existing.length > 0) {
+    // Migrate any legacy Math.random() or "legacy-date" IDs to valid UUIDs
+    // to prevent Postgres from crashing with "invalid input syntax for type uuid"
+    let mutated = false;
+    const validated = existing.map((n) => {
+      if (!UUID_REGEX.test(n.id)) {
+        mutated = true;
+        return { ...n, id: crypto.randomUUID() };
+      }
+      return n;
+    });
+    if (mutated) {
+      lsSet(LS_KEY, validated, onQuota);
+    }
+    return validated;
+  }
+  // Try legacy migration
   return migrateLegacy(onQuota);
 }
 
@@ -69,7 +86,7 @@ interface UseNotesSyncReturn {
 }
 
 function nanoid(): string {
-  return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  return crypto.randomUUID();
 }
 
 export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
