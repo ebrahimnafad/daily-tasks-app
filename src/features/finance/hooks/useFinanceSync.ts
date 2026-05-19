@@ -9,6 +9,7 @@ import type {
 } from '../types';
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../constants';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
+import { authFetch } from '@/features/auth/authFetch';
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
 export const KEYS = {
@@ -144,7 +145,7 @@ export default function useFinanceSync(onQuota?: () => void) {
       ];
       const results = await Promise.all(
         resources.map((r) =>
-          fetch(`/api/finance?resource=${r.key}`, {
+          authFetch(`/api/finance?resource=${r.key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ [r.key]: r.data }),
@@ -170,7 +171,7 @@ export default function useFinanceSync(onQuota?: () => void) {
     try {
       const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
       const responses = await Promise.all(
-        resources.map((r) => fetch(`/api/finance?resource=${r}`, { cache: 'no-store' }))
+        resources.map((r) => authFetch(`/api/finance?resource=${r}`, { cache: 'no-store' }))
       );
       if (responses.some((r) => !r.ok)) {
         setSyncStatus('offline');
