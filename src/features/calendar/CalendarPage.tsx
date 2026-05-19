@@ -594,14 +594,14 @@ export default function CalendarPage({
       {/* Header */}
       <div className="cal-header">
         <button className="cal-nav" onClick={goToPrevMonth}>
-          ◀
+          ▶
         </button>
         <div className="cal-title">
           <span>{MONTHS[month]}</span>
           <span style={{ fontWeight: 400 }}>{year}</span>
         </div>
         <button className="cal-nav" onClick={goToNextMonth}>
-          ▶
+          ◀
         </button>
       </div>
 
