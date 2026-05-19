@@ -39,14 +39,6 @@ export interface TimeBlock {
   isRest?: boolean;
 }
 
-export interface FridaySchedule {
-  /** 24h decimal start, e.g. 18.5 = 6:30 PM */
-  start: number;
-  /** 24h decimal end — may be next day, e.g. 3 = 3 AM next day */
-  end: number;
-  label: string;
-}
-
 export type ShiftType = 'morning' | 'evening';
 
 export interface ShiftConfig {
@@ -62,8 +54,7 @@ export interface ShiftConfig {
    *  computeShift() treats times before this hour on Friday as still the previous week.
    *  Persisted automatically as part of ShiftConfig inside 'mhm_schedule'. */
   weekStartHour?: number;
-  /** Friday special schedule for this shift */
-  fridaySchedule: FridaySchedule;
+
   blocks: TimeBlock[];
   /** Custom block schedules per day of week (0=Sun…6=Sat) */
   dayOverrides?: Partial<Record<number, TimeBlock[]>>;
@@ -99,11 +90,7 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
     //             off days regardless of what the user sets. See isWorkday() below.
     offDayLabel: '',
     weekStartHour: 0, // midnight — matches existing behavior, safe default
-    fridaySchedule: {
-      start: 13, // 1:00 PM
-      end: 21.5, // 9:30 PM
-      label: 'الجمعة (بعد الظهر) ١م — ٩:٣٠م',
-    },
+
     blocks: EVENING_BLOCKS,
   },
   {
@@ -113,11 +100,7 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
     offDays: [4, 6], // Thursday + Saturday
     offDayLabel: 'إجازة — الخميس والسبت',
     weekStartHour: 0, // midnight — matches existing behavior, safe default
-    fridaySchedule: {
-      start: 18.5, // 6:30 PM
-      end: 3, // 3:00 AM next day
-      label: 'الجمعة (مسائي) ٦:٣٠م — ٣ص',
-    },
+
     blocks: MORNING_BLOCKS,
   },
 ];

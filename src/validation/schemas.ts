@@ -324,13 +324,6 @@ export const scheduleDataSchema = z.array(
       offDays: z.array(z.number()).optional(),
       offDayLabel: z.string().optional(),
       weekStartHour: z.number().optional(),
-      fridaySchedule: z
-        .object({
-          start: z.number(),
-          end: z.number(),
-          label: z.string(),
-        })
-        .optional(),
     })
     .strict()
 );

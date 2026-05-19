@@ -8,7 +8,7 @@
 //  What it does:
 //    1. Remaps task.timeBlock using BLOCK_ID_MIGRATION_V2
 //    2. Replaces each shift's blocks[] with the new canonical blocks,
-//       preserving all other shift metadata (offDays, fridaySchedule, etc.)
+//       preserving all other shift metadata (offDays, weekStartHour, etc.)
 //
 import type { Task } from '@/types';
 import {
@@ -43,7 +43,7 @@ function migrateTasks(tasks: Task[]): Task[] {
 
 /**
  * Replace each shift's blocks[] with the new canonical blocks while preserving
- * all user-customised shift metadata (offDays, fridaySchedule, weekStartHour, etc.).
+ * all user-customised shift metadata (offDays, weekStartHour, etc.).
  *
  * dayOverrides are cleared — they referenced old block IDs and would drift otherwise.
  * The user can re-apply day overrides via ScheduleSettingsModal after migration.
