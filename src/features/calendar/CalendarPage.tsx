@@ -101,22 +101,38 @@ export default function CalendarPage({
     });
   }, []);
 
+  // ── Work-day exceptions (per-date overrides: work → off) ──────────────
+  const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions';
+  const [workExceptions, setWorkExceptions] = useState<string[]>(() =>
+    lsGet<string[]>(LS_WORK_EXCEPTIONS_KEY, [])
+  );
+
+  const toggleWorkException = useCallback((dateStr: string) => {
+    setWorkExceptions((prev) => {
+      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
+      lsSet(LS_WORK_EXCEPTIONS_KEY, next);
+      return next;
+    });
+  }, []);
+
   /** Classify a calendar date as morning-shift, evening-shift, or off-day.
-   *  Off-day exceptions (user-set) override the normal off classification. */
+   *  Both off→work and work→off user exceptions override the normal classification. */
   const getDayShiftType = useCallback(
     (dateStr: string): DayShiftType => {
+      // Work-day marked as exceptional off
+      if (workExceptions.includes(dateStr)) return 'off';
       const date = new Date(dateStr + 'T12:00:00');
       const shiftId = computeShift(shiftEpoch, schedule, date);
       const shift = schedule.find((s) => s.id === shiftId);
       const dow = date.getDay();
       if (shift?.offDays.includes(dow)) {
-        // User has marked this specific date as a work-day exception
+        // Off-day marked as exceptional work day
         if (offExceptions.includes(dateStr)) return shiftId as DayShiftType;
         return 'off';
       }
       return shiftId as DayShiftType;
     },
-    [schedule, shiftEpoch, offExceptions]
+    [schedule, shiftEpoch, offExceptions, workExceptions]
   );
 
   // ── Holiday offsets (user-confirmed moon-sighting adjustments) ────
@@ -439,12 +455,18 @@ export default function CalendarPage({
     let hasLateOffDay = false;
     for (let d = 1; d <= days; d++) {
       const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      // Work-day manually marked as off
+      if (workExceptions.includes(dateStr)) {
+        offCount++;
+        if (d >= 26) hasLateOffDay = true;
+        continue;
+      }
       const date = new Date(dateStr + 'T12:00:00');
       const shiftId = computeShift(shiftEpoch, schedule, date);
       const shift = schedule.find((s) => s.id === shiftId);
       const isStructurallyOff = !!shift?.offDays.includes(date.getDay());
-      const isException = offExceptions.includes(dateStr);
-      if (isStructurallyOff && !isException) {
+      const isOffException = offExceptions.includes(dateStr);
+      if (isStructurallyOff && !isOffException) {
         offCount++;
         if (d >= 26) hasLateOffDay = true;
       }
@@ -461,7 +483,7 @@ export default function CalendarPage({
       });
     return warnings;
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
-  }, [year, month, shiftEpoch, schedule, offExceptions]);
+  }, [year, month, shiftEpoch, schedule, offExceptions, workExceptions]);
 
   // True if the selected date is a structural off-day (before exception override)
   const selectedDateIsStructurallyOff = useMemo(() => {
@@ -472,6 +494,8 @@ export default function CalendarPage({
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [selectedDate, shiftEpoch, schedule]);
   const selectedDateIsException = offExceptions.includes(selectedDate);
+  // True when a structurally normal work day has been manually marked as off
+  const selectedDateIsWorkException = workExceptions.includes(selectedDate);
 
   return (
     <div className="cal-view">
@@ -818,7 +842,7 @@ export default function CalendarPage({
                 month: 'long',
               })}
             </h3>
-            {/* ── Off-day exception toggle ── */}
+            {/* ── Off-day exception toggle (off → work) ── */}
             {selectedDateIsStructurallyOff && (
               <div className="cal-exception-row">
                 <span className="cal-exception-row__label">
@@ -831,6 +855,25 @@ export default function CalendarPage({
                   onClick={() => toggleOffException(selectedDate)}
                 >
                   {selectedDateIsException ? 'إلغاء الاستثناء' : 'اعتبره يوم عمل'}
+                </button>
+              </div>
+            )}
+
+            {/* ── Work-day exception toggle (work → off) ── */}
+            {!selectedDateIsStructurallyOff && (
+              <div
+                className={`cal-exception-row ${selectedDateIsWorkException ? 'cal-exception-row--off' : ''}`}
+              >
+                <span className="cal-exception-row__label">
+                  {selectedDateIsWorkException
+                    ? '🏖️ معتمد كيوم إجازة استثنائي'
+                    : '💼 هذا اليوم عمل وفق جدولك'}
+                </span>
+                <button
+                  className={`cal-exception-btn ${selectedDateIsWorkException ? 'cal-exception-btn--off' : ''}`}
+                  onClick={() => toggleWorkException(selectedDate)}
+                >
+                  {selectedDateIsWorkException ? 'إلغاء الاستثناء' : 'اعتبره إجازة استثنائية'}
                 </button>
               </div>
             )}
