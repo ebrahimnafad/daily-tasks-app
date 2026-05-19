@@ -19,40 +19,52 @@ interface TagInputHandle {
   flush: () => string[];
 }
 
-const TagInput = forwardRef<TagInputHandle, { tags: string[]; onChange: (tags: string[]) => void }>(
-  ({ tags, onChange }, ref) => {
-    const [input, setInput] = useState('');
+const TagInput = forwardRef<
+  TagInputHandle,
+  { tags: string[]; onChange: (tags: string[]) => void; allTags?: string[] }
+>(({ tags, onChange, allTags = [] }, ref) => {
+  const [input, setInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
-    // Expose flush() so parents can call it synchronously before save
-    useImperativeHandle(ref, () => ({
-      flush: () => {
-        const newTag = input.trim().replace(/^#/, '');
-        if (newTag && !tags.includes(newTag)) {
-          const next = [...tags, newTag];
-          onChange(next);
-          setInput('');
-          return next;
-        }
-        return tags;
-      },
-    }));
+  const suggestions = allTags.filter(
+    (t) => !tags.includes(t) && t.toLowerCase().includes(input.toLowerCase().replace(/^#/, ''))
+  );
 
-    const commitInput = () => {
+  // Expose flush() so parents can call it synchronously before save
+  useImperativeHandle(ref, () => ({
+    flush: () => {
       const newTag = input.trim().replace(/^#/, '');
       if (newTag && !tags.includes(newTag)) {
-        onChange([...tags, newTag]);
+        const next = [...tags, newTag];
+        onChange(next);
+        setInput('');
+        return next;
       }
-      setInput('');
-    };
+      return tags;
+    },
+  }));
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        commitInput();
-      }
-    };
+  const commitInput = (value?: string) => {
+    const newTag = (value ?? input).trim().replace(/^#/, '');
+    if (newTag && !tags.includes(newTag)) {
+      onChange([...tags, newTag]);
+    }
+    setInput('');
+    setShowSuggestions(false);
+  };
 
-    return (
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      commitInput();
+    }
+    if (e.key === 'Escape') {
+      setShowSuggestions(false);
+    }
+  };
+
+  return (
+    <div style={{ position: 'relative' }}>
       <div
         style={{
           display: 'flex',
@@ -62,6 +74,11 @@ const TagInput = forwardRef<TagInputHandle, { tags: string[]; onChange: (tags: s
           padding: '4px 8px',
           background: 'var(--bg-lighter)',
           borderRadius: '6px',
+          border:
+            showSuggestions && suggestions.length > 0
+              ? '1px solid rgba(var(--gold-rgb), 0.35)'
+              : '1px solid transparent',
+          transition: 'border-color 0.2s',
         }}
       >
         {tags.map((tag) => (
@@ -96,9 +113,19 @@ const TagInput = forwardRef<TagInputHandle, { tags: string[]; onChange: (tags: s
         ))}
         <input
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setShowSuggestions(true);
+          }}
           onKeyDown={handleKeyDown}
-          onBlur={commitInput}
+          onBlur={() => {
+            // Delay so suggestion clicks register first
+            setTimeout(() => {
+              commitInput();
+              setShowSuggestions(false);
+            }, 150);
+          }}
+          onFocus={() => setShowSuggestions(true)}
           placeholder={
             tags.length === 0 ? 'أضف تصنيف (اضغط Enter أو انتقل للحفظ)' : 'تصنيف جديد...'
           }
@@ -106,16 +133,74 @@ const TagInput = forwardRef<TagInputHandle, { tags: string[]; onChange: (tags: s
             background: 'transparent',
             border: 'none',
             outline: 'none',
-            color: 'var(--text-color)',
+            color: 'var(--gold)',
             fontSize: '0.85em',
             flex: 1,
             minWidth: '100px',
           }}
         />
       </div>
-    );
-  }
-);
+
+      {/* Suggestions dropdown */}
+      {showSuggestions && suggestions.length > 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 'calc(100% + 4px)',
+            right: 0,
+            left: 0,
+            background: 'var(--bg-lighter)',
+            border: '1px solid rgba(var(--gold-rgb), 0.25)',
+            borderRadius: '8px',
+            boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+            zIndex: 100,
+            overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              padding: '4px 10px',
+              fontSize: '0.72em',
+              color: 'rgba(var(--gold-rgb), 0.5)',
+              borderBottom: '1px solid rgba(var(--gold-rgb), 0.1)',
+            }}
+          >
+            تصنيفات سابقة
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px 10px' }}>
+            {suggestions.map((s) => (
+              <button
+                key={s}
+                onMouseDown={(e) => {
+                  e.preventDefault(); // prevents blur from firing first
+                  commitInput(s);
+                }}
+                style={{
+                  background: 'rgba(var(--gold-rgb), 0.1)',
+                  border: '1px solid rgba(var(--gold-rgb), 0.25)',
+                  color: 'var(--gold)',
+                  borderRadius: '12px',
+                  padding: '2px 10px',
+                  fontSize: '0.8em',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) =>
+                  ((e.target as HTMLButtonElement).style.background = 'rgba(var(--gold-rgb), 0.25)')
+                }
+                onMouseLeave={(e) =>
+                  ((e.target as HTMLButtonElement).style.background = 'rgba(var(--gold-rgb), 0.1)')
+                }
+              >
+                #{s}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
 TagInput.displayName = 'TagInput';
 
 // ── Markdown toolbar helpers ──────────────────────────────────────────────
@@ -142,9 +227,10 @@ interface NoteCardProps {
   onUpdate: (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => void;
   onDelete: (id: string) => void;
   onTogglePin: (id: string) => void;
+  allTags?: string[];
 }
 
-function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
+function NoteCard({ note, onUpdate, onDelete, onTogglePin, allTags = [] }: NoteCardProps) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.text);
   const [draftTags, setDraftTags] = useState<string[]>(note.tags || []);
@@ -310,7 +396,7 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin }: NoteCardProps) {
             dir="auto"
           />
 
-          <TagInput ref={tagInputRef} tags={draftTags} onChange={setDraftTags} />
+          <TagInput ref={tagInputRef} tags={draftTags} onChange={setDraftTags} allTags={allTags} />
 
           <div
             style={{
@@ -368,9 +454,10 @@ interface AddNoteFormProps {
   date: string;
   onAdd: (date: string, text: string, tags?: string[]) => void;
   onClose: () => void;
+  allTags?: string[];
 }
 
-function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
+function AddNoteForm({ date, onAdd, onClose, allTags = [] }: AddNoteFormProps) {
   const [text, setText] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const taRef = useRef<HTMLTextAreaElement>(null);
@@ -444,7 +531,7 @@ function AddNoteForm({ date, onAdd, onClose }: AddNoteFormProps) {
         autoFocus
       />
 
-      <TagInput ref={tagInputRef} tags={tags} onChange={setTags} />
+      <TagInput ref={tagInputRef} tags={tags} onChange={setTags} allTags={allTags} />
 
       <div
         style={{
@@ -485,6 +572,9 @@ export default function NotesPanel({
 }: NotesPanelProps) {
   const [adding, setAdding] = useState(false);
 
+  // Collect all unique tags across every note for the suggestions dropdown
+  const allTags = [...new Set(notes.flatMap((n) => n.tags ?? []))];
+
   // Sort: pinned first, then newest
   const sorted = [...notes].sort((a, b) => {
     if (a.pinned && !b.pinned) return -1;
@@ -506,7 +596,9 @@ export default function NotesPanel({
         </button>
       </div>
 
-      {adding && <AddNoteForm date={date} onAdd={onAdd} onClose={() => setAdding(false)} />}
+      {adding && (
+        <AddNoteForm date={date} onAdd={onAdd} onClose={() => setAdding(false)} allTags={allTags} />
+      )}
 
       {sorted.length === 0 && !adding && (
         <p className="cal-notes-empty">
@@ -521,6 +613,7 @@ export default function NotesPanel({
           onUpdate={onUpdate}
           onDelete={onDelete}
           onTogglePin={onTogglePin}
+          allTags={allTags}
         />
       ))}
     </div>
