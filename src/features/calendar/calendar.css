@@ -196,6 +196,17 @@
   flex-direction: column;
   gap: var(--space-xs);
 }
+
+/* Force task titles to wrap fully inside the calendar panel.
+   The title span uses hardcoded inline ellipsis styles in TaskCard/Header.tsx,
+   so !important is required here to override them without touching the component. */
+.cal-date-tasks .task-card span[style*='ellipsis'] {
+  overflow: visible !important;
+  text-overflow: unset !important;
+  white-space: normal !important;
+  word-break: break-word;
+}
+
 .cal-task-item {
   display: flex;
   align-items: center;
