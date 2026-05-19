@@ -221,7 +221,13 @@ export default function TasksPage({ today, shift, setShift }: TasksPageProps) {
                       }}
                     >
                       {(() => {
-                        const formatH = (h: number) => `${h % 12 || 12}:00 ${h >= 12 ? 'م' : 'ص'}`;
+                        const formatH = (h: number) => {
+                          const whole = Math.floor(h);
+                          const m = Math.round((h - whole) * 60);
+                          const ampm = whole >= 12 && whole < 24 ? 'م' : 'ص';
+                          const dh = whole % 12 || 12;
+                          return `${dh}:${String(m).padStart(2, '0')} ${ampm}`;
+                        };
                         return `${formatH(block.startHour)} - ${formatH(block.endHour)}`;
                       })()}
                     </span>
