@@ -75,10 +75,8 @@ export function useTaskDerivedState(
         const anchor = new Date(t.date + 'T12:00:00');
         return anchor.getDay() === new Date().getDay();
       }
-      // 'Once' task: hide once it has been checked. The checked state is NOT
-      // cleared by resetNewDay, so the task stays visually done until the
-      // user manually deletes it — matching "مرة واحدة" (one-time) semantics.
-      if (rec === 'مرة واحدة' && !!checked[t.id]) return false;
+      // 'Once' task: stays visible (as checked) for the rest of the day so it
+      // appears in the daily snapshot. resetNewDay auto-deletes it on the next reset.
       return true;
     });
 

@@ -83,12 +83,10 @@ export default function useTaskManager(
       const r = t.recurrence ?? 'يومي';
       return (
         r === 'يومي' || (r === 'أيام العمل' && workday) || (r === 'أسبوعي' && isStartOfWeek)
-        // 'مرة واحدة' (once): excluded — checked state must persist so the filter
-        // keeps it hidden after completion. User manually deletes when done.
-        // 'أسبوعي' (weekly): resets on Friday (isStartOfWeek) — task only appears on its
-        // anchor day-of-week, so cleared state is invisible until the next anchor day.
-        // 'شهري' (monthly): no reset entry needed — task only appears on its anchor
-        // day-of-month, so the checked state from last month is never visible.
+        // 'مرة واحدة' (once): handled separately below — completed ones are deleted,
+        //   uncompleted ones are left untouched (still show up the next day).
+        // 'شهري' (monthly): no reset — task only appears on its anchor day-of-month,
+        //   so the checked state from last month is never visible.
       );
     });
     const ids = toReset.map((t) => t.id);
@@ -125,6 +123,28 @@ export default function useTaskManager(
       ids.forEach((id) => delete n[id]);
       return n;
     });
+
+    // Auto-delete completed once-tasks — they were visible (and snapshotted) all day,
+    // and should disappear on the next day rather than showing up unchecked.
+    const onceDoneIds = new Set(
+      tasks
+        .filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة' && !!checked[t.id])
+        .map((t) => t.id)
+    );
+    if (onceDoneIds.size > 0) {
+      setTasks((prev) => prev.filter((t) => !onceDoneIds.has(t.id)));
+      // Also clean up their checked/skipped entries
+      setChecked((p) => {
+        const n = { ...p };
+        onceDoneIds.forEach((id) => delete n[id]);
+        return n;
+      });
+      setSkipped((p) => {
+        const n = { ...p };
+        onceDoneIds.forEach((id) => delete n[id]);
+        return n;
+      });
+    }
   }, [
     tasks,
     shift,
