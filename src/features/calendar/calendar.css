@@ -990,3 +990,86 @@
     transform: translateX(0);
   }
 }
+
+/* ── Off-day warnings strip ──────────────────────────────────────────── */
+.cal-offday-warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 6px 0 2px;
+  animation: slideDown 0.2s ease;
+}
+.cal-offday-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-sm);
+  border: 1px solid;
+}
+.cal-offday-warning--excess {
+  background: rgba(230, 168, 85, 0.08);
+  border-color: rgba(230, 168, 85, 0.3);
+  color: rgba(230, 168, 85, 0.9);
+}
+.cal-offday-warning--late {
+  background: rgba(217, 126, 106, 0.08);
+  border-color: rgba(217, 126, 106, 0.3);
+  color: rgba(217, 126, 106, 0.9);
+}
+.cal-offday-warning__icon {
+  flex-shrink: 0;
+  font-size: 15px;
+}
+.cal-offday-warning__text {
+  flex: 1;
+  line-height: 1.4;
+}
+
+/* ── Off-day exception toggle row (selected-day panel) ───────────────── */
+.cal-exception-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  padding: 8px 12px;
+  margin-bottom: 10px;
+  background: rgba(100, 116, 139, 0.08);
+  border: 1px solid rgba(100, 116, 139, 0.25);
+  border-radius: var(--radius-md);
+  animation: slideDown 0.18s ease;
+}
+.cal-exception-row__label {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.65);
+  flex: 1;
+}
+.cal-exception-btn {
+  background: rgba(100, 116, 139, 0.15);
+  border: 1px solid rgba(100, 116, 139, 0.35);
+  border-radius: var(--radius-pill);
+  color: rgba(var(--gold-rgb), 0.75);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-sm);
+  padding: 4px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cal-exception-btn:hover {
+  background: rgba(var(--gold-rgb), 0.15);
+  border-color: rgba(var(--gold-rgb), 0.4);
+  color: var(--gold);
+}
+.cal-exception-btn--active {
+  background: rgba(155, 200, 122, 0.12);
+  border-color: rgba(155, 200, 122, 0.35);
+  color: rgba(155, 200, 122, 0.9);
+}
+.cal-exception-btn--active:hover {
+  background: rgba(155, 200, 122, 0.2);
+  border-color: rgba(155, 200, 122, 0.55);
+  color: rgb(155, 200, 122);
+}

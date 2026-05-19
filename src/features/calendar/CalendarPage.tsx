@@ -87,17 +87,36 @@ export default function CalendarPage({
     lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday())
   );
 
-  /** Classify a calendar date as morning-shift, evening-shift, or off-day */
+  // ── Off-day exceptions (per-date overrides: off → work) ────────────────
+  const LS_OFF_EXCEPTIONS_KEY = 'mhm_off_exceptions';
+  const [offExceptions, setOffExceptions] = useState<string[]>(() =>
+    lsGet<string[]>(LS_OFF_EXCEPTIONS_KEY, [])
+  );
+
+  const toggleOffException = useCallback((dateStr: string) => {
+    setOffExceptions((prev) => {
+      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
+      lsSet(LS_OFF_EXCEPTIONS_KEY, next);
+      return next;
+    });
+  }, []);
+
+  /** Classify a calendar date as morning-shift, evening-shift, or off-day.
+   *  Off-day exceptions (user-set) override the normal off classification. */
   const getDayShiftType = useCallback(
     (dateStr: string): DayShiftType => {
       const date = new Date(dateStr + 'T12:00:00');
       const shiftId = computeShift(shiftEpoch, schedule, date);
       const shift = schedule.find((s) => s.id === shiftId);
       const dow = date.getDay();
-      if (shift?.offDays.includes(dow)) return 'off';
+      if (shift?.offDays.includes(dow)) {
+        // User has marked this specific date as a work-day exception
+        if (offExceptions.includes(dateStr)) return shiftId as DayShiftType;
+        return 'off';
+      }
       return shiftId as DayShiftType;
     },
-    [schedule, shiftEpoch]
+    [schedule, shiftEpoch, offExceptions]
   );
 
   // ── Holiday offsets (user-confirmed moon-sighting adjustments) ────
@@ -411,6 +430,49 @@ export default function CalendarPage({
   const selectedDateFinance = financeEventsByDate[selectedDate] || [];
   const selectedDateNotes = notesByDate[selectedDate] ?? [];
 
+  // ── Off-day warnings for the viewed month ───────────────────────────
+  // Inline the shift-type logic to avoid a useCallback dependency (React Compiler rule).
+  const offDayWarnings = useMemo(() => {
+    const warnings: { type: string; message: string }[] = [];
+    const days = new Date(year, month + 1, 0).getDate();
+    let offCount = 0;
+    let hasLateOffDay = false;
+    for (let d = 1; d <= days; d++) {
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      const date = new Date(dateStr + 'T12:00:00');
+      const shiftId = computeShift(shiftEpoch, schedule, date);
+      const shift = schedule.find((s) => s.id === shiftId);
+      const isStructurallyOff = !!shift?.offDays.includes(date.getDay());
+      const isException = offExceptions.includes(dateStr);
+      if (isStructurallyOff && !isException) {
+        offCount++;
+        if (d >= 26) hasLateOffDay = true;
+      }
+    }
+    if (offCount > 4)
+      warnings.push({
+        type: 'excess',
+        message: `يوجد ${offCount} أيام إجازة هذا الشهر (يتجاوز الحد المعتاد 4)`,
+      });
+    if (hasLateOffDay)
+      warnings.push({
+        type: 'late',
+        message: 'يوجد يوم إجازة بعد اليوم 26 — قد يؤثر على إغلاق الحصة الشهرية',
+      });
+    return warnings;
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [year, month, shiftEpoch, schedule, offExceptions]);
+
+  // True if the selected date is a structural off-day (before exception override)
+  const selectedDateIsStructurallyOff = useMemo(() => {
+    const date = new Date(selectedDate + 'T12:00:00');
+    const shiftId = computeShift(shiftEpoch, schedule, date);
+    const shift = schedule.find((s) => s.id === shiftId);
+    return !!shift?.offDays.includes(date.getDay());
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [selectedDate, shiftEpoch, schedule]);
+  const selectedDateIsException = offExceptions.includes(selectedDate);
+
   return (
     <div className="cal-view">
       {/* Header */}
@@ -659,6 +721,20 @@ export default function CalendarPage({
             </button>
           </div>
 
+          {/* ── Off-day warnings for this month ── */}
+          {offDayWarnings.length > 0 && (
+            <div className="cal-offday-warnings">
+              {offDayWarnings.map((w) => (
+                <div key={w.type} className={`cal-offday-warning cal-offday-warning--${w.type}`}>
+                  <span className="cal-offday-warning__icon">
+                    {w.type === 'excess' ? '⚠️' : '📅⚠️'}
+                  </span>
+                  <span className="cal-offday-warning__text">{w.message}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* ── Financial settings panel ── */}
           {showFinSettings && (
             <div className="cal-fin-settings">
@@ -742,6 +818,23 @@ export default function CalendarPage({
                 month: 'long',
               })}
             </h3>
+            {/* ── Off-day exception toggle ── */}
+            {selectedDateIsStructurallyOff && (
+              <div className="cal-exception-row">
+                <span className="cal-exception-row__label">
+                  {selectedDateIsException
+                    ? '✅ معتمد كيوم عمل (استثناء)'
+                    : '🏖️ هذا اليوم إجازة وفق جدولك'}
+                </span>
+                <button
+                  className={`cal-exception-btn ${selectedDateIsException ? 'cal-exception-btn--active' : ''}`}
+                  onClick={() => toggleOffException(selectedDate)}
+                >
+                  {selectedDateIsException ? 'إلغاء الاستثناء' : 'اعتبره يوم عمل'}
+                </button>
+              </div>
+            )}
+
             {/* Financial cycle context banner */}
             {(finCycleMap[selectedDate] ?? []).map((ev) => (
               <div
