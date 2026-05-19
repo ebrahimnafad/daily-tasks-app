@@ -139,7 +139,12 @@ export default function CalendarPage({
   );
 
   // ── Snapshot summaries (for battery indicator) ──────────────────────
-  const [snapSummaries, setSnapSummaries] = useState<Record<string, SnapshotSummary>>({});
+  const LS_SNAP_SUMMARIES_KEY = 'mhm_snap_summaries';
+  const [snapSummaries, setSnapSummaries] = useState<Record<string, SnapshotSummary>>(
+    // Seed from localStorage so battery indicators appear instantly on first paint.
+    // Will be overwritten by the fresh network response in the background.
+    () => lsGet<Record<string, SnapshotSummary>>(LS_SNAP_SUMMARIES_KEY, {})
+  );
   const [selectedSnapshot, setSelectedSnapshot] = useState<DailySnapshot | null>(null);
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
 
@@ -155,6 +160,8 @@ export default function CalendarPage({
         data.summaries.forEach((s) => {
           map[s.date] = s;
         });
+        // Persist for next page load so indicators render instantly
+        lsSet(LS_SNAP_SUMMARIES_KEY, map);
         setSnapSummaries(map);
       })
       .catch(() => {
