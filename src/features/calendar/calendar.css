@@ -1173,3 +1173,125 @@
   opacity: 0.35;
   cursor: not-allowed;
 }
+
+/* ── Vacation balance bar — range button ─────────────────────────────── */
+.cal-vacation-bar__range-btn {
+  background: rgba(56, 178, 172, 0.1);
+  border: 1px solid rgba(56, 178, 172, 0.3);
+  border-radius: var(--radius-pill);
+  color: rgba(56, 178, 172, 0.85);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  padding: 3px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.cal-vacation-bar__range-btn:hover,
+.cal-vacation-bar__range-btn--active {
+  background: rgba(56, 178, 172, 0.2);
+  border-color: rgba(56, 178, 172, 0.55);
+  color: rgb(56, 178, 172);
+}
+
+/* ── Vacation range picker panel ─────────────────────────────────────── */
+.cal-vac-picker {
+  background: rgba(56, 178, 172, 0.05);
+  border: 1px solid rgba(56, 178, 172, 0.22);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  margin: 2px 0 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: slideDown 0.18s ease;
+}
+.cal-vac-picker__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.cal-vac-picker__lbl {
+  font-size: var(--font-sm);
+  color: rgba(56, 178, 172, 0.75);
+  flex-shrink: 0;
+}
+.cal-vac-picker__date {
+  flex: 1;
+  min-width: 130px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(56, 178, 172, 0.3);
+  border-radius: var(--radius-sm);
+  color: var(--text-gold);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  padding: 5px 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  color-scheme: dark;
+}
+.cal-vac-picker__date:focus {
+  border-color: rgba(56, 178, 172, 0.6);
+}
+.cal-vac-picker__check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.65);
+  cursor: pointer;
+}
+.cal-vac-picker__preview {
+  font-size: var(--font-sm);
+  color: rgba(56, 178, 172, 0.85);
+  background: rgba(56, 178, 172, 0.07);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+}
+.cal-vac-picker__preview--over {
+  color: rgba(217, 126, 106, 0.9);
+  background: rgba(217, 126, 106, 0.07);
+}
+.cal-vac-picker__actions {
+  display: flex;
+  gap: 8px;
+}
+.cal-vac-picker__apply {
+  flex: 1;
+  background: rgba(56, 178, 172, 0.15);
+  border: 1px solid rgba(56, 178, 172, 0.4);
+  border-radius: var(--radius-pill);
+  color: rgba(56, 178, 172, 0.9);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  padding: 5px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cal-vac-picker__apply:hover:not(:disabled) {
+  background: rgba(56, 178, 172, 0.25);
+  border-color: rgba(56, 178, 172, 0.6);
+  color: rgb(56, 178, 172);
+}
+.cal-vac-picker__apply:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.cal-vac-picker__cancel {
+  flex: 1;
+  background: transparent;
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: var(--radius-pill);
+  color: rgba(var(--gold-rgb), 0.5);
+  font-family: inherit;
+  font-size: var(--font-sm);
+  padding: 5px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cal-vac-picker__cancel:hover {
+  border-color: rgba(var(--gold-rgb), 0.4);
+  color: rgba(var(--gold-rgb), 0.75);
+}

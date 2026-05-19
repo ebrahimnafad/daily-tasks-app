@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback } from 'react';
+﻿import { useMemo, useState, useEffect, useCallback } from 'react';
 import type { Task } from '@/types';
 import type { SnapshotSummary, DailySnapshot } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
@@ -49,20 +49,28 @@ interface CalendarPageProps {
   setSelectedDate: (d: string) => void;
 }
 
-const DAYS = ['أحد', 'إثنين', 'ثلاثاء', 'أربعاء', 'خميس', 'جمعة', 'سبت'];
+const DAYS = [
+  'Ø£Ø­Ø¯',
+  'Ø¥Ø«Ù†ÙŠÙ†',
+  'Ø«Ù„Ø§Ø«Ø§Ø¡',
+  'Ø£Ø±Ø¨Ø¹Ø§Ø¡',
+  'Ø®Ù…ÙŠØ³',
+  'Ø¬Ù…Ø¹Ø©',
+  'Ø³Ø¨Øª',
+];
 const MONTHS = [
-  'يناير',
-  'فبراير',
-  'مارس',
-  'أبريل',
-  'مايو',
-  'يونيو',
-  'يوليو',
-  'أغسطس',
-  'سبتمبر',
-  'أكتوبر',
-  'نوفمبر',
-  'ديسمبر',
+  'ÙŠÙ†Ø§ÙŠØ±',
+  'ÙØ¨Ø±Ø§ÙŠØ±',
+  'Ù…Ø§Ø±Ø³',
+  'Ø£Ø¨Ø±ÙŠÙ„',
+  'Ù…Ø§ÙŠÙˆ',
+  'ÙŠÙˆÙ†ÙŠÙˆ',
+  'ÙŠÙˆÙ„ÙŠÙˆ',
+  'Ø£ØºØ³Ø·Ø³',
+  'Ø³Ø¨ØªÙ…Ø¨Ø±',
+  'Ø£ÙƒØªÙˆØ¨Ø±',
+  'Ù†ÙˆÙÙ…Ø¨Ø±',
+  'Ø¯ÙŠØ³Ù…Ø¨Ø±',
 ];
 
 // Shift type for a calendar day: 'morning' | 'evening' | 'off'
@@ -78,7 +86,7 @@ export default function CalendarPage({
   const { tm } = useTaskContext();
   const today = localDateISO();
 
-  // ── Schedule shift config (reactive to storage changes from other tabs) ──
+  // â”€â”€ Schedule shift config (reactive to storage changes from other tabs) â”€â”€
   const LS_SCHEDULE_KEY = 'mhm_schedule';
   const [schedule, setSchedule] = useState<ShiftConfig[]>(() =>
     lsGet<ShiftConfig[]>(LS_SCHEDULE_KEY, DEFAULT_SHIFTS)
@@ -87,7 +95,7 @@ export default function CalendarPage({
     lsGet<string>(DEFAULT_EPOCH_KEY, getMostRecentFriday())
   );
 
-  // ── Off-day exceptions (per-date overrides: off → work) ────────────────
+  // â”€â”€ Off-day exceptions (per-date overrides: off â†’ work) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const LS_OFF_EXCEPTIONS_KEY = 'mhm_off_exceptions';
   const [offExceptions, setOffExceptions] = useState<string[]>(() =>
     lsGet<string[]>(LS_OFF_EXCEPTIONS_KEY, [])
@@ -101,7 +109,7 @@ export default function CalendarPage({
     });
   }, []);
 
-  // ── Work-day exceptions (per-date overrides: work → off) ──────────────
+  // â”€â”€ Work-day exceptions (per-date overrides: work â†’ off) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions';
   const [workExceptions, setWorkExceptions] = useState<string[]>(() =>
     lsGet<string[]>(LS_WORK_EXCEPTIONS_KEY, [])
@@ -115,7 +123,7 @@ export default function CalendarPage({
     });
   }, []);
 
-  // ── Annual vacation days (user-scheduled leave, separate from weekly offs) ──
+  // â”€â”€ Annual vacation days (user-scheduled leave, separate from weekly offs) â”€â”€
   const LS_VACATION_DAYS_KEY = 'mhm_vacation_days';
   const LS_VACATION_BALANCE_KEY = 'mhm_vacation_balance';
   const [vacationDays, setVacationDays] = useState<string[]>(() =>
@@ -137,6 +145,12 @@ export default function CalendarPage({
     setVacationBalance(val);
     lsSet(LS_VACATION_BALANCE_KEY, val);
   }, []);
+
+  // â”€â”€ Vacation range picker state â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  const [showVacPicker, setShowVacPicker] = useState(false);
+  const [vacRangeStart, setVacRangeStart] = useState('');
+  const [vacRangeEnd, setVacRangeEnd] = useState('');
+  const [vacSkipOffDays, setVacSkipOffDays] = useState(true);
 
   /** Classify a calendar date as morning-shift, evening-shift, or off-day.
    *  Priority: vacation > work-exception > schedule > off-exception */
@@ -160,7 +174,7 @@ export default function CalendarPage({
     [schedule, shiftEpoch, offExceptions, workExceptions, vacationDays]
   );
 
-  // ── Holiday offsets (user-confirmed moon-sighting adjustments) ────
+  // â”€â”€ Holiday offsets (user-confirmed moon-sighting adjustments) â”€â”€â”€â”€
   const [holidayOffsets, setHolidayOffsets] = useState<Record<string, number>>(() =>
     lsGet<Record<string, number>>(LS_HOLIDAY_OFFSETS, {})
   );
@@ -175,10 +189,10 @@ export default function CalendarPage({
     });
   }, []);
 
-  // ── Holiday data (AlAdhan API + static fallback) ───────────────────
+  // â”€â”€ Holiday data (AlAdhan API + static fallback) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { holidayMap, eidFitrDates } = useHolidayData(holidayOffsets);
 
-  // ── Financial cycle config + pulse strip ──────────────────────────
+  // â”€â”€ Financial cycle config + pulse strip â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [finConfig, setFinConfig] = useState<FinCycleConfig>(() =>
     lsGet<FinCycleConfig>(LS_FIN_CYCLE_CONFIG, defaultFinConfig())
   );
@@ -192,13 +206,13 @@ export default function CalendarPage({
     });
   }, []);
 
-  /** Upcoming events within 60 days — for the Pulse Strip */
+  /** Upcoming events within 60 days â€” for the Pulse Strip */
   const upcomingFinEvents = useMemo(
     () => computeFinCycleEvents(finConfig, eidFitrDates, today, 60),
     [finConfig, eidFitrDates, today]
   );
 
-  // ── Snapshot summaries (for battery indicator) ──────────────────────
+  // â”€â”€ Snapshot summaries (for battery indicator) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const LS_SNAP_SUMMARIES_KEY = 'mhm_snap_summaries';
   const [snapSummaries, setSnapSummaries] = useState<Record<string, SnapshotSummary>>(
     // Seed from localStorage so battery indicators appear instantly on first paint.
@@ -225,7 +239,7 @@ export default function CalendarPage({
         setSnapSummaries(map);
       })
       .catch(() => {
-        /* offline — silent */
+        /* offline â€” silent */
       });
   }, []);
 
@@ -268,12 +282,12 @@ export default function CalendarPage({
     [today, snapSummaries]
   );
 
-  // ── Battery helper ─────────────────────────────────────────────────
+  // â”€â”€ Battery helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const BatteryBar = ({ progress }: { progress: number }) => {
     const filled = Math.round((progress / 100) * 5);
     const color = progress >= 80 ? '#9bc87a' : progress >= 50 ? '#e6a855' : '#d97e6a';
     return (
-      <div className="cal-battery" aria-label={`إنجاز ${progress}%`}>
+      <div className="cal-battery" aria-label={`Ø¥Ù†Ø¬Ø§Ø² ${progress}%`}>
         {Array.from({ length: 5 }).map((_, i) => (
           <span
             key={i}
@@ -285,7 +299,7 @@ export default function CalendarPage({
     );
   };
 
-  // ── Notes sync ──────────────────────────────────────────────────────
+  // â”€â”€ Notes sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const {
     notes,
     addNote,
@@ -300,7 +314,7 @@ export default function CalendarPage({
     resolveUseServer,
   } = useNotesSync();
 
-  // ── Search ──────────────────────────────────────────────────────────
+  // â”€â”€ Search â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const [searchQuery, setSearchQuery] = useState('');
   const searchResults = useNoteSearch(notes, searchQuery);
 
@@ -310,7 +324,7 @@ export default function CalendarPage({
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstDayOfWeek = new Date(year, month, 1).getDay();
 
-  /** Date → FinCycleEvent[] map for visible month — cell right-border.
+  /** Date â†’ FinCycleEvent[] map for visible month â€” cell right-border.
    * L-11: Window aligned to 60 days from today (same as upcomingFinEvents)
    * so Pulse Strip events always have matching cell markers. */
   const finCycleMap = useMemo(
@@ -416,7 +430,7 @@ export default function CalendarPage({
 
       // Only include tasks explicitly scheduled for this specific date
       const applicableTasks = tasks.filter((t) => {
-        return t.recurrence === 'موعد محدد' && t.date === dateStr;
+        return t.recurrence === 'Ù…ÙˆØ¹Ø¯ Ù…Ø­Ø¯Ø¯' && t.date === dateStr;
       });
 
       if (applicableTasks.length > 0) {
@@ -471,7 +485,7 @@ export default function CalendarPage({
   const selectedDateFinance = financeEventsByDate[selectedDate] || [];
   const selectedDateNotes = notesByDate[selectedDate] ?? [];
 
-  // ── Off-day warnings for the viewed month ───────────────────────────
+  // â”€â”€ Off-day warnings for the viewed month â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // Inline the shift-type logic to avoid a useCallback dependency (React Compiler rule).
   const offDayWarnings = useMemo(() => {
     const warnings: { type: string; message: string }[] = [];
@@ -499,16 +513,69 @@ export default function CalendarPage({
     if (offCount > 4)
       warnings.push({
         type: 'excess',
-        message: `يوجد ${offCount} أيام إجازة هذا الشهر (يتجاوز الحد المعتاد 4)`,
+        message: `ÙŠÙˆØ¬Ø¯ ${offCount} Ø£ÙŠØ§Ù… Ø¥Ø¬Ø§Ø²Ø© Ù‡Ø°Ø§ Ø§Ù„Ø´Ù‡Ø± (ÙŠØªØ¬Ø§ÙˆØ² Ø§Ù„Ø­Ø¯ Ø§Ù„Ù…Ø¹ØªØ§Ø¯ 4)`,
       });
     if (hasLateOffDay)
       warnings.push({
         type: 'late',
-        message: 'يوجد يوم إجازة بعد اليوم 26 — قد يؤثر على إغلاق الحصة الشهرية',
+        message:
+          'ÙŠÙˆØ¬Ø¯ ÙŠÙˆÙ… Ø¥Ø¬Ø§Ø²Ø© Ø¨Ø¹Ø¯ Ø§Ù„ÙŠÙˆÙ… 26 â€” Ù‚Ø¯ ÙŠØ¤Ø«Ø± Ø¹Ù„Ù‰ Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø­ØµØ© Ø§Ù„Ø´Ù‡Ø±ÙŠØ©',
       });
     return warnings;
     // eslint-disable-next-line react-hooks/preserve-manual-memoization
   }, [year, month, shiftEpoch, schedule, offExceptions, workExceptions]);
+
+  // â”€â”€ Preview of dates in the selected range (excluding already-tagged days) â”€â”€
+  const vacRangePreview = useMemo(() => {
+    if (!vacRangeStart || !vacRangeEnd || vacRangeEnd < vacRangeStart) return [];
+    const dates: string[] = [];
+    const d = new Date(vacRangeStart + 'T12:00:00');
+    const end = new Date(vacRangeEnd + 'T12:00:00');
+    while (d <= end) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (!vacationDays.includes(dateStr)) {
+        if (vacSkipOffDays) {
+          // Inline shift check â€” same logic as getDayShiftType without vacation layer
+          if (!workExceptions.includes(dateStr)) {
+            const shiftId = computeShift(shiftEpoch, schedule, d);
+            const shift = schedule.find((s) => s.id === shiftId);
+            const isStructOff = !!shift?.offDays.includes(d.getDay());
+            if (!isStructOff || offExceptions.includes(dateStr)) {
+              dates.push(dateStr);
+            }
+          }
+        } else {
+          dates.push(dateStr);
+        }
+      }
+      d.setDate(d.getDate() + 1);
+    }
+    return dates;
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [
+    vacRangeStart,
+    vacRangeEnd,
+    vacSkipOffDays,
+    vacationDays,
+    workExceptions,
+    offExceptions,
+    schedule,
+    shiftEpoch,
+  ]);
+
+  const applyVacationRange = useCallback(() => {
+    if (vacRangePreview.length === 0) return;
+    setVacationDays((prev) => {
+      const set = new Set(prev);
+      vacRangePreview.forEach((d) => set.add(d));
+      const next = Array.from(set).sort();
+      lsSet(LS_VACATION_DAYS_KEY, next);
+      return next;
+    });
+    setShowVacPicker(false);
+    setVacRangeStart('');
+    setVacRangeEnd('');
+  }, [vacRangePreview]);
 
   // True if the selected date is a structural off-day (before exception override)
   const selectedDateIsStructurallyOff = useMemo(() => {
@@ -524,7 +591,7 @@ export default function CalendarPage({
   // True when the selected date is tagged as an annual vacation day
   const selectedDateIsVacation = vacationDays.includes(selectedDate);
 
-  // ── Vacation balance for the viewed year ───────────────────────────
+  // â”€â”€ Vacation balance for the viewed year â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const vacationStats = useMemo(() => {
     const yearStr = String(year);
     const used = vacationDays.filter((d) => d.startsWith(yearStr)).length;
@@ -537,35 +604,35 @@ export default function CalendarPage({
       {/* Header */}
       <div className="cal-header">
         <button className="cal-nav" onClick={goToPrevMonth}>
-          ◀
+          â—€
         </button>
         <div className="cal-title">
           <span>{MONTHS[month]}</span>
           <span style={{ fontWeight: 400 }}>{year}</span>
         </div>
         <button className="cal-nav" onClick={goToNextMonth}>
-          ▶
+          â–¶
         </button>
       </div>
 
       <button className="cal-today-btn" onClick={goToToday}>
-        اليوم
+        Ø§Ù„ÙŠÙˆÙ…
       </button>
 
       {/* Search bar */}
       <div className="cal-search-bar">
-        <span className="cal-search-icon">🔍</span>
+        <span className="cal-search-icon">ðŸ”</span>
         <input
           type="text"
           className="cal-search-input"
-          placeholder="ابحث في الملاحظات..."
+          placeholder="Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           dir="auto"
         />
         {searchQuery && (
           <button className="cal-search-clear" onClick={() => setSearchQuery('')}>
-            ✕
+            âœ•
           </button>
         )}
       </div>
@@ -574,7 +641,7 @@ export default function CalendarPage({
       {searchQuery ? (
         <div className="cal-search-results">
           {searchResults.length === 0 ? (
-            <p className="cal-empty">لا توجد نتائج للبحث</p>
+            <p className="cal-empty">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù„Ù„Ø¨Ø­Ø«</p>
           ) : (
             searchResults.map((note) => (
               <div
@@ -595,7 +662,7 @@ export default function CalendarPage({
                     month: 'short',
                     year: 'numeric',
                   })}
-                  {note.pinned && ' 📌'}
+                  {note.pinned && ' ðŸ“Œ'}
                 </span>
                 <span className="cal-search-result-snippet">
                   {note.text.slice(0, 120)}
@@ -643,7 +710,7 @@ export default function CalendarPage({
               const holiday = holidayMap[dateStr] ?? null;
               const isVacationDay = vacationDays.includes(dateStr);
 
-              // ── Compute cell background (shift tint + heatmap blended) ──
+              // â”€â”€ Compute cell background (shift tint + heatmap blended) â”€â”€
               let cellBg: string | undefined;
               if (isToday) {
                 cellBg = undefined; // CSS class handles today
@@ -662,7 +729,7 @@ export default function CalendarPage({
                 cellBg = 'rgba(139,92,246,0.09)';
               }
 
-              // ── Top border stripe per shift ──
+              // â”€â”€ Top border stripe per shift â”€â”€
               const cellBorderTop =
                 shiftType === 'morning'
                   ? '3px solid rgba(251,191,36,0.75)'
@@ -670,12 +737,12 @@ export default function CalendarPage({
                     ? '3px solid rgba(167,139,250,0.72)'
                     : '2px dashed rgba(100,116,139,0.45)';
 
-              // ── Bottom border for holiday ──
+              // â”€â”€ Bottom border for holiday â”€â”€
               const cellBorderBottom = holiday
                 ? `2px solid ${HOLIDAY_COLOR[holiday.type]}`
                 : undefined;
 
-              // ── Right border for financial cycle events ──
+              // â”€â”€ Right border for financial cycle events â”€â”€
               const finEvents = finCycleMap[dateStr];
               const cellBorderRight = finEvents?.[0]
                 ? `3px solid ${finEvents[0].borderColor}`
@@ -717,13 +784,13 @@ export default function CalendarPage({
                   </span>
                   {hasNotes && (
                     <span style={{ position: 'absolute', top: 4, right: 4, fontSize: '10px' }}>
-                      📝
+                      ðŸ“
                     </span>
                   )}
-                  {/* Vacation icon — top-left corner */}
+                  {/* Vacation icon â€” top-left corner */}
                   {isVacationDay && (
-                    <span className="cal-cell-vacation" title="إجازة سنوية">
-                      🌴
+                    <span className="cal-cell-vacation" title="Ø¥Ø¬Ø§Ø²Ø© Ø³Ù†ÙˆÙŠØ©">
+                      ðŸŒ´
                     </span>
                   )}
                   {/* Holiday icon bottom-left */}
@@ -732,11 +799,11 @@ export default function CalendarPage({
                       {holiday.icon}
                     </span>
                   )}
-                  {/* Financial event icon — bottom-right corner */}
+                  {/* Financial event icon â€” bottom-right corner */}
                   {finEvents && finEvents.length > 0 && (
                     <span
                       className="cal-cell-fin"
-                      title={finEvents.map((e) => e.label).join(' · ')}
+                      title={finEvents.map((e) => e.label).join(' Â· ')}
                     >
                       {finEvents[0].icon}
                     </span>
@@ -753,7 +820,7 @@ export default function CalendarPage({
                         style={{ backgroundColor: 'var(--danger)' }}
                         title={fe.title}
                       >
-                        💰
+                        ðŸ’°
                       </div>
                     ))}
                     {dayTasks.slice(0, Math.max(0, 3 - dayFinance.length)).map((task) => (
@@ -773,27 +840,33 @@ export default function CalendarPage({
             })}
           </div>
 
-          {/* ── Shift legend ── */}
+          {/* â”€â”€ Shift legend â”€â”€ */}
           <div className="cal-shift-legend">
-            <span className="cal-shift-legend__item cal-shift-legend__item--morning">☀️ صباحي</span>
-            <span className="cal-shift-legend__item cal-shift-legend__item--evening">🌙 مسائي</span>
-            <span className="cal-shift-legend__item cal-shift-legend__item--off">🏖️ إجازة</span>
+            <span className="cal-shift-legend__item cal-shift-legend__item--morning">
+              â˜€ï¸ ØµØ¨Ø§Ø­ÙŠ
+            </span>
+            <span className="cal-shift-legend__item cal-shift-legend__item--evening">
+              ðŸŒ™ Ù…Ø³Ø§Ø¦ÙŠ
+            </span>
+            <span className="cal-shift-legend__item cal-shift-legend__item--off">
+              ðŸ–ï¸ Ø¥Ø¬Ø§Ø²Ø©
+            </span>
             <button
               className="cal-fin-settings-btn"
               onClick={() => setShowFinSettings((v) => !v)}
-              title="إعدادات نبضة المال"
+              title="Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ù†Ø¨Ø¶Ø© Ø§Ù„Ù…Ø§Ù„"
             >
-              {showFinSettings ? '×' : '⚙️'}
+              {showFinSettings ? 'Ã—' : 'âš™ï¸'}
             </button>
           </div>
 
-          {/* ── Off-day warnings for this month ── */}
+          {/* â”€â”€ Off-day warnings for this month â”€â”€ */}
           {offDayWarnings.length > 0 && (
             <div className="cal-offday-warnings">
               {offDayWarnings.map((w) => (
                 <div key={w.type} className={`cal-offday-warning cal-offday-warning--${w.type}`}>
                   <span className="cal-offday-warning__icon">
-                    {w.type === 'excess' ? '⚠️' : '📅⚠️'}
+                    {w.type === 'excess' ? 'âš ï¸' : 'ðŸ“…âš ï¸'}
                   </span>
                   <span className="cal-offday-warning__text">{w.message}</span>
                 </div>
@@ -801,9 +874,11 @@ export default function CalendarPage({
             </div>
           )}
 
-          {/* ── Annual vacation balance bar ── */}
+          {/* â”€â”€ Annual vacation balance bar â”€â”€ */}
           <div className="cal-vacation-bar">
-            <span className="cal-vacation-bar__label">🌴 الإجازة السنوية {year}</span>
+            <span className="cal-vacation-bar__label">
+              ðŸŒ´ Ø§Ù„Ø¥Ø¬Ø§Ø²Ø© Ø§Ù„Ø³Ù†ÙˆÙŠØ© {year}
+            </span>
             <div className="cal-vacation-bar__track">
               <div
                 className={`cal-vacation-bar__fill ${
@@ -821,18 +896,109 @@ export default function CalendarPage({
             >
               {vacationStats.used} / {vacationBalance}
             </span>
+            <button
+              className={`cal-vacation-bar__range-btn ${showVacPicker ? 'cal-vacation-bar__range-btn--active' : ''}`}
+              onClick={() => setShowVacPicker((v) => !v)}
+              title="ØªØ­Ø¯ÙŠØ¯ Ø¥Ø¬Ø§Ø²Ø© Ø¨Ø§Ù„Ù†Ø·Ø§Ù‚"
+            >
+              {showVacPicker ? 'Ã—' : 'ðŸ“… Ù†Ø·Ø§Ù‚'}
+            </button>
           </div>
 
-          {/* ── Financial settings panel ── */}
+          {/* â”€â”€ Vacation range picker panel â”€â”€ */}
+          {showVacPicker && (
+            <div className="cal-vac-picker">
+              <div className="cal-vac-picker__row">
+                <label className="cal-vac-picker__lbl">Ù…Ù†</label>
+                <input
+                  type="date"
+                  className="cal-vac-picker__date"
+                  value={vacRangeStart}
+                  title="ØªØ§Ø±ÙŠØ® Ø¨Ø¯Ø§ÙŠØ© Ø§Ù„Ø¥Ø¬Ø§Ø²Ø©"
+                  onChange={(e) => setVacRangeStart(e.target.value)}
+                />
+                <label className="cal-vac-picker__lbl">Ø¥Ù„Ù‰</label>
+                <input
+                  type="date"
+                  className="cal-vac-picker__date"
+                  value={vacRangeEnd}
+                  min={vacRangeStart}
+                  title="ØªØ§Ø±ÙŠØ® Ù†Ù‡Ø§ÙŠØ© Ø§Ù„Ø¥Ø¬Ø§Ø²Ø©"
+                  onChange={(e) => setVacRangeEnd(e.target.value)}
+                />
+              </div>
+              <label className="cal-vac-picker__check">
+                <input
+                  type="checkbox"
+                  checked={vacSkipOffDays}
+                  onChange={(e) => setVacSkipOffDays(e.target.checked)}
+                />
+                <span>
+                  ØªØ¬Ø§Ù‡Ù„ Ø£ÙŠØ§Ù… Ø§Ù„Ø¥Ø¬Ø§Ø²Ø© Ø§Ù„Ø£Ø³Ø¨ÙˆØ¹ÙŠØ© (Ù„Ø§ ØªØ®ØµÙ… Ù…Ù†
+                  Ø§Ù„Ø±ØµÙŠØ¯)
+                </span>
+              </label>
+              {vacRangePreview.length > 0 && (
+                <div
+                  className={`cal-vac-picker__preview ${
+                    vacationStats.remaining - vacRangePreview.length < 0
+                      ? 'cal-vac-picker__preview--over'
+                      : ''
+                  }`}
+                >
+                  ðŸŒ´ Ø³ÙŠÙØ­Ø¬Ø² {vacRangePreview.length} ÙŠÙˆÙ…Ø§Ù‹ â€” Ù…ØªØ¨Ù‚ÙŠ Ø¨Ø¹Ø¯Ù‡Ø§:{' '}
+                  <strong>{vacationStats.remaining - vacRangePreview.length} ÙŠÙˆÙ…</strong>
+                </div>
+              )}
+              {vacRangeStart &&
+                vacRangeEnd &&
+                vacRangeEnd >= vacRangeStart &&
+                vacRangePreview.length === 0 && (
+                  <div className="cal-vac-picker__preview">
+                    Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£ÙŠØ§Ù… Ø¬Ø¯ÙŠØ¯Ø© Ù„ØªØ­Ø¬ÙŠØ²Ù‡Ø§ ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„Ù†Ø·Ø§Ù‚
+                  </div>
+                )}
+              <div className="cal-vac-picker__actions">
+                <button
+                  className="cal-vac-picker__apply"
+                  onClick={applyVacationRange}
+                  disabled={
+                    vacRangePreview.length === 0 ||
+                    vacationStats.remaining - vacRangePreview.length < 0
+                  }
+                >
+                  ØªØ·Ø¨ÙŠÙ‚ âœ“
+                </button>
+                <button
+                  className="cal-vac-picker__cancel"
+                  onClick={() => {
+                    setShowVacPicker(false);
+                    setVacRangeStart('');
+                    setVacRangeEnd('');
+                  }}
+                >
+                  Ø¥Ù„ØºØ§Ø¡
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* â”€â”€ Financial settings panel â”€â”€ */}
           {showFinSettings && (
             <div className="cal-fin-settings">
-              <h4 className="cal-fin-settings__title">⚙️ إعدادات نبضة المال</h4>
+              <h4 className="cal-fin-settings__title">âš™ï¸ Ø¥Ø¹Ø¯Ø§Ø¯Ø§Øª Ù†Ø¨Ø¶Ø© Ø§Ù„Ù…Ø§Ù„</h4>
               {(
                 [
-                  { key: 'govSalaryEnabled', label: '🏙️ رواتب القطاع الحكومي (27 ميلادي)' },
-                  { key: 'gosiSalaryEnabled', label: '👴 معاشات GOSI (1 ميلادي)' },
-                  { key: 'quotaCloseEnabled', label: '📊 إغلاق الحصة المبيعاتية (آخر الشهر)' },
-                  { key: 'eidBonusEnabled', label: '🎁 موسم مكافأة العيد' },
+                  {
+                    key: 'govSalaryEnabled',
+                    label: 'ðŸ™ï¸ Ø±ÙˆØ§ØªØ¨ Ø§Ù„Ù‚Ø·Ø§Ø¹ Ø§Ù„Ø­ÙƒÙˆÙ…ÙŠ (27 Ù…ÙŠÙ„Ø§Ø¯ÙŠ)',
+                  },
+                  { key: 'gosiSalaryEnabled', label: 'ðŸ‘´ Ù…Ø¹Ø§Ø´Ø§Øª GOSI (1 Ù…ÙŠÙ„Ø§Ø¯ÙŠ)' },
+                  {
+                    key: 'quotaCloseEnabled',
+                    label: 'ðŸ“Š Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ø­ØµØ© Ø§Ù„Ù…Ø¨ÙŠØ¹Ø§ØªÙŠØ© (Ø¢Ø®Ø± Ø§Ù„Ø´Ù‡Ø±)',
+                  },
+                  { key: 'eidBonusEnabled', label: 'ðŸŽ Ù…ÙˆØ³Ù… Ù…ÙƒØ§ÙØ£Ø© Ø§Ù„Ø¹ÙŠØ¯' },
                 ] as const
               ).map(({ key, label }) => (
                 <label key={key} className="cal-fin-settings__row">
@@ -845,7 +1011,7 @@ export default function CalendarPage({
                 </label>
               ))}
               <label className="cal-fin-settings__row">
-                <span>🎁 أيام قبل العيد</span>
+                <span>ðŸŽ Ø£ÙŠØ§Ù… Ù‚Ø¨Ù„ Ø§Ù„Ø¹ÙŠØ¯</span>
                 <input
                   type="number"
                   min={7}
@@ -858,10 +1024,10 @@ export default function CalendarPage({
                   }
                   className="cal-fin-settings__num"
                 />
-                <span>يوم</span>
+                <span>ÙŠÙˆÙ…</span>
               </label>
               <label className="cal-fin-settings__row">
-                <span>🌴 رصيد الإجازة السنوية</span>
+                <span>ðŸŒ´ Ø±ØµÙŠØ¯ Ø§Ù„Ø¥Ø¬Ø§Ø²Ø© Ø§Ù„Ø³Ù†ÙˆÙŠØ©</span>
                 <input
                   type="number"
                   min={1}
@@ -870,12 +1036,12 @@ export default function CalendarPage({
                   onChange={(e) => saveVacationBalance(Math.max(1, Math.min(60, +e.target.value)))}
                   className="cal-fin-settings__num"
                 />
-                <span>يوم/سنة</span>
+                <span>ÙŠÙˆÙ…/Ø³Ù†Ø©</span>
               </label>
             </div>
           )}
 
-          {/* ── نبضة المال — Financial Pulse Strip ── */}
+          {/* â”€â”€ Ù†Ø¨Ø¶Ø© Ø§Ù„Ù…Ø§Ù„ â€” Financial Pulse Strip â”€â”€ */}
           {upcomingFinEvents.length > 0 && (
             <div className="cal-fin-pulse">
               {upcomingFinEvents.slice(0, 6).map((ev, idx) => {
@@ -900,7 +1066,7 @@ export default function CalendarPage({
                     <span className="cal-fin-card__icon">{ev.icon}</span>
                     <span className="cal-fin-card__label">{ev.label}</span>
                     <span className="cal-fin-card__countdown">
-                      {isToday ? '🟢 اليوم' : `${diffDays} يوم`}
+                      {isToday ? 'ðŸŸ¢ Ø§Ù„ÙŠÙˆÙ…' : `${diffDays} ÙŠÙˆÙ…`}
                     </span>
                   </div>
                 );
@@ -911,50 +1077,54 @@ export default function CalendarPage({
           {/* Selected day tasks */}
           <div className="cal-selected-tasks">
             <h3 className="cal-selected-title">
-              المهام والاستحقاقات لـ{' '}
+              Ø§Ù„Ù…Ù‡Ø§Ù… ÙˆØ§Ù„Ø§Ø³ØªØ­Ù‚Ø§Ù‚Ø§Øª Ù„Ù€{' '}
               {new Date(selectedDate + 'T00:00:00').toLocaleDateString('ar-SA', {
                 weekday: 'long',
                 day: 'numeric',
                 month: 'long',
               })}
             </h3>
-            {/* ── Off-day exception toggle (off → work) ── */}
+            {/* â”€â”€ Off-day exception toggle (off â†’ work) â”€â”€ */}
             {selectedDateIsStructurallyOff && (
               <div className="cal-exception-row">
                 <span className="cal-exception-row__label">
                   {selectedDateIsException
-                    ? '✅ معتمد كيوم عمل (استثناء)'
-                    : '🏖️ هذا اليوم إجازة وفق جدولك'}
+                    ? 'âœ… Ù…Ø¹ØªÙ…Ø¯ ÙƒÙŠÙˆÙ… Ø¹Ù…Ù„ (Ø§Ø³ØªØ«Ù†Ø§Ø¡)'
+                    : 'ðŸ–ï¸ Ù‡Ø°Ø§ Ø§Ù„ÙŠÙˆÙ… Ø¥Ø¬Ø§Ø²Ø© ÙˆÙÙ‚ Ø¬Ø¯ÙˆÙ„Ùƒ'}
                 </span>
                 <button
                   className={`cal-exception-btn ${selectedDateIsException ? 'cal-exception-btn--active' : ''}`}
                   onClick={() => toggleOffException(selectedDate)}
                 >
-                  {selectedDateIsException ? 'إلغاء الاستثناء' : 'اعتبره يوم عمل'}
+                  {selectedDateIsException
+                    ? 'Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø§Ø³ØªØ«Ù†Ø§Ø¡'
+                    : 'Ø§Ø¹ØªØ¨Ø±Ù‡ ÙŠÙˆÙ… Ø¹Ù…Ù„'}
                 </button>
               </div>
             )}
 
-            {/* ── Work-day exception toggle (work → off) ── */}
+            {/* â”€â”€ Work-day exception toggle (work â†’ off) â”€â”€ */}
             {!selectedDateIsStructurallyOff && (
               <div
                 className={`cal-exception-row ${selectedDateIsWorkException ? 'cal-exception-row--off' : ''}`}
               >
                 <span className="cal-exception-row__label">
                   {selectedDateIsWorkException
-                    ? '🏖️ معتمد كيوم إجازة استثنائي'
-                    : '💼 هذا اليوم عمل وفق جدولك'}
+                    ? 'ðŸ–ï¸ Ù…Ø¹ØªÙ…Ø¯ ÙƒÙŠÙˆÙ… Ø¥Ø¬Ø§Ø²Ø© Ø§Ø³ØªØ«Ù†Ø§Ø¦ÙŠ'
+                    : 'ðŸ’¼ Ù‡Ø°Ø§ Ø§Ù„ÙŠÙˆÙ… Ø¹Ù…Ù„ ÙˆÙÙ‚ Ø¬Ø¯ÙˆÙ„Ùƒ'}
                 </span>
                 <button
                   className={`cal-exception-btn ${selectedDateIsWorkException ? 'cal-exception-btn--off' : ''}`}
                   onClick={() => toggleWorkException(selectedDate)}
                 >
-                  {selectedDateIsWorkException ? 'إلغاء الاستثناء' : 'اعتبره إجازة استثنائية'}
+                  {selectedDateIsWorkException
+                    ? 'Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø§Ø³ØªØ«Ù†Ø§Ø¡'
+                    : 'Ø§Ø¹ØªØ¨Ø±Ù‡ Ø¥Ø¬Ø§Ø²Ø© Ø§Ø³ØªØ«Ù†Ø§Ø¦ÙŠØ©'}
                 </button>
               </div>
             )}
 
-            {/* ── Annual vacation toggle ── */}
+            {/* â”€â”€ Annual vacation toggle â”€â”€ */}
             <div
               className={`cal-exception-row ${
                 selectedDateIsVacation ? 'cal-exception-row--vacation' : ''
@@ -962,8 +1132,8 @@ export default function CalendarPage({
             >
               <span className="cal-exception-row__label">
                 {selectedDateIsVacation
-                  ? `🌴 إجازة سنوية (متبقي: ${vacationStats.remaining} يوم)`
-                  : `🌴 رصيد الإجازة السنوية: ${vacationStats.remaining} يوم`}
+                  ? `ðŸŒ´ Ø¥Ø¬Ø§Ø²Ø© Ø³Ù†ÙˆÙŠØ© (Ù…ØªØ¨Ù‚ÙŠ: ${vacationStats.remaining} ÙŠÙˆÙ…)`
+                  : `ðŸŒ´ Ø±ØµÙŠØ¯ Ø§Ù„Ø¥Ø¬Ø§Ø²Ø© Ø§Ù„Ø³Ù†ÙˆÙŠØ©: ${vacationStats.remaining} ÙŠÙˆÙ…`}
               </span>
               <button
                 className={`cal-exception-btn ${
@@ -973,11 +1143,13 @@ export default function CalendarPage({
                 disabled={!selectedDateIsVacation && vacationStats.remaining <= 0}
                 title={
                   !selectedDateIsVacation && vacationStats.remaining <= 0
-                    ? 'انتهى رصيد إجازتك السنوية'
+                    ? 'Ø§Ù†ØªÙ‡Ù‰ Ø±ØµÙŠØ¯ Ø¥Ø¬Ø§Ø²ØªÙƒ Ø§Ù„Ø³Ù†ÙˆÙŠØ©'
                     : undefined
                 }
               >
-                {selectedDateIsVacation ? 'إلغاء الإجازة' : 'إجازة سنوية 🌴'}
+                {selectedDateIsVacation
+                  ? 'Ø¥Ù„ØºØ§Ø¡ Ø§Ù„Ø¥Ø¬Ø§Ø²Ø©'
+                  : 'Ø¥Ø¬Ø§Ø²Ø© Ø³Ù†ÙˆÙŠØ© ðŸŒ´'}
               </button>
             </div>
 
@@ -1011,44 +1183,44 @@ export default function CalendarPage({
                       <span className="cal-holiday-banner__icon">{h.icon}</span>
                       <span className="cal-holiday-banner__name">{h.name}</span>
                       {h.approximate && !confirmed && (
-                        <span className="cal-holiday-banner__approx">تقريبي</span>
+                        <span className="cal-holiday-banner__approx">ØªÙ‚Ø±ÙŠØ¨ÙŠ</span>
                       )}
                       {confirmed && h.approximate && (
-                        <span className="cal-holiday-banner__confirmed">✓ مؤكد</span>
+                        <span className="cal-holiday-banner__confirmed">âœ“ Ù…Ø¤ÙƒØ¯</span>
                       )}
                     </div>
                     {h.approximate && h.dayIndex === 0 && (
                       <div className="cal-holiday-adj">
                         <span className="cal-holiday-adj__label">
                           {confirmed
-                            ? `الموعد المؤكد: ${new Date(confirmedDate + 'T12:00:00').toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })}`
-                            : 'تأكيد الموعد بعد إعلان رؤية الهلال:'}
+                            ? `Ø§Ù„Ù…ÙˆØ¹Ø¯ Ø§Ù„Ù…Ø¤ÙƒØ¯: ${new Date(confirmedDate + 'T12:00:00').toLocaleDateString('ar-SA', { weekday: 'short', day: 'numeric', month: 'short' })}`
+                            : 'ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ù…ÙˆØ¹Ø¯ Ø¨Ø¹Ø¯ Ø¥Ø¹Ù„Ø§Ù† Ø±Ø¤ÙŠØ© Ø§Ù„Ù‡Ù„Ø§Ù„:'}
                         </span>
                         <div className="cal-holiday-adj__controls">
                           <button
                             className="cal-holiday-adj__btn"
                             onClick={() => adjustHoliday(h.groupId, -1)}
-                            title="يوم قبل"
+                            title="ÙŠÙˆÙ… Ù‚Ø¨Ù„"
                           >
-                            ◀
+                            â—€
                           </button>
                           <span className="cal-holiday-adj__offset">
-                            {offset === 0 ? '±٠' : offset > 0 ? `+${offset}` : `${offset}`}
+                            {offset === 0 ? 'Â±Ù ' : offset > 0 ? `+${offset}` : `${offset}`}
                           </span>
                           <button
                             className="cal-holiday-adj__btn"
                             onClick={() => adjustHoliday(h.groupId, +1)}
-                            title="يوم بعد"
+                            title="ÙŠÙˆÙ… Ø¨Ø¹Ø¯"
                           >
-                            ▶
+                            â–¶
                           </button>
                           {offset !== 0 && (
                             <button
                               className="cal-holiday-adj__btn cal-holiday-adj__btn--reset"
                               onClick={() => adjustHoliday(h.groupId, 'reset')}
-                              title="إعادة ضبط"
+                              title="Ø¥Ø¹Ø§Ø¯Ø© Ø¶Ø¨Ø·"
                             >
-                              ↩
+                              â†©
                             </button>
                           )}
                         </div>
@@ -1059,7 +1231,9 @@ export default function CalendarPage({
               })()}
 
             {selectedDateTasks.length === 0 && selectedDateFinance.length === 0 ? (
-              <p className="cal-empty">لا توجد مهام أو استحقاقات في هذا اليوم</p>
+              <p className="cal-empty">
+                Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ù‡Ø§Ù… Ø£Ùˆ Ø§Ø³ØªØ­Ù‚Ø§Ù‚Ø§Øª ÙÙŠ Ù‡Ø°Ø§ Ø§Ù„ÙŠÙˆÙ…
+              </p>
             ) : (
               <div className="cal-date-tasks" style={{ marginTop: '16px' }}>
                 {selectedDateFinance.map((fe) => (
@@ -1078,9 +1252,11 @@ export default function CalendarPage({
                         flex: 1,
                       }}
                     >
-                      {fe.title} ({(fe.amount || 0).toLocaleString('ar-SA')} ر.س)
+                      {fe.title} ({(fe.amount || 0).toLocaleString('ar-SA')} Ø±.Ø³)
                     </span>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>⏳ مستحق</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                      â³ Ù…Ø³ØªØ­Ù‚
+                    </span>
                   </div>
                 ))}
                 {selectedDateTasks.map((task) => (
