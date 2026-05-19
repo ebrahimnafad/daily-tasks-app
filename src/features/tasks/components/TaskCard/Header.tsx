@@ -82,6 +82,7 @@ export default function Header() {
           </span>
 
           <span
+            title={task.title}
             style={{
               flex: '1 1 auto',
               minWidth: 0,
