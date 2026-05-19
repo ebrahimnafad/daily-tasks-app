@@ -911,8 +911,6 @@
   overflow-x: auto;
   padding: 6px 2px 4px;
   margin: 4px 0;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
 }
 .cal-fin-pulse::-webkit-scrollbar {
   display: none;
@@ -1099,4 +1097,79 @@
   background: rgba(217, 126, 106, 0.22);
   border-color: rgba(217, 126, 106, 0.6);
   color: rgb(217, 126, 106);
+}
+
+/* ── Annual vacation cell icon ───────────────────────────────────────── */
+.cal-cell-vacation {
+  position: absolute;
+  top: 2px;
+  left: 3px;
+  font-size: 9px;
+  line-height: 1;
+  pointer-events: none;
+}
+
+/* ── Annual vacation balance bar ─────────────────────────────────────── */
+.cal-vacation-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  margin: 4px 0 2px;
+  background: rgba(56, 178, 172, 0.06);
+  border: 1px solid rgba(56, 178, 172, 0.2);
+  border-radius: var(--radius-md);
+  animation: slideDown 0.2s ease;
+}
+.cal-vacation-bar__label {
+  font-size: var(--font-sm);
+  color: rgba(56, 178, 172, 0.85);
+  flex-shrink: 0;
+}
+.cal-vacation-bar__track {
+  flex: 1;
+  height: 5px;
+  background: rgba(56, 178, 172, 0.15);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+.cal-vacation-bar__fill {
+  height: 100%;
+  background: rgba(56, 178, 172, 0.7);
+  border-radius: var(--radius-pill);
+  transition: width 0.5s ease;
+}
+.cal-vacation-bar__fill--over {
+  background: rgba(217, 126, 106, 0.8);
+}
+.cal-vacation-bar__count {
+  font-size: var(--font-sm);
+  font-weight: 700;
+  color: rgba(56, 178, 172, 0.9);
+  flex-shrink: 0;
+  min-width: 36px;
+  text-align: left;
+}
+.cal-vacation-bar__count--over {
+  color: rgba(217, 126, 106, 0.9);
+}
+
+/* ── Vacation exception row and button (teal palette) ────────────────── */
+.cal-exception-row--vacation {
+  background: rgba(56, 178, 172, 0.07);
+  border-color: rgba(56, 178, 172, 0.28);
+}
+.cal-exception-btn--vacation {
+  background: rgba(56, 178, 172, 0.15);
+  border-color: rgba(56, 178, 172, 0.4);
+  color: rgba(56, 178, 172, 0.9);
+}
+.cal-exception-btn--vacation:hover {
+  background: rgba(56, 178, 172, 0.25);
+  border-color: rgba(56, 178, 172, 0.6);
+  color: rgb(56, 178, 172);
+}
+.cal-exception-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
 }

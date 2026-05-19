@@ -115,10 +115,35 @@ export default function CalendarPage({
     });
   }, []);
 
+  // ── Annual vacation days (user-scheduled leave, separate from weekly offs) ──
+  const LS_VACATION_DAYS_KEY = 'mhm_vacation_days';
+  const LS_VACATION_BALANCE_KEY = 'mhm_vacation_balance';
+  const [vacationDays, setVacationDays] = useState<string[]>(() =>
+    lsGet<string[]>(LS_VACATION_DAYS_KEY, [])
+  );
+  const [vacationBalance, setVacationBalance] = useState<number>(() =>
+    lsGet<number>(LS_VACATION_BALANCE_KEY, 30)
+  );
+
+  const toggleVacationDay = useCallback((dateStr: string) => {
+    setVacationDays((prev) => {
+      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
+      lsSet(LS_VACATION_DAYS_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const saveVacationBalance = useCallback((val: number) => {
+    setVacationBalance(val);
+    lsSet(LS_VACATION_BALANCE_KEY, val);
+  }, []);
+
   /** Classify a calendar date as morning-shift, evening-shift, or off-day.
-   *  Both off→work and work→off user exceptions override the normal classification. */
+   *  Priority: vacation > work-exception > schedule > off-exception */
   const getDayShiftType = useCallback(
     (dateStr: string): DayShiftType => {
+      // Annual vacation day
+      if (vacationDays.includes(dateStr)) return 'off';
       // Work-day marked as exceptional off
       if (workExceptions.includes(dateStr)) return 'off';
       const date = new Date(dateStr + 'T12:00:00');
@@ -132,7 +157,7 @@ export default function CalendarPage({
       }
       return shiftId as DayShiftType;
     },
-    [schedule, shiftEpoch, offExceptions, workExceptions]
+    [schedule, shiftEpoch, offExceptions, workExceptions, vacationDays]
   );
 
   // ── Holiday offsets (user-confirmed moon-sighting adjustments) ────
@@ -496,6 +521,16 @@ export default function CalendarPage({
   const selectedDateIsException = offExceptions.includes(selectedDate);
   // True when a structurally normal work day has been manually marked as off
   const selectedDateIsWorkException = workExceptions.includes(selectedDate);
+  // True when the selected date is tagged as an annual vacation day
+  const selectedDateIsVacation = vacationDays.includes(selectedDate);
+
+  // ── Vacation balance for the viewed year ───────────────────────────
+  const vacationStats = useMemo(() => {
+    const yearStr = String(year);
+    const used = vacationDays.filter((d) => d.startsWith(yearStr)).length;
+    return { used, remaining: vacationBalance - used, overused: used > vacationBalance };
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [vacationDays, vacationBalance, year]);
 
   return (
     <div className="cal-view">
@@ -606,6 +641,7 @@ export default function CalendarPage({
 
               const shiftType = getDayShiftType(dateStr);
               const holiday = holidayMap[dateStr] ?? null;
+              const isVacationDay = vacationDays.includes(dateStr);
 
               // ── Compute cell background (shift tint + heatmap blended) ──
               let cellBg: string | undefined;
@@ -684,6 +720,12 @@ export default function CalendarPage({
                       📝
                     </span>
                   )}
+                  {/* Vacation icon — top-left corner */}
+                  {isVacationDay && (
+                    <span className="cal-cell-vacation" title="إجازة سنوية">
+                      🌴
+                    </span>
+                  )}
                   {/* Holiday icon bottom-left */}
                   {holiday && (
                     <span className="cal-cell-holiday" title={holiday.name}>
@@ -759,6 +801,28 @@ export default function CalendarPage({
             </div>
           )}
 
+          {/* ── Annual vacation balance bar ── */}
+          <div className="cal-vacation-bar">
+            <span className="cal-vacation-bar__label">🌴 الإجازة السنوية {year}</span>
+            <div className="cal-vacation-bar__track">
+              <div
+                className={`cal-vacation-bar__fill ${
+                  vacationStats.overused ? 'cal-vacation-bar__fill--over' : ''
+                }`}
+                style={{
+                  width: `${Math.min(100, (vacationStats.used / vacationBalance) * 100)}%`,
+                }}
+              />
+            </div>
+            <span
+              className={`cal-vacation-bar__count ${
+                vacationStats.overused ? 'cal-vacation-bar__count--over' : ''
+              }`}
+            >
+              {vacationStats.used} / {vacationBalance}
+            </span>
+          </div>
+
           {/* ── Financial settings panel ── */}
           {showFinSettings && (
             <div className="cal-fin-settings">
@@ -795,6 +859,18 @@ export default function CalendarPage({
                   className="cal-fin-settings__num"
                 />
                 <span>يوم</span>
+              </label>
+              <label className="cal-fin-settings__row">
+                <span>🌴 رصيد الإجازة السنوية</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={vacationBalance}
+                  onChange={(e) => saveVacationBalance(Math.max(1, Math.min(60, +e.target.value)))}
+                  className="cal-fin-settings__num"
+                />
+                <span>يوم/سنة</span>
               </label>
             </div>
           )}
@@ -877,6 +953,33 @@ export default function CalendarPage({
                 </button>
               </div>
             )}
+
+            {/* ── Annual vacation toggle ── */}
+            <div
+              className={`cal-exception-row ${
+                selectedDateIsVacation ? 'cal-exception-row--vacation' : ''
+              }`}
+            >
+              <span className="cal-exception-row__label">
+                {selectedDateIsVacation
+                  ? `🌴 إجازة سنوية (متبقي: ${vacationStats.remaining} يوم)`
+                  : `🌴 رصيد الإجازة السنوية: ${vacationStats.remaining} يوم`}
+              </span>
+              <button
+                className={`cal-exception-btn ${
+                  selectedDateIsVacation ? 'cal-exception-btn--vacation' : ''
+                }`}
+                onClick={() => toggleVacationDay(selectedDate)}
+                disabled={!selectedDateIsVacation && vacationStats.remaining <= 0}
+                title={
+                  !selectedDateIsVacation && vacationStats.remaining <= 0
+                    ? 'انتهى رصيد إجازتك السنوية'
+                    : undefined
+                }
+              >
+                {selectedDateIsVacation ? 'إلغاء الإجازة' : 'إجازة سنوية 🌴'}
+              </button>
+            </div>
 
             {/* Financial cycle context banner */}
             {(finCycleMap[selectedDate] ?? []).map((ev) => (
