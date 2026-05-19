@@ -189,7 +189,7 @@ export default function CalendarPage({
       }
       setLoadingSnapshot(true);
       try {
-        const r = await authFetch(`/api/snapshot?date=${date}`, { cache: 'no-store' });
+        const r = await authFetch(`/api/snapshots?date=${date}`, { cache: 'no-store' });
         const data = (await r.json()) as { snapshot: DailySnapshot | null };
         setSelectedSnapshot(data.snapshot ?? null);
       } catch {

@@ -47,7 +47,7 @@ const flushSnapshotQueue = async (): Promise<void> => {
   const remaining: DailySnapshot[] = [];
   for (const snap of queue) {
     try {
-      const res = await authFetch('/api/snapshot', {
+      const res = await authFetch('/api/snapshots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: snap.date, snapshot: snap }),
@@ -383,7 +383,7 @@ export default function useSync(
       const progressAuto =
         totalOtherAuto > 0 ? Math.round((countDoneAuto / totalOtherAuto) * 100) : 0;
 
-      void authFetch('/api/snapshot', {
+      void authFetch('/api/snapshots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -812,7 +812,7 @@ export default function useSync(
 
   const saveSnapshot = useCallback(async (data: DailySnapshot): Promise<void> => {
     try {
-      const res = await authFetch('/api/snapshot', {
+      const res = await authFetch('/api/snapshots', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ date: data.date, snapshot: data }),
