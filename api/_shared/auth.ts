@@ -35,6 +35,16 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
 
 /** Extracts and verifies the Bearer token. Returns payload or sends 401 and returns null. */
 export async function requireAuth(req: ApiRequest, res: ApiResponse): Promise<JwtPayload | null> {
+  // Fast path: Vercel Edge Middleware verified the token and injected x-user-id
+  const fromEdgeUserId = req.headers['x-user-id'];
+  if (fromEdgeUserId && process.env.NODE_ENV === 'production') {
+    return {
+      userId: Number(fromEdgeUserId),
+      username: (req.headers['x-username'] as string) || '',
+    };
+  }
+
+  // Fallback for local dev where Edge Middleware is bypassed (e.g. Vite dev server)
   const authHeader = req.headers.authorization as string | undefined;
   if (!authHeader?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'غير مصرح — يرجى تسجيل الدخول' });
