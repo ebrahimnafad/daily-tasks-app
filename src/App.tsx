@@ -71,7 +71,8 @@ function AppContent({ logout }: { logout: () => void }) {
     setSkipped,
     shift,
     schedule,
-    saveSnapshot
+    saveSnapshot,
+    addSyncToast
   );
   const { prayersDone, prayerTotal } = tm;
 

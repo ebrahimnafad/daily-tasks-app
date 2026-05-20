@@ -26,7 +26,9 @@ export default function useTaskManager(
   setSkipped: Dispatch<SetStateAction<CheckedMap>>,
   shift: ShiftType,
   scheduleConfig: ShiftConfig[] = DEFAULT_SHIFTS,
-  saveSnapshot?: (data: import('@/types').DailySnapshot) => Promise<void>
+  saveSnapshot?: (data: import('@/types').DailySnapshot) => Promise<void>,
+  /** Non-blocking notification callback — replaces native alert() */
+  notify?: (message: string, type: 'offline' | 'error' | 'warn') => void
 ): TaskManagerReturn {
   // ── Sub-hook composition ───────────────────────────────────────────────────
   const subtasks = useSubtaskManager(setTasks, setSubChecked);
@@ -56,11 +58,11 @@ export default function useTaskManager(
         tasksDone: countDone,
         tasksTotal: totalOther,
       });
-      alert('تم إرسال الطلب ✅\nتحقق من الـ Sheet مباشرة للتأكد.');
+      notify?.('✅ تم إرسال الطلب — تحقق من الـ Sheet مباشرة للتأكد.', 'warn');
     } catch {
-      alert('خطأ في الإرسال. تحقق من الرابط.');
+      notify?.('❌ خطأ في الإرسال. تحقق من الرابط.', 'error');
     }
-  }, [progress, prayersDone, prayerTotal, countDone, totalOther]);
+  }, [progress, prayersDone, prayerTotal, countDone, totalOther, notify]);
 
   // ── Shift-aware Reset New Day ──────────────────────────────────────────────
   const resetNewDay = useCallback(() => {

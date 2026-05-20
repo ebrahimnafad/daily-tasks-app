@@ -1,7 +1,7 @@
 node_modules/
 dist/
-.env
-.env.local
+.env*
+!.env.example
 *.log
 playwright-report/
 test-results/
@@ -9,4 +9,4 @@ test-results/
 coverage/
 
 .vercel
-.env*.local
+inconsistencies.md

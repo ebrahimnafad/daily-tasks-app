@@ -8,36 +8,8 @@
  * Requires: GOOGLE_SHEETS_WEBHOOK_URL environment variable
  */
 
-// ── CORS: تقييد الوصول ──────────────────────────────────────────────────
-const ALLOWED_ORIGINS = [
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  process.env.FRONTEND_URL,
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'http://localhost:3000',
-].filter(Boolean);
-
+import { setCorsHeaders } from './_shared/cors.js';
 import type { ApiRequest, ApiResponse } from './_shared/types.js';
-
-function setCorsHeaders(req: ApiRequest, res: ApiResponse) {
-  const originHeader = req.headers.origin;
-  const origin = Array.isArray(originHeader) ? originHeader[0] : originHeader;
-
-  if (!origin) {
-    return;
-  }
-
-  if (!ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', 'null');
-    return;
-  }
-
-  res.setHeader('Access-Control-Allow-Origin', origin);
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Max-Age', '86400');
-  res.setHeader('Vary', 'Origin');
-}
 
 // ── Payload Validation ────────────────────────────────────────────────────
 function validateSheetsPayload(payload: unknown) {
