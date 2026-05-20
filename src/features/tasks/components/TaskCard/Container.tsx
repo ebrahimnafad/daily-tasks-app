@@ -22,7 +22,7 @@ function TaskCardContainer({
 
   const [isExpanded, setIsExpanded] = useState(task.id === 1);
   const [isBriefOpen, setIsBriefOpen] = useState(false);
-  const [isSubtaskOpen, setIsSubtaskOpen] = useState(task.id === 2);
+  const [isSubtaskOpen, setIsSubtaskOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
 
   const isSkipped = !!tm.skipped[task.id];
