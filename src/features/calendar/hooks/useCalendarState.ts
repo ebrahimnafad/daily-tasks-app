@@ -5,6 +5,8 @@
 // that calls this hook and passes its return values to child components.
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { fetchSchedule } from '@/lib/sync/useSync';
 import type { Task } from '@/types';
 import type { SnapshotSummary, DailySnapshot } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
@@ -89,26 +91,10 @@ export function useCalendarState({
     lsGet<string[]>(LS_OFF_EXCEPTIONS_KEY, [])
   );
 
-  const toggleOffException = useCallback((dateStr: string) => {
-    setOffExceptions((prev) => {
-      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
-      lsSet(LS_OFF_EXCEPTIONS_KEY, next);
-      return next;
-    });
-  }, []);
-
   // ── Work-day exceptions (work → off) ─────────────────────────────────────
   const [workExceptions, setWorkExceptions] = useState<string[]>(() =>
     lsGet<string[]>(LS_WORK_EXCEPTIONS_KEY, [])
   );
-
-  const toggleWorkException = useCallback((dateStr: string) => {
-    setWorkExceptions((prev) => {
-      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
-      lsSet(LS_WORK_EXCEPTIONS_KEY, next);
-      return next;
-    });
-  }, []);
 
   // ── Annual vacation days ──────────────────────────────────────────────────
   const [vacationDays, setVacationDays] = useState<string[]>(() =>
@@ -118,18 +104,104 @@ export function useCalendarState({
     lsGet<number>(LS_VACATION_BALANCE_KEY, 30)
   );
 
-  const toggleVacationDay = useCallback((dateStr: string) => {
-    setVacationDays((prev) => {
-      const next = prev.includes(dateStr) ? prev.filter((d) => d !== dateStr) : [...prev, dateStr];
-      lsSet(LS_VACATION_DAYS_KEY, next);
-      return next;
-    });
-  }, []);
+  const queryClient = useQueryClient();
+  const { data: scheduleData } = useQuery({
+    queryKey: ['schedule'],
+    queryFn: fetchSchedule,
+  });
 
-  const saveVacationBalance = useCallback((val: number) => {
-    setVacationBalance(val);
-    lsSet(LS_VACATION_BALANCE_KEY, val);
-  }, []);
+  useEffect(() => {
+    if (scheduleData) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSchedule(scheduleData.schedule);
+      setOffExceptions(scheduleData.offExceptions);
+      setWorkExceptions(scheduleData.workExceptions);
+      setVacationDays(scheduleData.vacationDays);
+      setVacationBalance(scheduleData.vacationBalance);
+    }
+  }, [scheduleData]);
+
+  const syncCalendarSettings = useCallback(
+    async (
+      updatedOffEx: string[],
+      updatedWorkEx: string[],
+      updatedVacDays: string[],
+      updatedBalance: number
+    ) => {
+      try {
+        const res = await authFetch('/api/schedule', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            schedule,
+            offExceptions: updatedOffEx,
+            workExceptions: updatedWorkEx,
+            vacationDays: updatedVacDays,
+            vacationBalance: updatedBalance,
+          }),
+        });
+        if (res.ok) {
+          void queryClient.invalidateQueries({ queryKey: ['schedule'] });
+        } else {
+          console.warn('Failed to sync calendar settings to server:', res.status);
+        }
+      } catch (err) {
+        console.warn('Error syncing calendar settings:', err);
+      }
+    },
+    [schedule, queryClient]
+  );
+
+  const toggleOffException = useCallback(
+    (dateStr: string) => {
+      setOffExceptions((prev) => {
+        const next = prev.includes(dateStr)
+          ? prev.filter((d) => d !== dateStr)
+          : [...prev, dateStr];
+        lsSet(LS_OFF_EXCEPTIONS_KEY, next);
+        void syncCalendarSettings(next, workExceptions, vacationDays, vacationBalance);
+        return next;
+      });
+    },
+    [workExceptions, vacationDays, vacationBalance, syncCalendarSettings]
+  );
+
+  const toggleWorkException = useCallback(
+    (dateStr: string) => {
+      setWorkExceptions((prev) => {
+        const next = prev.includes(dateStr)
+          ? prev.filter((d) => d !== dateStr)
+          : [...prev, dateStr];
+        lsSet(LS_WORK_EXCEPTIONS_KEY, next);
+        void syncCalendarSettings(offExceptions, next, vacationDays, vacationBalance);
+        return next;
+      });
+    },
+    [offExceptions, vacationDays, vacationBalance, syncCalendarSettings]
+  );
+
+  const toggleVacationDay = useCallback(
+    (dateStr: string) => {
+      setVacationDays((prev) => {
+        const next = prev.includes(dateStr)
+          ? prev.filter((d) => d !== dateStr)
+          : [...prev, dateStr];
+        lsSet(LS_VACATION_DAYS_KEY, next);
+        void syncCalendarSettings(offExceptions, workExceptions, next, vacationBalance);
+        return next;
+      });
+    },
+    [offExceptions, workExceptions, vacationBalance, syncCalendarSettings]
+  );
+
+  const saveVacationBalance = useCallback(
+    (val: number) => {
+      setVacationBalance(val);
+      lsSet(LS_VACATION_BALANCE_KEY, val);
+      void syncCalendarSettings(offExceptions, workExceptions, vacationDays, val);
+    },
+    [offExceptions, workExceptions, vacationDays, syncCalendarSettings]
+  );
 
   // ── Vacation range picker state ───────────────────────────────────────────
   const [showVacPicker, setShowVacPicker] = useState(false);
@@ -514,24 +586,26 @@ export function useCalendarState({
       vacRangePreview.forEach((d) => set.add(d));
       const next = Array.from(set).sort();
       lsSet(LS_VACATION_DAYS_KEY, next);
+      void syncCalendarSettings(offExceptions, workExceptions, next, vacationBalance);
       return next;
     });
     setShowVacPicker(false);
     setVacRangeStart('');
     setVacRangeEnd('');
-  }, [vacRangePreview]);
+  }, [vacRangePreview, offExceptions, workExceptions, vacationBalance, syncCalendarSettings]);
 
   const removeVacationRange = useCallback(() => {
     if (vacRangeTagged.length === 0) return;
     setVacationDays((prev) => {
       const next = prev.filter((d) => !vacRangeTagged.includes(d));
       lsSet(LS_VACATION_DAYS_KEY, next);
+      void syncCalendarSettings(offExceptions, workExceptions, next, vacationBalance);
       return next;
     });
     setShowVacPicker(false);
     setVacRangeStart('');
     setVacRangeEnd('');
-  }, [vacRangeTagged]);
+  }, [vacRangeTagged, offExceptions, workExceptions, vacationBalance, syncCalendarSettings]);
 
   // ── Exposed values ────────────────────────────────────────────────────────
   return {

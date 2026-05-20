@@ -125,6 +125,10 @@ interface DailyResponse {
 
 interface ScheduleResponse {
   schedule: ShiftConfig[];
+  offExceptions?: string[];
+  workExceptions?: string[];
+  vacationDays?: string[];
+  vacationBalance?: number;
   updatedAt: string | null;
 }
 
@@ -184,22 +188,43 @@ const fetchDaily = async (
   return { daily: { checked: {}, subChecked: {}, skipped: {} }, timestamp: 0 };
 };
 
-const fetchSchedule = async (): Promise<{ schedule: ShiftConfig[]; timestamp: number }> => {
+export const fetchSchedule = async (): Promise<{
+  schedule: ShiftConfig[];
+  offExceptions: string[];
+  workExceptions: string[];
+  vacationDays: string[];
+  vacationBalance: number;
+  timestamp: number;
+}> => {
   try {
     const res = await authFetch('/api/schedule', { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as ScheduleResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-    if (data.schedule && Array.isArray(data.schedule)) {
-      lsSet('mhm_schedule', data.schedule);
-      lsSet('mhm_schedule_timestamp', timestamp);
-      return { schedule: data.schedule, timestamp };
-    }
+
+    const schedule = data.schedule && Array.isArray(data.schedule) ? data.schedule : DEFAULT_SHIFTS;
+    const offExceptions = data.offExceptions || [];
+    const workExceptions = data.workExceptions || [];
+    const vacationDays = data.vacationDays || [];
+    const vacationBalance = data.vacationBalance !== undefined ? data.vacationBalance : 30;
+
+    lsSet('mhm_schedule', schedule);
+    lsSet('mhm_off_exceptions', offExceptions);
+    lsSet('mhm_work_exceptions', workExceptions);
+    lsSet('mhm_vacation_days', vacationDays);
+    lsSet('mhm_vacation_balance', vacationBalance);
+    lsSet('mhm_schedule_timestamp', timestamp);
+
+    return { schedule, offExceptions, workExceptions, vacationDays, vacationBalance, timestamp };
   } catch (err) {
     console.error('Fetch schedule failed, using local fallback:', err);
   }
   return {
     schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
+    offExceptions: lsGet<string[]>('mhm_off_exceptions', []),
+    workExceptions: lsGet<string[]>('mhm_work_exceptions', []),
+    vacationDays: lsGet<string[]>('mhm_vacation_days', []),
+    vacationBalance: lsGet<number>('mhm_vacation_balance', 30),
     timestamp: lsGet<number>('mhm_schedule_timestamp', 0),
   };
 };
@@ -332,12 +357,20 @@ export default function useSync(
   // ── Queries ───────────────────────────────────────────────────────────
   const { data: scheduleResp, isFetching: fetchingSchedule } = useQuery<{
     schedule: ShiftConfig[];
+    offExceptions: string[];
+    workExceptions: string[];
+    vacationDays: string[];
+    vacationBalance: number;
     timestamp: number;
   }>({
     queryKey: ['schedule'],
     queryFn: fetchSchedule,
     initialData: () => ({
       schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
+      offExceptions: lsGet<string[]>('mhm_off_exceptions', []),
+      workExceptions: lsGet<string[]>('mhm_work_exceptions', []),
+      vacationDays: lsGet<string[]>('mhm_vacation_days', []),
+      vacationBalance: lsGet<number>('mhm_vacation_balance', 30),
       timestamp: 0,
     }),
     initialDataUpdatedAt: 0,

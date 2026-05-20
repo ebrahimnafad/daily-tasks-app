@@ -83,6 +83,10 @@ export const scheduleConfig = pgTable(
       .references(() => users.id)
       .notNull(),
     data: jsonb('data').notNull().default([]),
+    offExceptions: jsonb('off_exceptions').notNull().default([]),
+    workExceptions: jsonb('work_exceptions').notNull().default([]),
+    vacationDays: jsonb('vacation_days').notNull().default([]),
+    vacationBalance: integer('vacation_balance').notNull().default(0),
     clientId: uuid('client_id').defaultRandom(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
