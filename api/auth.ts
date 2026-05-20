@@ -57,8 +57,8 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(403).json({ error: 'مفتاح الإعداد غير صحيح أو مفقود' });
       }
       const existing = await sql`SELECT COUNT(*) AS count FROM users`;
-      if (parseInt(existing[0].count) > 0) {
-        return res.status(409).json({ error: 'الحساب موجود بالفعل' });
+      if (parseInt(existing[0].count) >= 10) {
+        return res.status(409).json({ error: 'تم الوصول للحد الأقصى للمستخدمين (10)' });
       }
       const { username, password } = body;
       if (!username || !password) {

@@ -11,7 +11,20 @@ import {
   numeric,
   index,
   primaryKey,
+  pgEnum,
 } from 'drizzle-orm/pg-core';
+
+export const recurrenceEnum = pgEnum('recurrence_enum', [
+  'يومي',
+  'مرة واحدة',
+  'أسبوعي',
+  'شهري',
+  'سنوي',
+  'كل يومين',
+  'أيام العمل',
+  'موعد محدد',
+  'صلاة',
+]);
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -83,7 +96,7 @@ export const tasks = pgTable('tasks', {
   shifts: jsonb('shifts').default([]),
   timeBlock: text('time_block'),
   isWarning: boolean('is_warning').default(false),
-  recurrence: text('recurrence'),
+  recurrence: recurrenceEnum('recurrence'),
   targetDate: date('target_date'),
   alertTime: text('alert_time'),
   isPrayerTask: boolean('is_prayer_task').default(false),

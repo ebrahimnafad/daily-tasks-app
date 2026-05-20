@@ -15,6 +15,13 @@
       "when": 1779074067259,
       "tag": "0001_fantastic_multiple_man",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779276187821,
+      "tag": "0002_oval_doctor_doom",
+      "breakpoints": true
     }
   ]
 }

@@ -35,6 +35,18 @@ const VALID_ICONS = [
 
 const VALID_SHIFTS = ['morning', 'evening'] as const;
 
+export const VALID_RECURRENCES = [
+  'يومي',
+  'مرة واحدة',
+  'أسبوعي',
+  'شهري',
+  'سنوي',
+  'كل يومين',
+  'أيام العمل',
+  'موعد محدد',
+  'صلاة',
+] as const;
+
 const HEX_COLOR_REGEX = /^#[0-9A-Fa-f]{6}$/;
 const VAR_COLOR_REGEX = /^var\(.+\)$/;
 const DATE_REGEX = /^\d{4}-\d{2}-\d{2}$/;
@@ -54,7 +66,7 @@ export const TaskSchema = createInsertSchema(tasks, {
   shifts: () =>
     z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل').nullable().optional(),
   timeBlock: (s) => s.max(50).nullable().optional(),
-  recurrence: (s) => s.min(1).max(50).nullable().optional(),
+  recurrence: () => z.enum(VALID_RECURRENCES).nullable().optional(),
   alertTime: (s) => s.max(20).nullable().optional(),
   subtasks: () =>
     z

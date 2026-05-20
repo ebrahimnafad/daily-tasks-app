@@ -1,5 +1,6 @@
 import type { Dispatch, SetStateAction, RefObject, MouseEvent } from 'react';
 import type { TimeBlock, ShiftConfig } from '@/features/tasks/data/scheduleConfig';
+import type { VALID_RECURRENCES } from '@/validation/schemas';
 
 // ── Primitive domain types ────────────────────────────────────────────────
 
@@ -28,7 +29,7 @@ export interface Task {
   /** Time block ID from scheduleConfig.ts (e.g. 'work-early', 'family') */
   timeBlock: string;
   isWarning: boolean;
-  recurrence: string;
+  recurrence: (typeof VALID_RECURRENCES)[number];
   /** Specific date for one-time tasks (YYYY-MM-DD) */
   date?: string;
   alertTime?: string;
@@ -75,7 +76,7 @@ export interface TaskForm {
   shifts: string[];
   timeBlock: string;
   isWarning: boolean;
-  recurrence: string;
+  recurrence: (typeof VALID_RECURRENCES)[number];
   date: string;
   alertTime: string;
   blockers: string[];
