@@ -76,6 +76,7 @@ export const TaskSchema = createInsertSchema(tasks, {
             id: z.union([z.string(), z.number()]),
             text: z.string().min(1).max(200),
             alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).nullable().optional(),
+            isOptional: z.boolean().optional(),
           })
           .strict()
       )
