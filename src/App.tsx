@@ -36,8 +36,8 @@ function AppContent({ logout }: { logout: () => void }) {
   // Defined before useSync so it can be passed as the 4th arg. The ref itself is
   // populated after useTaskManager (which provides the correct otherTasks / progress).
   // Using a ref+stableCallback pattern avoids adding useSync to the re-render cycle.
-  const autoSnapshotFnRef = useRef<() => void>(() => undefined);
-  const stableAutoSnapshot = useCallback(() => autoSnapshotFnRef.current(), []);
+  const autoSnapshotFnRef = useRef<(date?: string) => void>(() => undefined);
+  const stableAutoSnapshot = useCallback((date?: string) => autoSnapshotFnRef.current(date), []);
 
   const {
     tasks,
@@ -82,9 +82,9 @@ function AppContent({ logout }: { logout: () => void }) {
   // This is the correct data source: same otherTasks/progress/countDone/totalOther
   // the user sees on screen, not an ad-hoc recomputation over all tasks.
   useEffect(() => {
-    autoSnapshotFnRef.current = () => {
+    autoSnapshotFnRef.current = (date?: string) => {
       void saveSnapshot({
-        date: getLogicalDateISO(dayStartHour),
+        date: date || getLogicalDateISO(dayStartHour),
         tasks: tm.otherTasks,
         checked,
         skipped,

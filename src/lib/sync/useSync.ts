@@ -230,8 +230,7 @@ export default function useSync(
   initialTasks: Task[],
   onNewDay?: () => void,
   onQuota?: () => void,
-  /** Optional callback called just before the daily state is cleared at midnight. */
-  onAutoSnapshotNeeded?: () => void,
+  onAutoSnapshotNeeded?: (date: string) => void,
   /** Non-blocking replacement for alert() — show sync errors as toasts. */
   onSyncError?: (message: string, type: 'offline' | 'error' | 'warn') => void
 ): UseSyncReturn {
@@ -437,7 +436,7 @@ export default function useSync(
         // fall back to the internal query-cache recomputation only as a last resort
         // since it counts all tasks instead of shift-filtered tasks.
         if (onAutoSnapshotNeeded) {
-          onAutoSnapshotNeeded();
+          onAutoSnapshotNeeded(storedDate);
         } else {
           autoSnapshotRef.current();
         }
