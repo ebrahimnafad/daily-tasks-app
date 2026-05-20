@@ -16,6 +16,10 @@ import { lsGet } from '@/lib/storage/localStorage';
 // resets before dayStartHour but after calendar midnight.
 const logicalTodayISO = (): string => getLogicalDateISO(lsGet<number>(DAY_START_HOUR_KEY, 0));
 
+// localStorage keys shared with CalendarPage for per-date overrides
+const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions'; // workday → exceptional off
+const LS_VACATION_DAYS_KEY = 'mhm_vacation_days'; // annual vacation days
+
 export interface TaskDerivedStateReturn {
   shiftTasks: Task[];
   prayerTask: Task | undefined;
@@ -48,7 +52,18 @@ export function useTaskDerivedState(
     const now = new Date();
     const dayOfWeek = now.getDay();
     const hourDecimal = now.getHours() + now.getMinutes() / 60;
-    const workday = isWorkday(shift, scheduleConfig, dayOfWeek);
+    const structuralWorkday = isWorkday(shift, scheduleConfig, dayOfWeek);
+
+    // Respect per-date calendar overrides: if today is explicitly marked as an
+    // exceptional off day (workException) or an annual vacation day, treat it
+    // as a non-workday so "أيام العمل" tasks are hidden — same as any off day.
+    const todayISO = logicalTodayISO();
+    const workExceptions = lsGet<string[]>(LS_WORK_EXCEPTIONS_KEY, []);
+    const vacationDays = lsGet<string[]>(LS_VACATION_DAYS_KEY, []);
+    const isExceptionalOffDay =
+      workExceptions.includes(todayISO) || vacationDays.includes(todayISO);
+    const workday = isExceptionalOffDay ? false : structuralWorkday;
+
     const blockId = getCurrentBlockId(shift, scheduleConfig, hourDecimal, dayOfWeek);
     const shiftConfig = scheduleConfig.find((s) => s.id === shift) || scheduleConfig[0];
 
