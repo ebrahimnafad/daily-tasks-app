@@ -12,7 +12,9 @@ import {
   index,
   primaryKey,
   pgEnum,
+  check,
 } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
 
 export const recurrenceEnum = pgEnum('recurrence_enum', [
   'يومي',
@@ -49,6 +51,12 @@ export const dailyState = pgTable(
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.date] }),
     updatedAtIndex: index('idx_daily_state_updated_at').on(table.updatedAt),
+    checkedIsObject: check('checked_is_object', sql`jsonb_typeof(${table.checked}) = 'object'`),
+    subCheckedIsObject: check(
+      'sub_checked_is_object',
+      sql`jsonb_typeof(${table.subChecked}) = 'object'`
+    ),
+    skippedIsObject: check('skipped_is_object', sql`jsonb_typeof(${table.skipped}) = 'object'`),
   })
 );
 
@@ -84,29 +92,38 @@ export const scheduleConfig = pgTable(
   })
 );
 
-export const tasks = pgTable('tasks', {
-  id: serial('id').primaryKey(),
-  userId: integer('user_id')
-    .references(() => users.id)
-    .notNull(),
-  icon: text('icon'),
-  title: text('title').notNull(),
-  category: text('category'),
-  color: text('color'),
-  shifts: jsonb('shifts').default([]),
-  timeBlock: text('time_block'),
-  isWarning: boolean('is_warning').default(false),
-  recurrence: recurrenceEnum('recurrence'),
-  targetDate: date('target_date'),
-  alertTime: text('alert_time'),
-  isPrayerTask: boolean('is_prayer_task').default(false),
-  isPinned: boolean('is_pinned').default(false),
-  subtasks: jsonb('subtasks').default([]),
-  brief: jsonb('brief').default({}),
-  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
-  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
-  deletedAt: timestamp('deleted_at', { withTimezone: true }),
-});
+export const tasks = pgTable(
+  'tasks',
+  {
+    id: serial('id').primaryKey(),
+    userId: integer('user_id')
+      .references(() => users.id)
+      .notNull(),
+    icon: text('icon'),
+    title: text('title').notNull(),
+    category: text('category'),
+    color: text('color'),
+    shifts: jsonb('shifts').default([]),
+    timeBlock: text('time_block'),
+    isWarning: boolean('is_warning').default(false),
+    recurrence: recurrenceEnum('recurrence'),
+    targetDate: date('target_date'),
+    alertTime: text('alert_time'),
+    isPrayerTask: boolean('is_prayer_task').default(false),
+    isPinned: boolean('is_pinned').default(false),
+    subtasks: jsonb('subtasks').default([]),
+    brief: jsonb('brief').default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
+  },
+  (table) => ({
+    subtasksIsArray: check(
+      'subtasks_is_array',
+      sql`jsonb_typeof(${table.subtasks}) = 'array' OR ${table.subtasks} IS NULL`
+    ),
+  })
+);
 
 export const financeIncomes = pgTable('finance_incomes', {
   id: uuid('id').primaryKey(),

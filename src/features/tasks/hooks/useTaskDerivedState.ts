@@ -73,7 +73,6 @@ export function useTaskDerivedState(
       if (!taskShifts.includes(shift)) return false;
       const rec = t.recurrence ?? 'يومي';
       if (rec === 'أيام العمل' && !workday) return false;
-      if (rec === 'عطل' && workday) return false;
       if (rec === 'موعد محدد') {
         // Hide when no date is set OR when the task's date is not today.
         // Uses logical date so this matches the snapshot date system exactly —

@@ -6,7 +6,7 @@ dotenv.config({ path: '.env.local' });
 
 async function main() {
   const sql = neon(process.env.DATABASE_URL);
-  const query = fs.readFileSync('drizzle/0002_oval_doctor_doom.sql', 'utf8');
+  const query = fs.readFileSync('drizzle/0003_thankful_stick.sql', 'utf8');
 
   console.log('Running SQL...');
   const statements = query.split('--> statement-breakpoint');

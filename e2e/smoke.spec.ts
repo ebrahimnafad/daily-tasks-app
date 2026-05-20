@@ -81,7 +81,7 @@ test.describe('Task Creation', () => {
 
   test('open add task modal', async ({ page }) => {
     await page.click('button >> text=إضافة مهمة');
-    await expect(page.locator('text=إضافة مهمة')).toBeVisible();
+    await expect(page.getByRole('heading', { name: '➕ مهمة جديدة' })).toBeVisible();
   });
 
   test('fill and save task', async ({ page }) => {

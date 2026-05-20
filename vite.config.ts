@@ -120,10 +120,30 @@ export default defineConfig({
         ],
       },
 
-      // ── خيارات التطوير ────────────────────────────────────────────────────
       devOptions: {
         enabled: false,
       },
     }),
   ],
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react') || id.includes('react-dom')) {
+              return 'react-vendor';
+            }
+            if (id.includes('drizzle') || id.includes('zod')) {
+              return 'db-vendor';
+            }
+            if (id.includes('@tanstack')) {
+              return 'query-vendor';
+            }
+            return 'vendor';
+          }
+        },
+      },
+    },
+  },
 });

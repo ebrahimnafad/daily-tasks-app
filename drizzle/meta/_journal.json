@@ -22,6 +22,13 @@
       "when": 1779276187821,
       "tag": "0002_oval_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1779277614894,
+      "tag": "0003_thankful_stick",
+      "breakpoints": true
     }
   ]
 }

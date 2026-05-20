@@ -42,7 +42,7 @@ export default async function middleware(request: Request) {
     }
 
     return new Response(null, { headers });
-  } catch (error) {
+  } catch {
     return Response.json(
       { error: 'جلسة منتهية الصلاحية — يرجى تسجيل الدخول مجدداً' },
       { status: 401 }

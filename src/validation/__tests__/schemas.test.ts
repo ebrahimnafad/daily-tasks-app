@@ -21,7 +21,7 @@ describe('TaskSchema', () => {
     shifts: ['morning', 'evening'] as const,
     timeBlock: 'morning',
     isWarning: false,
-    recurrence: 'daily',
+    recurrence: 'يومي',
     date: undefined,
     alertTime: undefined,
     isPrayerTask: false,
@@ -195,7 +195,7 @@ describe('parseTaskFormSafe', () => {
     shifts: ['morning'],
     timeBlock: 'anytime',
     isWarning: false,
-    recurrence: 'daily',
+    recurrence: 'يومي',
     blockers: ['', '', ''],
     helpers: ['', '', ''],
   };
@@ -204,7 +204,7 @@ describe('parseTaskFormSafe', () => {
     const result = parseTaskFormSafe(validForm);
 
     expect(result.success).toBe(true);
-    if (result.success) {
+    if ('data' in result) {
       expect(result.data).toEqual(validForm);
     }
   });
@@ -213,7 +213,7 @@ describe('parseTaskFormSafe', () => {
     const result = parseTaskFormSafe({ ...validForm, title: '' });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if ('errors' in result) {
       expect(result.errors).toBeDefined();
       expect(result.errors.length).toBeGreaterThan(0);
     }
@@ -227,7 +227,7 @@ describe('parseTaskFormSafe', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) {
+    if ('errors' in result) {
       expect(result.errors.length).toBeGreaterThanOrEqual(2);
     }
   });
@@ -381,7 +381,7 @@ describe('parseSafe helper', () => {
     });
 
     expect(result.success).toBe(true);
-    if (result.success) expect(result.data.id).toBe(validUUID);
+    if ('data' in result) expect((result.data as Record<string, unknown>).id).toBe(validUUID);
   });
 
   it('should return errors on failure', () => {
@@ -396,7 +396,7 @@ describe('parseSafe helper', () => {
     });
 
     expect(result.success).toBe(false);
-    if (!result.success) expect(result.errors.length).toBeGreaterThan(0);
+    if ('errors' in result) expect(result.errors.length).toBeGreaterThan(0);
   });
 });
 

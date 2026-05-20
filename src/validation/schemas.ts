@@ -67,7 +67,7 @@ export const TaskSchema = createInsertSchema(tasks, {
     z.array(z.enum(VALID_SHIFTS)).min(1, 'يجب تحديد وردية واحدة على الأقل').nullable().optional(),
   timeBlock: (s) => s.max(50).nullable().optional(),
   recurrence: () => z.enum(VALID_RECURRENCES).nullable().optional(),
-  alertTime: (s) => s.max(20).nullable().optional(),
+  alertTime: () => z.string().regex(TIME_REGEX).or(z.literal('')).nullable().optional(),
   subtasks: () =>
     z
       .array(
@@ -75,7 +75,7 @@ export const TaskSchema = createInsertSchema(tasks, {
           .object({
             id: z.union([z.string(), z.number()]),
             text: z.string().min(1).max(200),
-            alertTime: z.string().max(20).nullable().optional(),
+            alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).nullable().optional(),
           })
           .strict()
       )

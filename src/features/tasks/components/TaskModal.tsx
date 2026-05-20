@@ -292,7 +292,7 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
               id="task-recurrence"
               className="form-select"
               value={form.recurrence}
-              onChange={(e) => onFormField('recurrence', e.target.value)}
+              onChange={(e) => onFormField('recurrence', e.target.value as TaskForm['recurrence'])}
             >
               {RECURRENCE_OPTIONS.map((r) => (
                 <option key={r} value={r}>

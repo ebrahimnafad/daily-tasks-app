@@ -149,6 +149,7 @@ export default function useTaskManager(
     }
   }, [
     tasks,
+    setTasks,
     shift,
     scheduleConfig,
     setChecked,
