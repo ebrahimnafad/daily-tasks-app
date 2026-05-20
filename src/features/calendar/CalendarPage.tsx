@@ -941,12 +941,21 @@ export default function CalendarPage({
                   <strong>{vacationStats.remaining - vacRangePreview.length} يوم</strong>
                 </div>
               )}
+              {vacRangeTagged.length > 0 && (
+                <div
+                  className="cal-vac-picker__preview"
+                  style={{ color: 'var(--text-gold)', opacity: 0.85 }}
+                >
+                  🏖️ سيتم إلغاء حجز {vacRangeTagged.length} يوم إجازة من هذا النطاق
+                </div>
+              )}
               {vacRangeStart &&
                 vacRangeEnd &&
                 vacRangeEnd >= vacRangeStart &&
-                vacRangePreview.length === 0 && (
+                vacRangePreview.length === 0 &&
+                vacRangeTagged.length === 0 && (
                   <div className="cal-vac-picker__preview">
-                    لا توجد أيام جديدة لتحجيزها في هذا النطاق
+                    لا توجد أيام جديدة لتحجيزها أو إلغائها في هذا النطاق
                   </div>
                 )}
               <div className="cal-vac-picker__actions">
@@ -960,6 +969,11 @@ export default function CalendarPage({
                 >
                   تطبيق ✓
                 </button>
+                {vacRangeTagged.length > 0 && (
+                  <button className="cal-vac-picker__delete" onClick={removeVacationRange}>
+                    إلغاء حجز 🗑️
+                  </button>
+                )}
                 <button
                   className="cal-vac-picker__cancel"
                   onClick={() => {

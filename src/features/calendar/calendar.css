@@ -1295,3 +1295,21 @@
   border-color: rgba(var(--gold-rgb), 0.4);
   color: rgba(var(--gold-rgb), 0.75);
 }
+
+.cal-vac-picker__delete {
+  flex: 1;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: var(--radius-pill);
+  color: #f87171;
+  font-family: inherit;
+  font-size: var(--font-sm);
+  padding: 5px 0;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.cal-vac-picker__delete:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.55);
+  color: #ef4444;
+}
