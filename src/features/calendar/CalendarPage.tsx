@@ -13,7 +13,7 @@ import NotesPanel from './NotesPanel';
 import HistoryPanel from './HistoryPanel';
 import SyncStatusBar from './SyncStatusBar';
 import ConflictDialog from './ConflictDialog';
-import { localDateISO } from '@/lib/date/localDate';
+
 import {
   computeShift,
   getMostRecentFriday,
@@ -78,9 +78,20 @@ export default function CalendarPage({
   setSelectedDate,
 }: CalendarPageProps) {
   const { tm } = useTaskContext();
-  const today = useMemo(() => {
+  const [today, setToday] = useState(() => {
     const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
     return getLogicalDateISO(dayStartHour);
+  });
+
+  // Re-evaluate the logical date every minute so the calendar updates correctly
+  // when the day-start boundary (e.g. 4 AM) is crossed while the app is open.
+  useEffect(() => {
+    const tick = () => {
+      const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
+      setToday(getLogicalDateISO(dayStartHour));
+    };
+    const id = setInterval(tick, 60_000);
+    return () => clearInterval(id);
   }, []);
 
   // ── Schedule shift config (reactive to storage changes from other tabs) ──
@@ -594,6 +605,33 @@ export default function CalendarPage({
     setVacRangeStart('');
     setVacRangeEnd('');
   }, [vacRangePreview]);
+
+  // ── Already-tagged vacation days within the selected range (for un-tagging) ──
+  const vacRangeTagged = useMemo(() => {
+    if (!vacRangeStart || !vacRangeEnd || vacRangeEnd < vacRangeStart) return [];
+    const dates: string[] = [];
+    const d = new Date(vacRangeStart + 'T12:00:00');
+    const end = new Date(vacRangeEnd + 'T12:00:00');
+    while (d <= end) {
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      if (vacationDays.includes(dateStr)) dates.push(dateStr);
+      d.setDate(d.getDate() + 1);
+    }
+    return dates;
+    // eslint-disable-next-line react-hooks/preserve-manual-memoization
+  }, [vacRangeStart, vacRangeEnd, vacationDays]);
+
+  const removeVacationRange = useCallback(() => {
+    if (vacRangeTagged.length === 0) return;
+    setVacationDays((prev) => {
+      const next = prev.filter((d) => !vacRangeTagged.includes(d));
+      lsSet(LS_VACATION_DAYS_KEY, next);
+      return next;
+    });
+    setShowVacPicker(false);
+    setVacRangeStart('');
+    setVacRangeEnd('');
+  }, [vacRangeTagged]);
 
   return (
     <div className="cal-view">
