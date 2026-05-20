@@ -20,11 +20,28 @@ export async function signToken(payload: JwtPayload) {
   return new SignJWT(payload as unknown as Record<string, unknown>)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('30d')
+    .setExpirationTime('1h')
+    .sign(getJwtSecret());
+}
+
+export async function signRefreshToken(payload: JwtPayload) {
+  return new SignJWT(payload as unknown as Record<string, unknown>)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime('90d')
     .sign(getJwtSecret());
 }
 
 export async function verifyToken(token: string): Promise<JwtPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    return payload as unknown as JwtPayload;
+  } catch {
+    return null;
+  }
+}
+
+export async function verifyRefreshToken(token: string): Promise<JwtPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
     return payload as unknown as JwtPayload;

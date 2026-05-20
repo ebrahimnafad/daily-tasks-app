@@ -58,6 +58,7 @@ export function useAuth() {
       const res = await fetch('/api/auth?action=login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify({ username, password }),
       });
       const data = (await res.json()) as LoginResponse;
@@ -73,6 +74,9 @@ export function useAuth() {
   }, []);
 
   const logout = useCallback(() => {
+    fetch('/api/auth?action=logout', { method: 'POST', credentials: 'include' }).catch(
+      console.error
+    );
     clearToken();
     setState({ isAuthenticated: false, isLoading: false, username: null });
   }, []);

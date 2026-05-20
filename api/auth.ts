@@ -1,7 +1,7 @@
 import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
 import { setCorsHeaders } from './_shared/cors.js';
-import { requireAuth, signToken } from './_shared/auth.js';
+import { requireAuth, signToken, signRefreshToken, verifyRefreshToken } from './_shared/auth.js';
 import type { ApiRequest, ApiResponse } from './_shared/types.js';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
@@ -20,6 +20,22 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
   const sql = neon(process.env.DATABASE_URL);
   const { action } = req.query;
   const { method } = req;
+
+  function parseCookies(header?: string | string[]) {
+    if (!header) return {};
+    const str = Array.isArray(header) ? header.join(';') : header;
+    return Object.fromEntries(
+      str.split(';').map((v) => {
+        const parts = v.split('=');
+        return [parts[0].trim(), decodeURIComponent(parts.slice(1).join('='))];
+      })
+    );
+  }
+
+  function getCookieHeader(token: string, maxAge: number) {
+    const isProd = process.env.NODE_ENV === 'production';
+    return `mhm_refresh_token=${token}; Max-Age=${maxAge}; Path=/; HttpOnly; SameSite=Strict${isProd ? '; Secure' : ''}`;
+  }
 
   try {
     if (method === 'GET' && action === 'me') {
@@ -74,8 +90,40 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       if (!valid) {
         return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
       }
+
       const token = await signToken({ userId: user.id, username: user.username });
+      const refreshToken = await signRefreshToken({ userId: user.id, username: user.username });
+      res.setHeader('Set-Cookie', getCookieHeader(refreshToken, 90 * 24 * 60 * 60));
+
       return res.status(200).json({ ok: true, token });
+    }
+
+    if (action === 'refresh') {
+      const cookies = parseCookies(req.headers.cookie);
+      const refreshTokenStr = cookies.mhm_refresh_token;
+      if (!refreshTokenStr) {
+        return res.status(401).json({ error: 'Missing refresh token' });
+      }
+
+      const payload = await verifyRefreshToken(refreshTokenStr);
+      if (!payload) {
+        return res.status(401).json({ error: 'Invalid or expired refresh token' });
+      }
+
+      // sliding window rotation
+      const newToken = await signToken({ userId: payload.userId, username: payload.username });
+      const newRefreshToken = await signRefreshToken({
+        userId: payload.userId,
+        username: payload.username,
+      });
+      res.setHeader('Set-Cookie', getCookieHeader(newRefreshToken, 90 * 24 * 60 * 60));
+
+      return res.status(200).json({ ok: true, token: newToken });
+    }
+
+    if (action === 'logout') {
+      res.setHeader('Set-Cookie', getCookieHeader('', 0)); // Max-Age 0 clears it
+      return res.status(200).json({ ok: true });
     }
 
     if (action === 'change-password') {

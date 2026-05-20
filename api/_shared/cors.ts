@@ -22,6 +22,7 @@ export function setCorsHeaders(req: ApiRequest, res: ApiResponse) {
   }
 
   res.setHeader('Access-Control-Allow-Origin', origin);
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Setup-Secret');
   res.setHeader('Access-Control-Max-Age', '86400');
