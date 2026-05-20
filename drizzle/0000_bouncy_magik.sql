@@ -1,7 +1,10 @@
 -- Fresh start: erase all legacy unscoped data
 TRUNCATE TABLE daily_state CASCADE;
+--> statement-breakpoint
 TRUNCATE TABLE daily_snapshots CASCADE;
+--> statement-breakpoint
 TRUNCATE TABLE schedule_config CASCADE;
+--> statement-breakpoint
 
 CREATE TABLE "calendar_notes_rel" (
 	"id" uuid PRIMARY KEY NOT NULL,
