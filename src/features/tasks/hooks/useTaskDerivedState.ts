@@ -3,13 +3,18 @@ import {
   DEFAULT_SHIFTS,
   getCurrentBlockId,
   isWorkday,
+  getLogicalDateISO,
+  DAY_START_HOUR_KEY,
   type ShiftType,
   type ShiftConfig,
 } from '@/features/tasks/data/scheduleConfig';
 import type { Task, CheckedMap, SubCheckedMap, TaskSubCheckedMap } from '@/types';
-import { localDateISO } from '@/lib/date/localDate';
+import { lsGet } from '@/lib/storage/localStorage';
 
-const todayISO = (): string => localDateISO();
+// Uses logical date (respects dayStartHour) so task visibility always matches
+// the snapshot date — avoids filing tasks into the wrong day when the user
+// resets before dayStartHour but after calendar midnight.
+const logicalTodayISO = (): string => getLogicalDateISO(lsGet<number>(DAY_START_HOUR_KEY, 0));
 
 export interface TaskDerivedStateReturn {
   shiftTasks: Task[];
@@ -56,9 +61,11 @@ export function useTaskDerivedState(
       if (rec === 'عطل' && workday) return false;
       if (rec === 'موعد محدد') {
         // Hide when no date is set OR when the task's date is not today.
-        // The previous guard `&& t.date` let undated specific-date tasks
-        // fall through and appear every day — now explicitly blocked.
-        if (!t.date || t.date !== todayISO()) return false;
+        // Uses logical date so this matches the snapshot date system exactly —
+        // avoids filing the task into the wrong snapshot when reset runs before
+        // dayStartHour (e.g. reset at 3 AM when dayStartHour=4 would have made
+        // a May-20 task appear in the May-19 snapshot using the old calendar date).
+        if (!t.date || t.date !== logicalTodayISO()) return false;
       }
       // Monthly task: only visible on the same day-of-month as the anchor date.
       // Falls back to visible when no date is set (safe for pre-existing tasks).
@@ -68,14 +75,16 @@ export function useTaskDerivedState(
       if (rec === 'شهري') {
         if (!t.date) return true;
         const anchor = new Date(t.date + 'T12:00:00');
-        return anchor.getDate() === new Date().getDate();
+        const logicalToday = new Date(logicalTodayISO() + 'T12:00:00');
+        return anchor.getDate() === logicalToday.getDate();
       }
       // Weekly task: only visible on the same day-of-week as the anchor date.
       // Falls back to visible when no date is set (safe for pre-existing tasks).
       if (rec === 'أسبوعي') {
         if (!t.date) return true;
         const anchor = new Date(t.date + 'T12:00:00');
-        return anchor.getDay() === new Date().getDay();
+        const logicalToday = new Date(logicalTodayISO() + 'T12:00:00');
+        return anchor.getDay() === logicalToday.getDay();
       }
       // 'Once' task: stays visible (as checked) for the rest of the day so it
       // appears in the daily snapshot. resetNewDay auto-deletes it on the next reset.
