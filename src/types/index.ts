@@ -7,6 +7,9 @@ export interface Subtask {
   id: string | number;
   text: string;
   alertTime?: string;
+  /** When true, this subtask is a recommended extra (e.g. Witr) and is excluded
+   *  from the required-prayer ring denominator. */
+  isOptional?: boolean;
 }
 
 export interface Brief {
@@ -153,6 +156,8 @@ export interface TaskManagerReturn {
   prayerTask: Task | undefined;
   prayersDone: number;
   prayerTotal: number;
+  /** Number of checked optional (sunnah) prayers — display only. */
+  prayerOptionalDone: number;
   otherTasks: Task[];
   countDone: number;
   totalOther: number;

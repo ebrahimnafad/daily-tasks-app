@@ -28,6 +28,7 @@ export const INITIAL_TASKS: Task[] = [
       { id: 's3', text: 'العصر' },
       { id: 's4', text: 'المغرب' },
       { id: 's5', text: 'العشاء' },
+      { id: 's6', text: 'الوتر', isOptional: true },
     ],
     brief: {
       blockers: ['النوم بعد الفجر', 'الانشغال بالشاشات وقت الأذان', 'الكسل والتأجيل'],

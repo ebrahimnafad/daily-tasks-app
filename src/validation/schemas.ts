@@ -297,6 +297,7 @@ export const subtaskSchema = z
     id: z.union([z.string(), z.number()]),
     text: z.string().max(200),
     alertTime: z.string().max(20).nullable().optional(),
+    isOptional: z.boolean().optional(),
   })
   .strict();
 

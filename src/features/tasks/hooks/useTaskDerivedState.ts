@@ -16,6 +16,8 @@ export interface TaskDerivedStateReturn {
   prayerTask: Task | undefined;
   prayersDone: number;
   prayerTotal: number;
+  /** Number of checked optional (sunnah) prayer subtasks — display only, not in ring. */
+  prayerOptionalDone: number;
   otherTasks: Task[];
   countDone: number;
   totalOther: number;
@@ -81,8 +83,13 @@ export function useTaskDerivedState(
     });
 
     const pt = shiftFiltered.find((t) => t.isPrayerTask);
-    const pd = pt ? pt.subtasks.filter((s) => subChecked[s.id]).length : 0;
-    const pTotal = pt ? pt.subtasks.length : 0;
+    // Required (fard) subtasks drive the ring & overall progress
+    const reqSubs = pt ? pt.subtasks.filter((s) => !s.isOptional) : [];
+    const optSubs = pt ? pt.subtasks.filter((s) => s.isOptional) : [];
+    const pd = reqSubs.filter((s) => subChecked[s.id]).length;
+    const pTotal = reqSubs.length;
+    // Optional (sunnah) prayers are tracked separately for display only
+    const pOptionalDone = optSubs.filter((s) => subChecked[s.id]).length;
     const others = shiftFiltered.filter((t) => !t.isPrayerTask);
     const done = others.filter((t) =>
       t.subtasks.length > 0 ? t.subtasks.every((s) => subChecked[s.id]) : checked[t.id]
@@ -131,6 +138,7 @@ export function useTaskDerivedState(
       prayerTask: pt,
       prayersDone: pd,
       prayerTotal: pTotal,
+      prayerOptionalDone: pOptionalDone,
       otherTasks: others,
       countDone: done,
       totalOther: total,
