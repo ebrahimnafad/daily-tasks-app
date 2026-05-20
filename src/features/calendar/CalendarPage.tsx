@@ -871,12 +871,22 @@ export default function CalendarPage({
                 }}
               />
             </div>
+            {/* Explicit labeled pills so numbers are never ambiguous */}
             <span
               className={`cal-vacation-bar__count ${
                 vacationStats.overused ? 'cal-vacation-bar__count--over' : ''
               }`}
+              title="أيام مستخدمة"
             >
-              {vacationStats.used} / {vacationBalance}
+              ✈️ {vacationStats.used}
+            </span>
+            <span
+              className={`cal-vacation-bar__count ${
+                vacationStats.remaining <= 0 ? 'cal-vacation-bar__count--over' : ''
+              }`}
+              title="أيام متبقية"
+            >
+              🌴 {vacationStats.remaining}
             </span>
             <button
               className={`cal-vacation-bar__range-btn ${
@@ -1095,16 +1105,14 @@ export default function CalendarPage({
               </div>
             )}
 
-            {/* ── Annual vacation toggle ── */}
+            {/* ── Annual vacation toggle (action only — balance shown in top bar) ── */}
             <div
               className={`cal-exception-row ${
                 selectedDateIsVacation ? 'cal-exception-row--vacation' : ''
               }`}
             >
               <span className="cal-exception-row__label">
-                {selectedDateIsVacation
-                  ? `🌴 إجازة سنوية (متبقي: ${vacationStats.remaining} يوم)`
-                  : `🌴 رصيد الإجازة السنوية: ${vacationStats.remaining} يوم`}
+                {selectedDateIsVacation ? '🌴 هذا اليوم إجازة سنوية' : '🌴 تسجيل يوم إجازة سنوية'}
               </span>
               <button
                 className={`cal-exception-btn ${
