@@ -19,6 +19,8 @@ import {
   getMostRecentFriday,
   DEFAULT_EPOCH_KEY,
   DEFAULT_SHIFTS,
+  DAY_START_HOUR_KEY,
+  getLogicalDateISO,
 } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 import { HOLIDAY_COLOR, LS_HOLIDAY_OFFSETS, addDays, HOLIDAY_GROUPS } from './holidays';
@@ -76,7 +78,10 @@ export default function CalendarPage({
   setSelectedDate,
 }: CalendarPageProps) {
   const { tm } = useTaskContext();
-  const today = localDateISO();
+  const today = useMemo(() => {
+    const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
+    return getLogicalDateISO(dayStartHour);
+  }, []);
 
   // ── Schedule shift config (reactive to storage changes from other tabs) ──
   const LS_SCHEDULE_KEY = 'mhm_schedule';
@@ -461,9 +466,10 @@ export default function CalendarPage({
   };
 
   const goToToday = () => {
-    const now = new Date();
-    setCurrentDate(now);
-    const d = localDateISO(now);
+    const dayStartHour = lsGet<number>(DAY_START_HOUR_KEY, 0);
+    const d = getLogicalDateISO(dayStartHour);
+    const logicalDate = new Date(d + 'T12:00:00');
+    setCurrentDate(logicalDate);
     setSelectedDate(d);
     setSelectedSnapshot(null);
   };

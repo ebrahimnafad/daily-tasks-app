@@ -26,9 +26,8 @@ function AppContent({ logout }: { logout: () => void }) {
   // M-5: Lifted here so the selected month/day survive tab switches
   const [calCurrentDate, setCalCurrentDate] = useState(() => new Date());
   const [calSelectedDate, setCalSelectedDate] = useState(() => {
-    // initialise to today's local ISO date
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    const dayStartHour = Number(localStorage.getItem('mhm_day_start_hour') || '0');
+    return getLogicalDateISO(dayStartHour);
   });
   const toasts = useToasts();
   const { onNewDay, onQuota, addSyncToast } = toasts;
