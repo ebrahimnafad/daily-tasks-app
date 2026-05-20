@@ -124,24 +124,24 @@ export default function useTaskManager(
       return n;
     });
 
-    // Auto-delete completed once-tasks — they were visible (and snapshotted) all day,
-    // and should disappear on the next day rather than showing up unchecked.
-    const onceDoneIds = new Set(
-      tasks
-        .filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة' && !!checked[t.id])
-        .map((t) => t.id)
+    // Auto-delete ALL once-tasks on reset — a "مرة واحدة" task belongs to a
+    // specific day. Once the day resets, it disappears whether done or not.
+    // Previously only completed ones were deleted, leaving uncompleted tasks
+    // reappearing as unchecked on the next day (bug).
+    const onceIds = new Set(
+      tasks.filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة').map((t) => t.id)
     );
-    if (onceDoneIds.size > 0) {
-      setTasks((prev) => prev.filter((t) => !onceDoneIds.has(t.id)));
-      // Also clean up their checked/skipped entries
+    if (onceIds.size > 0) {
+      setTasks((prev) => prev.filter((t) => !onceIds.has(t.id)));
+      // Also clean up their checked/skipped/subChecked entries
       setChecked((p) => {
         const n = { ...p };
-        onceDoneIds.forEach((id) => delete n[id]);
+        onceIds.forEach((id) => delete n[id]);
         return n;
       });
       setSkipped((p) => {
         const n = { ...p };
-        onceDoneIds.forEach((id) => delete n[id]);
+        onceIds.forEach((id) => delete n[id]);
         return n;
       });
     }

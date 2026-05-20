@@ -1,3 +1,5 @@
+import { getToken } from '@/features/auth/authFetch';
+
 const STORAGE_KEY = 'mhm_error_logs';
 const MAX_LOCAL_LOGS = 100;
 
@@ -104,9 +106,13 @@ class Logger {
     this.saveToStorage();
 
     try {
+      const token = getToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
       const response = await fetch('/api/logs', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ entries: logsToSend }),
       });
 
