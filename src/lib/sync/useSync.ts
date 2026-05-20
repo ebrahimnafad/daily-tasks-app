@@ -340,6 +340,7 @@ export default function useSync(
       schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
       timestamp: 0,
     }),
+    initialDataUpdatedAt: 0,
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
@@ -508,6 +509,7 @@ export default function useSync(
       const localMigrated = local.length > 0 ? migrateTasks(local) : initialTasks;
       return { tasks: localMigrated, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
     },
+    initialDataUpdatedAt: 0,
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
@@ -534,6 +536,7 @@ export default function useSync(
       }
       return { daily: { checked: {}, subChecked: {}, skipped: {} }, timestamp: 0 };
     },
+    initialDataUpdatedAt: 0,
     enabled: isOnline,
     retry: isOnline ? 3 : false,
   });
