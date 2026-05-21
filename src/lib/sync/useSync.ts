@@ -255,7 +255,11 @@ export default function useSync(
   initialTasks: Task[],
   onNewDay?: () => void,
   onQuota?: () => void,
-  onAutoSnapshotNeeded?: (date: string) => void,
+  onAutoSnapshotNeeded?: (
+    date: string,
+    fallbackChecked?: CheckedMap,
+    fallbackSubChecked?: SubCheckedMap
+  ) => void,
   /** Non-blocking replacement for alert() — show sync errors as toasts. */
   onSyncError?: (message: string, type: 'offline' | 'error' | 'warn') => void
 ): UseSyncReturn {
@@ -465,12 +469,16 @@ export default function useSync(
       const today = getLogicalDateISO(dayStartHour);
       const storedDate = lsGet<string | null>('mhm_date', null);
       if (storedDate && storedDate !== today) {
+        // Get state BEFORE clearing it, so we can pass it to the snapshot backup
+        const currentChecked = lsGet<Record<string, boolean>>('mhm_checked', {});
+        const currentSubChecked = lsGet<Record<string, boolean>>('mhm_sub_checked', {});
+
         // Auto-save yesterday's snapshot before clearing.
         // Prefer the caller's shift-aware callback (correct data) when available;
         // fall back to the internal query-cache recomputation only as a last resort
         // since it counts all tasks instead of shift-filtered tasks.
         if (onAutoSnapshotNeeded) {
-          onAutoSnapshotNeeded(storedDate);
+          onAutoSnapshotNeeded(storedDate, currentChecked, currentSubChecked);
         } else {
           autoSnapshotRef.current();
         }
@@ -479,10 +487,6 @@ export default function useSync(
         // BEFORE the daily state is cleared.
         const currentTasks =
           queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ?? [];
-
-        // Get state BEFORE clearing it
-        const currentChecked = lsGet<Record<string, boolean>>('mhm_checked', {});
-        const currentSubChecked = lsGet<Record<string, boolean>>('mhm_sub_checked', {});
 
         let hasOnceTaskChanges = false;
         const newTasks = currentTasks

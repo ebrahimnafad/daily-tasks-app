@@ -21,6 +21,7 @@ import {
 } from '@/shared/components/FeatureErrorFallback';
 import { useAuth } from '@/features/auth/useAuth';
 import LoginPage from '@/features/auth/LoginPage';
+import type { CheckedMap, SubCheckedMap } from '@/types';
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
@@ -45,8 +46,14 @@ function AppContent({ logout }: { logout: () => void }) {
   // Defined before useSync so it can be passed as the 4th arg. The ref itself is
   // populated after useTaskManager (which provides the correct otherTasks / progress).
   // Using a ref+stableCallback pattern avoids adding useSync to the re-render cycle.
-  const autoSnapshotFnRef = useRef<(date?: string) => void>(() => undefined);
-  const stableAutoSnapshot = useCallback((date?: string) => autoSnapshotFnRef.current(date), []);
+  const autoSnapshotFnRef = useRef<
+    (date?: string, fallbackChecked?: CheckedMap, fallbackSubChecked?: SubCheckedMap) => void
+  >(() => undefined);
+  const stableAutoSnapshot = useCallback(
+    (date?: string, fallbackChecked?: CheckedMap, fallbackSubChecked?: SubCheckedMap) =>
+      autoSnapshotFnRef.current(date, fallbackChecked, fallbackSubChecked),
+    []
+  );
 
   const {
     tasks,
@@ -96,9 +103,16 @@ function AppContent({ logout }: { logout: () => void }) {
   // not today's filtered visibility. Otherwise, if May 20 had only "مرة واحدة" tasks
   // (deleted at midnight), the snapshot would show 0% progress despite tasks being done.
   useLayoutEffect(() => {
-    autoSnapshotFnRef.current = (date?: string) => {
+    autoSnapshotFnRef.current = (
+      date?: string,
+      fallbackChecked?: CheckedMap,
+      fallbackSubChecked?: SubCheckedMap
+    ) => {
       const targetDate = date || getLogicalDateISO(dayStartHour);
       const logicalToday = getLogicalDateISO(dayStartHour);
+
+      const resolvedChecked = fallbackChecked ?? checked;
+      const resolvedSubChecked = fallbackSubChecked ?? subChecked;
 
       let snapshotCountDone = tm.countDone;
       let snapshotTotalOther = tm.totalOther;
@@ -158,17 +172,17 @@ function AppContent({ logout }: { logout: () => void }) {
           if (t.subtasks && t.subtasks.length > 0) {
             const required = t.subtasks.filter((s) => !s.isOptional);
             if (required.length === 0) {
-              return t.subtasks.every((s) => subChecked[s.id]);
+              return t.subtasks.every((s) => resolvedSubChecked[s.id]);
             }
-            return required.every((s) => subChecked[s.id]);
+            return required.every((s) => resolvedSubChecked[s.id]);
           }
-          return checked[t.id];
+          return resolvedChecked[t.id];
         }).length;
 
         const pt = allTasksForDate.find((t) => t.isPrayerTask);
         const reqSubs = pt ? pt.subtasks.filter((s) => !s.isOptional) : [];
         snapshotPrayerTotal = reqSubs.length;
-        snapshotPrayersDone = reqSubs.filter((s) => subChecked[s.id]).length;
+        snapshotPrayersDone = reqSubs.filter((s) => resolvedSubChecked[s.id]).length;
 
         snapshotProgress =
           snapshotTotalOther > 0
@@ -185,7 +199,7 @@ function AppContent({ logout }: { logout: () => void }) {
       void saveSnapshot({
         date: targetDate,
         tasks: snapshotTasks,
-        checked: { ...checked, ...subChecked },
+        checked: { ...resolvedChecked, ...resolvedSubChecked },
         skipped,
         progress: snapshotProgress,
         countDone: snapshotCountDone,
