@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { enqueuePending, dequeuePendingEntity, flushPending, PENDING_SYNC_KEY } from '../syncQueue';
+import {
+  enqueuePending,
+  dequeuePendingEntity,
+  flushPending,
+  flushPendingType,
+  PENDING_SYNC_KEY,
+} from '../syncQueue';
 import { lsGet } from '@/lib/storage/localStorage';
 
 // Mock localStorage for Node environment
@@ -47,5 +53,30 @@ describe('syncQueue', () => {
     queue = lsGet(PENDING_SYNC_KEY, []);
     expect(queue).toHaveLength(1); // Only Task 2 remains
     expect(queue[0].entityId).toBe(2);
+  });
+
+  it('should flush pending items by type with flushPendingType', () => {
+    enqueuePending('tasks', { id: 1, title: 'task 1' });
+    enqueuePending('finance', { id: 2, amount: 100 }, 2);
+    enqueuePending('notes', { id: 3, text: 'note 1' });
+    enqueuePending('finance', { id: 4, amount: 200 }, 4);
+
+    const financeItems = flushPendingType('finance');
+    expect(financeItems).toHaveLength(2);
+    expect(financeItems[0].type).toBe('finance');
+    expect(financeItems[1].type).toBe('finance');
+
+    const remaining = lsGet<any[]>(PENDING_SYNC_KEY, []);
+    expect(remaining).toHaveLength(2);
+    expect(remaining[0].type).toBe('tasks');
+    expect(remaining[1].type).toBe('notes');
+
+    const notesItems = flushPendingType('notes');
+    expect(notesItems).toHaveLength(1);
+
+    const tasksItems = flushPendingType('tasks');
+    expect(tasksItems).toHaveLength(1);
+
+    expect(lsGet(PENDING_SYNC_KEY, [])).toHaveLength(0);
   });
 });

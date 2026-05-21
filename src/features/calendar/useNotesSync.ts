@@ -1,7 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import { mergeArrays } from '@/lib/sync/reconcile';
+import {
+  enqueuePending,
+  dequeuePendingEntity,
+  flushPendingType,
+  isNetworkError,
+} from '@/lib/sync/syncQueue';
 import type { CalendarNote } from './types';
 
 // ── Keys ──────────────────────────────────────────────────────────────────
@@ -9,8 +16,9 @@ const LS_KEY = 'mhm_calendar_notes_v2';
 const LS_TS_KEY = 'mhm_calendar_notes_v2_ts';
 const LEGACY_KEY = 'mhm_calendar_notes';
 
-// ── Migration from old format Record<string,string> ───────────────────────
-function migrateLegacy(onQuota?: () => void): CalendarNote[] {
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function migrateLegacy(): CalendarNote[] {
   try {
     const legacy = lsGet<Record<string, string> | null>(LEGACY_KEY, null);
     if (!legacy || typeof legacy !== 'object' || Array.isArray(legacy)) return [];
@@ -26,9 +34,8 @@ function migrateLegacy(onQuota?: () => void): CalendarNote[] {
         pinned: false,
       }));
     if (notes.length > 0) {
-      lsSet(LS_KEY, notes, onQuota);
-      lsSet(LS_TS_KEY, now, onQuota);
-      // Remove old key so migration runs once only
+      lsSet(LS_KEY, notes);
+      lsSet(LS_TS_KEY, now);
       localStorage.removeItem(LEGACY_KEY);
     }
     return notes;
@@ -37,13 +44,9 @@ function migrateLegacy(onQuota?: () => void): CalendarNote[] {
   }
 }
 
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-
-function initialLoad(onQuota?: () => void): CalendarNote[] {
+function initialLoad(): CalendarNote[] {
   const existing = lsGet<CalendarNote[] | null>(LS_KEY, null);
   if (Array.isArray(existing) && existing.length > 0) {
-    // Migrate any legacy Math.random() or "legacy-date" IDs to valid UUIDs
-    // to prevent Postgres from crashing with "invalid input syntax for type uuid"
     let mutated = false;
     const validated = existing.map((n) => {
       if (!UUID_REGEX.test(n.id)) {
@@ -53,15 +56,13 @@ function initialLoad(onQuota?: () => void): CalendarNote[] {
       return n;
     });
     if (mutated) {
-      lsSet(LS_KEY, validated, onQuota);
+      lsSet(LS_KEY, validated);
     }
     return validated;
   }
-  // Try legacy migration
-  return migrateLegacy(onQuota);
+  return migrateLegacy();
 }
 
-// ── Hook ─────────────────────────────────────────────────────────────────
 export type SyncStatus = 'syncing' | 'synced' | 'offline' | 'error';
 
 interface UseNotesSyncReturn {
@@ -71,32 +72,41 @@ interface UseNotesSyncReturn {
   deleteNote: (id: string) => void;
   togglePin: (id: string) => void;
   syncStatus: SyncStatus;
-  /** Non-null when the last sync attempt failed. Contains Arabic message. */
   syncError: string | null;
-  /** Manually re-trigger the sync after a failure. */
   retrySync: () => void;
 }
 
-function nanoid(): string {
-  return crypto.randomUUID();
-}
+export const fetchNotes = async (): Promise<{ notes: CalendarNote[]; timestamp: number }> => {
+  try {
+    const res = await authFetch('/api/notes', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Network error');
+    const data = (await res.json()) as { notes: CalendarNote[] | null; updatedAt: string | null };
+    const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
+
+    if (Array.isArray(data.notes)) {
+      const serverNotes = data.notes;
+      const localNotes = initialLoad();
+      const merged = mergeArrays(localNotes, serverNotes);
+      lsSet(LS_KEY, merged);
+      lsSet(LS_TS_KEY, timestamp || new Date().toISOString());
+      return { notes: merged, timestamp };
+    }
+  } catch (err) {
+    console.error('Fetch notes failed, using local fallback:', err);
+  }
+  return {
+    notes: initialLoad(),
+    timestamp: new Date(lsGet<string>(LS_TS_KEY, new Date().toISOString())).getTime(),
+  };
+};
 
 export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
-  const [notes, setNotesState] = useState<CalendarNote[]>(() => initialLoad(onQuota));
-  const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+  const queryClient = useQueryClient();
+  const [isOnline, setIsOnline] = useState<boolean>(() => navigator.onLine);
   const [syncError, setSyncError] = useState<string | null>(null);
-
-  const dbAvailable = useRef(false);
+  const didMountRef = useRef(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMounted = useRef(false);
-  /**
-   * Tracks the last array successfully acknowledged by the server.
-   * On failure we roll back notesState to this snapshot so the UI
-   * never shows data that is only in the local state but not on the server.
-   */
-  const committedRef = useRef<CalendarNote[]>(notes);
 
-  // ── Persist helper ────────────────────────────────────────────────────
   const persist = useCallback(
     (next: CalendarNote[]) => {
       lsSet(LS_KEY, next, onQuota);
@@ -105,201 +115,250 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
     [onQuota]
   );
 
-  // ── Setters ───────────────────────────────────────────────────────────
+  const { data: notesResp, isFetching: fetchingNotes } = useQuery<{
+    notes: CalendarNote[];
+    timestamp: number;
+  }>({
+    queryKey: ['notes'],
+    queryFn: fetchNotes,
+    initialData: () => {
+      return {
+        notes: initialLoad(),
+        timestamp: new Date(lsGet<string>(LS_TS_KEY, new Date().toISOString())).getTime(),
+      };
+    },
+    initialDataUpdatedAt: 0,
+    enabled: isOnline,
+    retry: isOnline ? 3 : false,
+  });
+
+  const notes = notesResp?.notes ?? [];
+
+  const { mutate: updateNotesMut, mutateAsync: updateNotesMutAsync } = useMutation<
+    { ok: boolean },
+    Error,
+    CalendarNote[],
+    { prevData: { notes: CalendarNote[]; timestamp: number } | undefined }
+  >({
+    mutationFn: async (newNotes) => {
+      const res = await authFetch('/api/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: newNotes }),
+      });
+      if (!res.ok) {
+        let errData;
+        try {
+          errData = await res.json();
+        } catch (e) {
+          /* ignore */
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err: any = new Error(errData?.error || `Notes Sync API error ${res.status}`);
+        err.status = res.status;
+        err.serverData = errData?.serverData;
+        err.entityId = errData?.entityId;
+        throw err;
+      }
+      return res.json();
+    },
+    onMutate: async (newNotes) => {
+      await queryClient.cancelQueries({ queryKey: ['notes'] });
+      const prevData = queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>([
+        'notes',
+      ]);
+      queryClient.setQueryData(['notes'], { notes: newNotes, timestamp: Date.now() });
+      persist(newNotes);
+      return { prevData };
+    },
+    onSuccess: () => {
+      setSyncError(null);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: async (err: any, variables, context) => {
+      const isOfflineStatus = !navigator.onLine || isNetworkError(err);
+      if (isOfflineStatus) {
+        enqueuePending('notes', variables);
+        setSyncError('لا يوجد اتصال بالإنترنت — تم حفظ التغييرات محلياً.');
+        return;
+      }
+
+      if (err.status === 409 || err.status === 410) {
+        if (err.entityId) {
+          dequeuePendingEntity('notes', err.entityId);
+        }
+
+        let updatedNotes: CalendarNote[] = [];
+        queryClient.setQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'], (old) => {
+          if (!old) return old;
+          updatedNotes = old.notes;
+          if (err.status === 410) {
+            updatedNotes = updatedNotes.filter((p) => String(p.id) !== String(err.entityId));
+          } else if (err.status === 409 && err.serverData) {
+            updatedNotes = updatedNotes.map((p) =>
+              String(p.id) === String(err.entityId) ? { ...p, ...err.serverData } : p
+            );
+          }
+          persist(updatedNotes);
+          return { ...old, notes: updatedNotes };
+        });
+
+        if (updatedNotes.length > 0) {
+          updateNotesMutAsync(updatedNotes).catch(() => {});
+        }
+
+        setSyncError(
+          err.status === 410
+            ? 'تم حذف ملاحظة لتزامن الحذف من جهاز آخر'
+            : 'تم استرجاع نسخة أحدث من ملاحظة'
+        );
+        return;
+      }
+
+      console.error('Notes sync error:', err);
+      setSyncError('فشل حفظ الملاحظات على السيرفر.');
+
+      // Rollback to previous data
+      if (context?.prevData) {
+        queryClient.setQueryData(['notes'], context.prevData);
+        persist(context.prevData.notes);
+      }
+    },
+  });
+
+  const triggerMutate = useCallback(
+    (nextNotes: CalendarNote[]) => {
+      // Optimistically update the cache right away
+      queryClient.setQueryData(['notes'], { notes: nextNotes, timestamp: Date.now() });
+      persist(nextNotes);
+
+      if (syncTimer.current) clearTimeout(syncTimer.current);
+      syncTimer.current = setTimeout(() => {
+        const latestData = queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>([
+          'notes',
+        ])?.notes;
+        if (latestData) updateNotesMut(latestData);
+      }, 1500);
+    },
+    [queryClient, updateNotesMut, persist]
+  );
+
   const addNote = useCallback(
     (date: string, text: string, tags: string[] = []): CalendarNote => {
       const now = new Date().toISOString();
-      const note: CalendarNote = { id: nanoid(), date, text, tags, createdAt: now, updatedAt: now };
-      setNotesState((prev) => {
-        const next = [note, ...prev];
-        persist(next);
-        return next;
-      });
+      // Notes uses client-generated stable UUIDs, so no temporary ID reconciliation needed.
+      const note: CalendarNote = {
+        id: crypto.randomUUID(),
+        date,
+        text,
+        tags,
+        createdAt: now,
+        updatedAt: now,
+        pinned: false,
+      };
+
+      const currentNotes =
+        queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'])?.notes ??
+        [];
+      const nextNotes = [note, ...currentNotes];
+      triggerMutate(nextNotes);
       return note;
     },
-    [persist]
+    [queryClient, triggerMutate]
   );
 
   const updateNote = useCallback(
     (id: string, data: Partial<Omit<CalendarNote, 'id'>>) => {
-      setNotesState((prev) => {
-        const next = prev.map((n) =>
-          n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n
-        );
-        persist(next);
-        return next;
-      });
+      const currentNotes =
+        queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'])?.notes ??
+        [];
+      const nextNotes = currentNotes.map((n) =>
+        n.id === id ? { ...n, ...data, updatedAt: new Date().toISOString() } : n
+      );
+      triggerMutate(nextNotes);
     },
-    [persist]
+    [queryClient, triggerMutate]
   );
 
   const deleteNote = useCallback(
     (id: string) => {
-      setNotesState((prev) => {
-        const next = prev.filter((n) => n.id !== id);
-        persist(next);
-        return next;
-      });
+      const currentNotes =
+        queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'])?.notes ??
+        [];
+      const nextNotes = currentNotes.filter((n) => n.id !== id);
+      triggerMutate(nextNotes);
     },
-    [persist]
+    [queryClient, triggerMutate]
   );
 
   const togglePin = useCallback(
     (id: string) => {
-      setNotesState((prev) => {
-        const next = prev.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n));
-        persist(next);
-        return next;
-      });
+      const currentNotes =
+        queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'])?.notes ??
+        [];
+      const nextNotes = currentNotes.map((n) => (n.id === id ? { ...n, pinned: !n.pinned } : n));
+      triggerMutate(nextNotes);
     },
-    [persist]
-  );
-
-  // ── Cloud sync ────────────────────────────────────────────────────────
-  const doSync = useCallback(
-    async (currentNotes: CalendarNote[]) => {
-      try {
-        const res = await authFetch('/api/notes', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ notes: currentNotes }),
-        });
-        if (!res.ok) {
-          let errData;
-          try {
-            errData = await res.json();
-          } catch (e) {
-            /* ignore */
-          }
-
-          if (res.status === 409 || res.status === 410) {
-            const serverData = errData?.serverData;
-            const entityId = errData?.entityId;
-            if (entityId) {
-              setNotesState((prev) => {
-                let next;
-                if (res.status === 410) {
-                  next = prev.filter((p) => String(p.id) !== String(entityId));
-                } else if (serverData) {
-                  next = prev.map((p) =>
-                    String(p.id) === String(entityId) ? { ...p, ...serverData } : p
-                  );
-                } else {
-                  next = prev;
-                }
-                persist(next);
-                committedRef.current = next;
-                return next;
-              });
-
-              setSyncError(
-                res.status === 410
-                  ? 'تم حذف ملاحظة لتزامن الحذف من جهاز آخر'
-                  : 'تم استرجاع نسخة أحدث من ملاحظة'
-              );
-              return; // state update triggers retry
-            }
-          }
-          throw new Error('API error');
-        }
-        // Success — advance the committed snapshot and clear any error
-        committedRef.current = currentNotes;
-        setSyncStatus('synced');
-        setSyncError(null);
-      } catch {
-        const isOffline = !navigator.onLine;
-        setSyncStatus(isOffline ? 'offline' : 'error');
-        // Roll back UI to the last version the server acknowledged
-        const rollbackTo = committedRef.current;
-        setNotesState(rollbackTo);
-        persist(rollbackTo);
-        setSyncError(
-          isOffline
-            ? 'لا يوجد اتصال بالإنترنت — تم التراجع عن التغييرات الأخيرة. أعد المحاولة عند الاتصال.'
-            : 'فشل حفظ الملاحظات على السيرفر — تم التراجع عن التغيير الأخير. اضغط "إعادة المحاولة" للمحاولة مجدداً.'
-        );
-      }
-    },
-    [persist]
-  );
-
-  const scheduleSync = useCallback(
-    (currentNotes: CalendarNote[]) => {
-      if (!dbAvailable.current) return;
-      if (syncTimer.current) clearTimeout(syncTimer.current);
-      setSyncStatus('syncing');
-      syncTimer.current = setTimeout(() => doSync(currentNotes), 1500);
-    },
-    [doSync]
+    [queryClient, triggerMutate]
   );
 
   const retrySync = useCallback(() => {
-    if (!dbAvailable.current) return;
     setSyncError(null);
-    setSyncStatus('syncing');
-    void doSync(committedRef.current);
-  }, [doSync]);
+    const currentNotes =
+      queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>(['notes'])?.notes ??
+      [];
+    updateNotesMut(currentNotes);
+  }, [queryClient, updateNotesMut]);
 
-  const loadFromServer = useCallback(async () => {
-    try {
-      const res = await authFetch('/api/notes', { cache: 'no-store' });
-      if (!res.ok) {
-        setSyncStatus('offline');
-        return;
-      }
-      const data = (await res.json()) as { notes: CalendarNote[] | null; updatedAt: string | null };
-      dbAvailable.current = true;
-
-      if (Array.isArray(data.notes)) {
-        setNotesState((prevLocal) => {
-          const merged = mergeArrays(prevLocal, data.notes as CalendarNote[]);
-          persist(merged);
-          committedRef.current = merged;
-          return merged;
-        });
-
-        lsSet(LS_TS_KEY, data.updatedAt || new Date().toISOString(), onQuota);
-      }
-      setSyncStatus('synced');
+  useEffect(() => {
+    const handleOnline = async () => {
+      setIsOnline(true);
       setSyncError(null);
-    } catch {
-      setSyncStatus('offline');
-    }
-  }, [onQuota, persist]);
 
-  // Trigger sync whenever notes change (after mount)
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      loadFromServer();
-      return;
-    }
-    scheduleSync(notes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes]);
-
-  // Online retry — L-9: explicit void to mark intentional fire-and-forget
-  useEffect(() => {
-    const handle = () => {
-      setSyncStatus('syncing');
-      if (dbAvailable.current) {
-        void doSync(notes);
+      const items = flushPendingType('notes');
+      if (items.length > 0) {
+        const latest = items[items.length - 1].payload as CalendarNote[];
+        await updateNotesMutAsync(latest).catch(console.error);
       } else {
-        void loadFromServer();
+        if (didMountRef.current) {
+          void queryClient.invalidateQueries({ queryKey: ['notes'] });
+        }
       }
     };
-    window.addEventListener('online', handle);
-    return () => window.removeEventListener('online', handle);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, doSync, loadFromServer]);
+    const handleOffline = () => setIsOnline(false);
 
-  // Cleanup
-  useEffect(
-    () => () => {
-      if (syncTimer.current) clearTimeout(syncTimer.current);
-    },
-    []
-  );
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    didMountRef.current = true;
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [queryClient, updateNotesMutAsync]);
+
+  useEffect(() => {
+    return () => {
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current);
+        // Flush pending changes to offline queue if unmounted before mutation
+        const latestData = queryClient.getQueryData<{ notes: CalendarNote[]; timestamp: number }>([
+          'notes',
+        ])?.notes;
+        if (latestData) {
+          enqueuePending('notes', latestData);
+        }
+      }
+    };
+  }, [queryClient]);
+
+  const syncStatus: SyncStatus = !isOnline
+    ? 'offline'
+    : syncError
+      ? 'error'
+      : fetchingNotes
+        ? 'syncing'
+        : 'synced';
 
   return {
     notes,

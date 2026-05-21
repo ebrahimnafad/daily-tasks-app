@@ -20,7 +20,7 @@ function TaskCardContainer({
 }: TaskCardContainerProps) {
   const { tm, prayersDone, prayerTotal, setChecked, setSubChecked } = useTaskContext();
 
-  const [isExpanded, setIsExpanded] = useState(task.id === 1);
+  const [isExpanded, setIsExpanded] = useState(task.id === '00000000-0000-0000-0000-000000000001');
   const [isBriefOpen, setIsBriefOpen] = useState(false);
   const [isSubtaskOpen, setIsSubtaskOpen] = useState(false);
   const [isActionsOpen, setIsActionsOpen] = useState(false);

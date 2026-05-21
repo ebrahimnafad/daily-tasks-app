@@ -129,7 +129,7 @@ export default function useTaskManager(
     const onceTasks = tasks.filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة');
     if (onceTasks.length > 0) {
       let hasOnceTaskChanges = false;
-      const onceUpdates = new Map<number, Task | null>(); // null means delete
+      const onceUpdates = new Map<string, Task | null>(); // null means delete
 
       onceTasks.forEach((t) => {
         if (!t.subtasks || t.subtasks.length === 0) {

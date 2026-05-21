@@ -31,15 +31,15 @@ export interface TaskCrudReturn {
   setModal: Dispatch<SetStateAction<ModalState | null>>;
   form: TaskForm;
   setForm: Dispatch<SetStateAction<TaskForm>>;
-  deleteConfirm: number | null;
-  setDeleteConfirm: Dispatch<SetStateAction<number | null>>;
+  deleteConfirm: string | null;
+  setDeleteConfirm: Dispatch<SetStateAction<string | null>>;
   openAdd: () => void;
   openEdit: (task: Task, e: MouseEvent) => void;
   setFormField: <K extends keyof TaskForm>(f: K, v: TaskForm[K]) => void;
   saveTask: () => void;
-  deleteTask: (id: number) => void;
-  togglePinTask: (id: number) => void;
-  toggleSkipTask: (id: number) => void;
+  deleteTask: (id: string) => void;
+  togglePinTask: (id: string) => void;
+  toggleSkipTask: (id: string) => void;
 }
 
 export function useTaskCrud(
@@ -53,7 +53,7 @@ export function useTaskCrud(
 ): TaskCrudReturn {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [form, setForm] = useState<TaskForm>(EMPTY_FORM);
-  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   // Guard against double-tap: blocks re-entrant saveTask calls that fire before
   // React re-renders and closes the modal. Reset by useEffect when modal → null.
   const isSavingRef = useRef(false);
@@ -161,12 +161,12 @@ export function useTaskCrud(
       },
     };
     if (modal.mode === 'add') {
-      const newId = -Date.now();
+      const newId = crypto.randomUUID();
       setTasks((p) => [...p, { id: newId, isPrayerTask: false, subtasks: [], ...patch }]);
     } else {
       setTasks((p) =>
         p.map((t) =>
-          t.id === (modal as { mode: string; taskId: number }).taskId ? { ...t, ...patch } : t
+          t.id === (modal as { mode: string; taskId: string }).taskId ? { ...t, ...patch } : t
         )
       );
     }
@@ -174,7 +174,7 @@ export function useTaskCrud(
   }, [form, modal, setTasks]);
 
   const deleteTask = useCallback(
-    (id: number) => {
+    (id: string) => {
       const task = tasks.find((t) => t.id === id);
       setTasks((p) => p.filter((t) => t.id !== id));
       setChecked((p) => {
@@ -201,14 +201,14 @@ export function useTaskCrud(
   );
 
   const togglePinTask = useCallback(
-    (id: number) => {
+    (id: string) => {
       setTasks((p) => p.map((t) => (t.id === id ? { ...t, isPinned: !t.isPinned } : t)));
     },
     [setTasks]
   );
 
   const toggleSkipTask = useCallback(
-    (id: number) => {
+    (id: string) => {
       setSkipped((p) => {
         const n = { ...p };
         if (n[id]) delete n[id];

@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   Income,
   Expense,
@@ -11,6 +12,7 @@ import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../constants';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import { mergeArrays } from '@/lib/sync/reconcile';
+import { enqueuePending, flushPendingType, isNetworkError } from '@/lib/sync/syncQueue';
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
 export const KEYS = {
@@ -24,17 +26,79 @@ export const KEYS = {
 
 type SetterFn<T> = T | ((prev: T) => T);
 
+export interface FinanceData {
+  income: Income[];
+  categories: ExpenseCategory[];
+  expenses: Expense[];
+  transactions: Transaction[];
+  goals: Goal[];
+}
+
+export const fetchFinance = async (): Promise<{ data: FinanceData; timestamp: number }> => {
+  try {
+    const res = await authFetch('/api/finance?resource=sync-all', { cache: 'no-store' });
+    if (!res.ok) throw new Error('Network error');
+    const serverResp = await res.json();
+    const timestamp = serverResp.updatedAt ? new Date(serverResp.updatedAt).getTime() : 0;
+
+    // Server data might not be completely formed if empty
+    const serverData: FinanceData = {
+      income: serverResp.income || [],
+      categories: serverResp.categories || [],
+      expenses: serverResp.expenses || [],
+      transactions: serverResp.transactions || [],
+      goals: serverResp.goals || [],
+    };
+
+    const localData: FinanceData = {
+      income: lsGet(KEYS.income, []),
+      categories: lsGet(KEYS.categories, DEFAULT_CATEGORIES),
+      expenses: lsGet(KEYS.expenses, []),
+      transactions: lsGet(KEYS.transactions, []),
+      goals: lsGet(KEYS.goals, []),
+    };
+
+    const merged: FinanceData = {
+      income: mergeArrays(localData.income, serverData.income),
+      categories: mergeArrays(localData.categories, serverData.categories),
+      expenses: mergeArrays(localData.expenses, serverData.expenses),
+      transactions: mergeArrays(localData.transactions, serverData.transactions),
+      goals: mergeArrays(localData.goals, serverData.goals),
+    };
+
+    lsSet(KEYS.income, merged.income);
+    lsSet(KEYS.categories, merged.categories);
+    lsSet(KEYS.expenses, merged.expenses);
+    lsSet(KEYS.transactions, merged.transactions);
+    lsSet(KEYS.goals, merged.goals);
+    lsSet('mhm_fin2_timestamp', timestamp);
+
+    return { data: merged, timestamp };
+  } catch (err) {
+    console.error('Fetch finance failed, using local fallback:', err);
+  }
+
+  const localData: FinanceData = {
+    income: lsGet(KEYS.income, []),
+    categories: lsGet(KEYS.categories, DEFAULT_CATEGORIES),
+    expenses: lsGet(KEYS.expenses, []),
+    transactions: lsGet(KEYS.transactions, []),
+    goals: lsGet(KEYS.goals, []),
+  };
+  return { data: localData, timestamp: lsGet<number>('mhm_fin2_timestamp', 0) };
+};
+
 // ── Hook ────────────────────────────────────────────────────────────────────
-export default function useFinanceSync(onQuota?: () => void) {
-  const [income, setIncomeState] = useState<Income[]>(() => lsGet(KEYS.income, []));
-  const [categories, setCategoriesState] = useState<ExpenseCategory[]>(() =>
-    lsGet(KEYS.categories, DEFAULT_CATEGORIES)
-  );
-  const [expenses, setExpensesState] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
-  const [transactions, setTransactionsState] = useState<Transaction[]>(() =>
-    lsGet(KEYS.transactions, [])
-  );
-  const [goals, setGoalsState] = useState<Goal[]>(() => lsGet(KEYS.goals, []));
+export default function useFinanceSync(
+  onQuota?: () => void,
+  notify?: (msg: string, type: 'offline' | 'error' | 'warn') => void
+) {
+  const queryClient = useQueryClient();
+  const [isOnline, setIsOnline] = useState<boolean>(() => navigator.onLine);
+  const [hasError, setHasError] = useState(false);
+  const didMountRef = useRef(false);
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const [settings, setSettingsState] = useState<FinanceSettings>(() => {
     const s = lsGet(KEYS.settings, DEFAULT_SETTINGS) as FinanceSettings & Record<string, unknown>;
     // Migration from old settings
@@ -45,75 +109,166 @@ export default function useFinanceSync(onQuota?: () => void) {
     }
     if (s.showExchangeRate !== undefined) {
       s.showSecondaryCurrency = Boolean(s.showExchangeRate);
-      s.secondaryCurrencySymbol = 'ج.م'; // Previous secondary was always EGP
+      s.secondaryCurrencySymbol = 'ج.م';
       delete s.showExchangeRate;
     }
     if (!s.currencySymbol) s.currencySymbol = 'ر.س';
     return s as FinanceSettings;
   });
-  const [syncStatus, setSyncStatus] = useState<'syncing' | 'synced' | 'offline' | 'error'>(
-    'syncing'
-  );
 
-  const dbAvailable = useRef(false);
-  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isMounted = useRef(false);
-
-  const setIncome = useCallback(
-    (v: SetterFn<Income[]>) => {
-      setIncomeState((prev) => {
-        const next = typeof v === 'function' ? (v as (p: Income[]) => Income[])(prev) : v;
-        lsSet(KEYS.income, next, onQuota);
-        return next;
-      });
+  const { data: financeResp, isFetching: fetchingFinance } = useQuery<{
+    data: FinanceData;
+    timestamp: number;
+  }>({
+    queryKey: ['finance'],
+    queryFn: fetchFinance,
+    initialData: () => {
+      const localData: FinanceData = {
+        income: lsGet(KEYS.income, []),
+        categories: lsGet(KEYS.categories, DEFAULT_CATEGORIES),
+        expenses: lsGet(KEYS.expenses, []),
+        transactions: lsGet(KEYS.transactions, []),
+        goals: lsGet(KEYS.goals, []),
+      };
+      return { data: localData, timestamp: lsGet<number>('mhm_fin2_timestamp', 0) };
     },
-    [onQuota]
+    initialDataUpdatedAt: 0,
+    enabled: isOnline,
+    retry: isOnline ? 3 : false,
+  });
+
+  const financeData = financeResp?.data ?? {
+    income: [],
+    categories: DEFAULT_CATEGORIES,
+    expenses: [],
+    transactions: [],
+    goals: [],
+  };
+
+  const { mutate: updateFinanceMut, mutateAsync: updateFinanceMutAsync } = useMutation<
+    { ok: boolean },
+    Error,
+    FinanceData,
+    { prevData: { data: FinanceData; timestamp: number } | undefined }
+  >({
+    mutationFn: async (newData) => {
+      const res = await authFetch('/api/finance?resource=sync-all', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newData),
+      });
+      if (!res.ok) {
+        let errData;
+        try {
+          errData = await res.json();
+        } catch (e) {
+          /* ignore */
+        }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err: any = new Error(errData?.error || `Finance Sync API error ${res.status}`);
+        err.status = res.status;
+        err.serverData = errData?.serverData;
+        err.entityId = errData?.entityId;
+        err.resource = errData?.resource;
+        throw err;
+      }
+      return res.json();
+    },
+    onMutate: async (newData) => {
+      await queryClient.cancelQueries({ queryKey: ['finance'] });
+      const prevData = queryClient.getQueryData<{ data: FinanceData; timestamp: number }>([
+        'finance',
+      ]);
+      queryClient.setQueryData(['finance'], { data: newData, timestamp: Date.now() });
+      return { prevData };
+    },
+    onSuccess: () => {
+      setHasError(false);
+    },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: async (err: any, variables, context) => {
+      const isOfflineStatus = !navigator.onLine || isNetworkError(err);
+      if (isOfflineStatus) {
+        enqueuePending('finance', variables);
+        notify?.('أنت غير متصل — تم حفظ بياناتك المالية محلياً وستُزامَن عند اتصالك', 'offline');
+        return;
+      }
+
+      // Restore to previous data
+      if (context?.prevData) {
+        queryClient.setQueryData(['finance'], context.prevData);
+        lsSet(KEYS.income, context.prevData.data.income);
+        lsSet(KEYS.categories, context.prevData.data.categories);
+        lsSet(KEYS.expenses, context.prevData.data.expenses);
+        lsSet(KEYS.transactions, context.prevData.data.transactions);
+        lsSet(KEYS.goals, context.prevData.data.goals);
+      }
+
+      if (err.status === 409 || err.status === 410) {
+        const resNameMap: Record<string, string> = {
+          income: 'الدخل',
+          categories: 'الأقسام',
+          expenses: 'المصروفات',
+          transactions: 'المعاملات',
+          goals: 'الأهداف',
+        };
+        const localizedRes = resNameMap[err.resource] || 'عنصر';
+
+        notify?.(
+          err.status === 410
+            ? `تم حذف ${localizedRes} لتزامن الحذف من جهاز آخر. تم التراجع عن التغييرات الأخيرة.`
+            : `تم تحديث ${localizedRes} بنسخة أحدث. تم التراجع عن التغييرات الأخيرة.`,
+          'warn'
+        );
+        return;
+      }
+
+      console.error('Finance sync error:', err);
+      notify?.(`خطأ في مزامنة المالية: ${err.message}`, 'error');
+      setHasError(true);
+    },
+  });
+
+  // Helper to create setters with debounced mutation
+  const createSetter = useCallback(
+    <K extends keyof FinanceData>(key: K) => {
+      return (updater: SetterFn<FinanceData[K]>) => {
+        const currentDataObj = queryClient.getQueryData<{ data: FinanceData; timestamp: number }>([
+          'finance',
+        ]);
+        const currentData = currentDataObj?.data ?? {
+          income: [],
+          categories: DEFAULT_CATEGORIES,
+          expenses: [],
+          transactions: [],
+          goals: [],
+        };
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const nextValue =
+          typeof updater === 'function' ? (updater as any)(currentData[key]) : updater;
+        const nextData = { ...currentData, [key]: nextValue };
+
+        // Optimistic local update synchronously
+        queryClient.setQueryData(['finance'], { data: nextData, timestamp: Date.now() });
+        lsSet(KEYS[key], nextValue, onQuota);
+
+        if (syncTimer.current) clearTimeout(syncTimer.current);
+        syncTimer.current = setTimeout(() => {
+          const latestData = queryClient.getQueryData<{ data: FinanceData; timestamp: number }>([
+            'finance',
+          ])?.data;
+          if (latestData) updateFinanceMut(latestData);
+        }, 1500);
+      };
+    },
+    [queryClient, updateFinanceMut, onQuota]
   );
 
-  const setCategories = useCallback(
-    (v: SetterFn<ExpenseCategory[]>) => {
-      setCategoriesState((prev) => {
-        const next =
-          typeof v === 'function' ? (v as (p: ExpenseCategory[]) => ExpenseCategory[])(prev) : v;
-        lsSet(KEYS.categories, next, onQuota);
-        return next;
-      });
-    },
-    [onQuota]
-  );
-
-  const setExpenses = useCallback(
-    (v: SetterFn<Expense[]>) => {
-      setExpensesState((prev) => {
-        const next = typeof v === 'function' ? (v as (p: Expense[]) => Expense[])(prev) : v;
-        lsSet(KEYS.expenses, next, onQuota);
-        return next;
-      });
-    },
-    [onQuota]
-  );
-
-  const setTransactions = useCallback(
-    (v: SetterFn<Transaction[]>) => {
-      setTransactionsState((prev) => {
-        const next = typeof v === 'function' ? (v as (p: Transaction[]) => Transaction[])(prev) : v;
-        lsSet(KEYS.transactions, next, onQuota);
-        return next;
-      });
-    },
-    [onQuota]
-  );
-
-  const setGoals = useCallback(
-    (v: SetterFn<Goal[]>) => {
-      setGoalsState((prev) => {
-        const next = typeof v === 'function' ? (v as (p: Goal[]) => Goal[])(prev) : v;
-        lsSet(KEYS.goals, next, onQuota);
-        return next;
-      });
-    },
-    [onQuota]
-  );
+  const setIncome = createSetter('income');
+  const setCategories = createSetter('categories');
+  const setExpenses = createSetter('expenses');
+  const setTransactions = createSetter('transactions');
+  const setGoals = createSetter('goals');
 
   const setSettings = useCallback(
     (v: SetterFn<FinanceSettings>) => {
@@ -127,178 +282,69 @@ export default function useFinanceSync(onQuota?: () => void) {
     [onQuota]
   );
 
-  // ── Cloud sync ─────────────────────────────────────────────────────────────
-  const doSync = useCallback(async () => {
-    try {
-      const resources = [
-        { key: 'income', data: income },
-        { key: 'categories', data: categories },
-        { key: 'expenses', data: expenses },
-        { key: 'transactions', data: transactions },
-        { key: 'goals', data: goals },
-      ];
-      const results = await Promise.all(
-        resources.map((r) =>
-          authFetch(`/api/finance?resource=${r.key}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ [r.key]: r.data }),
-          })
-        )
-      );
-
-      let needsRetry = false;
-      for (let i = 0; i < results.length; i++) {
-        const res = results[i];
-        if (!res.ok) {
-          let errData;
-          try {
-            errData = await res.json();
-          } catch (e) {
-            /* ignore */
-          }
-
-          if (res.status === 409 || res.status === 410) {
-            const serverData = errData?.serverData;
-            const entityId = errData?.entityId;
-            if (serverData && entityId) {
-              const setter = [
-                setIncomeState,
-                setCategoriesState,
-                setExpensesState,
-                setTransactionsState,
-                setGoalsState,
-              ][i];
-              const lsKey = [
-                KEYS.income,
-                KEYS.categories,
-                KEYS.expenses,
-                KEYS.transactions,
-                KEYS.goals,
-              ][i];
-
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              (setter as React.Dispatch<React.SetStateAction<any[]>>)((prev) => {
-                let next;
-                if (res.status === 410) {
-                  next = prev.filter((p) => String(p.id) !== String(entityId));
-                } else {
-                  next = prev.map((p) =>
-                    String(p.id) === String(entityId) ? { ...p, ...serverData } : p
-                  );
-                }
-                lsSet(lsKey, next, onQuota);
-                return next;
-              });
-              needsRetry = true;
-            }
-          } else {
-            throw new Error('API error');
-          }
-        }
-      }
-
-      if (needsRetry) {
-        return; // State updates will trigger another sync
-      }
-      setSyncStatus('synced');
-    } catch {
-      setSyncStatus(navigator.onLine ? 'error' : 'offline');
-    }
-  }, [income, categories, expenses, transactions, goals, onQuota]);
-
-  const scheduleSync = useCallback(() => {
-    if (!dbAvailable.current) return;
-    if (syncTimer.current) clearTimeout(syncTimer.current);
-    setSyncStatus('syncing');
-    syncTimer.current = setTimeout(doSync, 1500);
-  }, [doSync]);
-
-  // Load data from server (initial load + online retry)
-  const loadFromServer = useCallback(async () => {
-    try {
-      const resources = ['income', 'categories', 'expenses', 'transactions', 'goals'];
-      const responses = await Promise.all(
-        resources.map((r) => authFetch(`/api/finance?resource=${r}`, { cache: 'no-store' }))
-      );
-      if (responses.some((r) => !r.ok)) {
-        setSyncStatus('offline');
-        return;
-      }
-
-      const data = await Promise.all(responses.map((r) => r.json()));
-      dbAvailable.current = true;
-
-      const setters = [
-        setIncomeState,
-        setCategoriesState,
-        setExpensesState,
-        setTransactionsState,
-        setGoalsState,
-      ] as const;
-      const keys = [KEYS.income, KEYS.categories, KEYS.expenses, KEYS.transactions, KEYS.goals];
-
-      resources.forEach((field, i) => {
-        const serverArr = data[i]?.[field];
-        if (Array.isArray(serverArr)) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (setters[i] as React.Dispatch<React.SetStateAction<any[]>>)((prevLocalArr) => {
-            const merged = mergeArrays(prevLocalArr, serverArr);
-            lsSet(keys[i], merged, onQuota);
-            return merged;
-          });
-        }
-      });
-
-      setSyncStatus('synced');
-    } catch {
-      setSyncStatus('offline');
-    }
-  }, [onQuota]);
-
-  // Initial load from DB and trigger sync on changes
-  useEffect(() => {
-    if (!isMounted.current) {
-      isMounted.current = true;
-      loadFromServer();
-      return;
-    }
-    scheduleSync();
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-  }, [income, categories, expenses, transactions, goals, scheduleSync, loadFromServer]);
-
   // Online retry
   useEffect(() => {
-    const handle = () => {
-      setSyncStatus('syncing');
-      if (dbAvailable.current) {
-        doSync();
+    const handleOnline = async () => {
+      setIsOnline(true);
+      setHasError(false);
+
+      const items = flushPendingType('finance');
+      if (items.length > 0) {
+        // Take the latest payload
+        const latest = items[items.length - 1].payload as FinanceData;
+        await updateFinanceMutAsync(latest).catch(console.error);
       } else {
-        loadFromServer();
+        if (didMountRef.current) {
+          void queryClient.invalidateQueries({ queryKey: ['finance'] });
+        }
       }
     };
-    window.addEventListener('online', handle);
-    return () => window.removeEventListener('online', handle);
-  }, [doSync, loadFromServer]);
+    const handleOffline = () => setIsOnline(false);
 
-  // Cleanup
-  useEffect(
-    () => () => {
-      if (syncTimer.current) clearTimeout(syncTimer.current);
-    },
-    []
-  );
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    didMountRef.current = true;
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [queryClient, updateFinanceMutAsync]);
+
+  // Cleanup timeout
+  useEffect(() => {
+    return () => {
+      if (syncTimer.current) {
+        clearTimeout(syncTimer.current);
+        // Flush pending changes to offline queue if unmounted before mutation
+        const latestData = queryClient.getQueryData<{ data: FinanceData; timestamp: number }>([
+          'finance',
+        ])?.data;
+        if (latestData) {
+          enqueuePending('finance', latestData);
+        }
+      }
+    };
+  }, [queryClient]);
+
+  const syncStatus = !isOnline
+    ? 'offline'
+    : hasError
+      ? 'error'
+      : fetchingFinance
+        ? 'syncing'
+        : 'synced';
 
   return {
-    income,
+    income: financeData.income,
     setIncome,
-    categories,
+    categories: financeData.categories,
     setCategories,
-    expenses,
+    expenses: financeData.expenses,
     setExpenses,
-    transactions,
+    transactions: financeData.transactions,
     setTransactions,
-    goals,
+    goals: financeData.goals,
     setGoals,
     settings,
     setSettings,

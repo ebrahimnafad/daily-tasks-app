@@ -98,7 +98,7 @@ export const TaskSchema = createInsertSchema(tasks, {
     targetDate: true,
   })
   .extend({
-    id: z.number().int().optional(),
+    id: z.string().optional(),
     date: z.string().regex(DATE_REGEX).or(z.literal('')).nullish(),
     time: z.string().nullish(),
     createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
@@ -287,7 +287,7 @@ export const snapshotSchema = z
     tasks: z.array(
       z
         .object({
-          id: z.number().int(),
+          id: z.string(),
           checked: z.boolean().optional(),
         })
         .passthrough()

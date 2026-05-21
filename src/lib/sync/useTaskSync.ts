@@ -7,6 +7,7 @@ import { authFetch } from '@/features/auth/authFetch';
 import { LEGACY_TIME_TO_BLOCK } from '@/features/tasks/data/scheduleConfig';
 import { enqueuePending, isNetworkError, dequeuePendingEntity } from './syncQueue';
 import { mergeArrays } from './reconcile';
+import { computeTaskDelta } from './delta';
 
 export interface TasksResponse {
   tasks: Task[];
@@ -22,7 +23,9 @@ export const migrateTasks = (tasks: Task[]): Task[] =>
 
 export const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
   try {
-    const res = await authFetch('/api/tasks', { cache: 'no-store' });
+    const lastTimestamp = lsGet<number>('mhm_tasks_timestamp', 0);
+    const url = lastTimestamp > 0 ? `/api/tasks?since=${lastTimestamp}` : '/api/tasks';
+    const res = await authFetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
     const data = (await res.json()) as TasksResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
@@ -81,13 +84,18 @@ export function useTaskSync({
   const { mutate: updateTasksMut, mutateAsync: updateTasksMutAsync } = useMutation<
     { tasks?: Task[] },
     Error,
-    Task[]
+    Task[],
+    { prevTasks: { tasks: Task[]; timestamp: number } | undefined }
   >({
     mutationFn: async (newTasks) => {
-      const res = await authFetch('/api/tasks', {
+      const prevTasks =
+        queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks || [];
+      const delta = computeTaskDelta(prevTasks, newTasks);
+
+      const res = await authFetch('/api/tasks?syncMode=delta', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ tasks: newTasks }),
+        body: JSON.stringify(delta),
       });
       if (!res.ok) {
         let errData;

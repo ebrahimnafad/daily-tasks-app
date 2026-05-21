@@ -1,9 +1,13 @@
-import { handleFinance } from './_shared/finance.js';
+import { handleFinance, handleFinanceSyncAll } from './_shared/finance.js';
 import type { ApiRequest, ApiResponse } from './_shared/types.js';
 import { financeResourceMap } from './_shared/finance/index.js';
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
   const resource = req.query.resource as string;
+
+  if (resource === 'sync-all') {
+    return handleFinanceSyncAll(req, res, Object.values(financeResourceMap));
+  }
 
   const finRes = financeResourceMap[resource];
 

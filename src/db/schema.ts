@@ -91,7 +91,7 @@ export const scheduleConfig = pgTable(
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
   },
   (table) => ({
-    pk: primaryKey({ columns: [table.userId] }),
+    pk: primaryKey({ name: 'schedule_config_user_id_pk', columns: [table.userId] }),
     updatedAtIndex: index('idx_schedule_updated_at').on(table.updatedAt),
   })
 );
@@ -99,7 +99,7 @@ export const scheduleConfig = pgTable(
 export const tasks = pgTable(
   'tasks',
   {
-    id: serial('id').primaryKey(),
+    id: uuid('id').primaryKey(),
     userId: integer('user_id')
       .references(() => users.id)
       .notNull(),

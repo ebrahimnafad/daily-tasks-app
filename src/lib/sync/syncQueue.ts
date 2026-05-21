@@ -78,6 +78,14 @@ export function flushPending(): PendingItem[] {
   return queue;
 }
 
+export function flushPendingType(type: PendingItem['type']): PendingItem[] {
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []) || [];
+  const items = queue.filter((q) => q.type === type);
+  const remaining = queue.filter((q) => q.type !== type);
+  lsSet(PENDING_SYNC_KEY, remaining);
+  return items;
+}
+
 export function hasStaleItems(queue: PendingItem[]): boolean {
   const ONE_HOUR = 60 * 60 * 1000;
   return queue.some((q) => Date.now() - q.queuedAt > ONE_HOUR);

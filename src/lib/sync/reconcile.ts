@@ -17,7 +17,7 @@ export interface ReconciliationResult<T> {
   remoteTimestamp: number;
 }
 
-export function reconcile<T extends { id: number; updatedAt?: number }>(
+export function reconcile<T extends { id: string | number; updatedAt?: number }>(
   local: LocalState<T[]>,
   remote: LocalState<T[]>
 ): ReconciliationResult<T[]> {
@@ -50,11 +50,11 @@ export function reconcile<T extends { id: number; updatedAt?: number }>(
   };
 }
 
-function deterministicMerge<T extends { id: number; updatedAt?: number }>(
+function deterministicMerge<T extends { id: string | number; updatedAt?: number }>(
   local: T[],
   remote: T[]
 ): T[] {
-  const merged = new Map<number, T>();
+  const merged = new Map<string | number, T>();
 
   local.forEach((item) => merged.set(item.id, item));
 

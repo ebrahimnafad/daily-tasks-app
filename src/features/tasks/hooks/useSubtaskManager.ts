@@ -5,20 +5,20 @@ import type { Task, Subtask, SubCheckedMap } from '@/types';
 const uid = (): string => crypto.randomUUID();
 
 export interface SubtaskManagerReturn {
-  newItemText: Record<number, string>;
-  setNewItemText: Dispatch<SetStateAction<Record<number, string>>>;
-  newItemAlertTime: Record<number, string>;
-  setNewItemAlertTime: Dispatch<SetStateAction<Record<number, string>>>;
+  newItemText: Record<string, string>;
+  setNewItemText: Dispatch<SetStateAction<Record<string, string>>>;
+  newItemAlertTime: Record<string, string>;
+  setNewItemAlertTime: Dispatch<SetStateAction<Record<string, string>>>;
   editingSubId: string | number | null;
   setEditingSubId: Dispatch<SetStateAction<string | number | null>>;
   editingSubText: string;
   setEditingSubText: Dispatch<SetStateAction<string>>;
   editingSubAlertTime: string;
   setEditingSubAlertTime: Dispatch<SetStateAction<string>>;
-  addSubItem: (taskId: number, inputRef: RefObject<HTMLInputElement | null>) => void;
-  deleteSubItem: (taskId: number, subId: string | number) => void;
+  addSubItem: (taskId: string, inputRef: RefObject<HTMLInputElement | null>) => void;
+  deleteSubItem: (taskId: string, subId: string | number) => void;
   startEditSub: (sub: Subtask) => void;
-  saveEditSub: (taskId: number) => void;
+  saveEditSub: (taskId: string) => void;
   cancelEditSub: () => void;
 }
 
@@ -26,14 +26,14 @@ export function useSubtaskManager(
   setTasks: Dispatch<SetStateAction<Task[]>>,
   setSubChecked: Dispatch<SetStateAction<SubCheckedMap>>
 ): SubtaskManagerReturn {
-  const [newItemText, setNewItemText] = useState<Record<number, string>>({});
-  const [newItemAlertTime, setNewItemAlertTime] = useState<Record<number, string>>({});
+  const [newItemText, setNewItemText] = useState<Record<string, string>>({});
+  const [newItemAlertTime, setNewItemAlertTime] = useState<Record<string, string>>({});
   const [editingSubId, setEditingSubId] = useState<string | number | null>(null);
   const [editingSubText, setEditingSubText] = useState('');
   const [editingSubAlertTime, setEditingSubAlertTime] = useState('');
 
   const addSubItem = useCallback(
-    (taskId: number, inputRef: RefObject<HTMLInputElement | null>) => {
+    (taskId: string, inputRef: RefObject<HTMLInputElement | null>) => {
       const text = (newItemText[taskId] ?? '').trim();
       const alertTime = newItemAlertTime[taskId] ?? '';
       if (!text) return;
@@ -50,7 +50,7 @@ export function useSubtaskManager(
   );
 
   const deleteSubItem = useCallback(
-    (taskId: number, subId: string | number) => {
+    (taskId: string, subId: string | number) => {
       setTasks((p) =>
         p.map((t) =>
           t.id === taskId ? { ...t, subtasks: t.subtasks.filter((s) => s.id !== subId) } : t
@@ -72,7 +72,7 @@ export function useSubtaskManager(
   }, []);
 
   const saveEditSub = useCallback(
-    (taskId: number) => {
+    (taskId: string) => {
       const text = editingSubText.trim();
       const alertTime = editingSubAlertTime;
       if (text)

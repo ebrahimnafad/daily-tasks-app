@@ -19,7 +19,7 @@ export interface Brief {
 }
 
 export interface Task {
-  id: number;
+  id: string;
   icon: string;
   title: string;
   category: string;
@@ -87,13 +87,13 @@ export interface TaskForm {
 
 // ── Checked maps ──────────────────────────────────────────────────────────
 
-export type CheckedMap = Record<number, boolean>;
-export type SubCheckedMap = Record<string | number, boolean>;
-export type TaskSubCheckedMap = Record<number, Record<string | number, boolean>>;
+export type CheckedMap = Record<string, boolean>;
+export type SubCheckedMap = Record<string, boolean>;
+export type TaskSubCheckedMap = Record<string, Record<string, boolean>>;
 
 // ── Modal ─────────────────────────────────────────────────────────────────
 
-export type ModalState = { mode: 'add' } | { mode: 'edit'; taskId: number };
+export type ModalState = { mode: 'add' } | { mode: 'edit'; taskId: string };
 
 // ── Sync / notification ───────────────────────────────────────────────────
 
@@ -114,10 +114,10 @@ export interface TaskManagerReturn {
   setSkipped: Dispatch<SetStateAction<CheckedMap>>;
 
   // Sub-item editing
-  newItemText: Record<number, string>;
-  setNewItemText: Dispatch<SetStateAction<Record<number, string>>>;
-  newItemAlertTime: Record<number, string>;
-  setNewItemAlertTime: Dispatch<SetStateAction<Record<number, string>>>;
+  newItemText: Record<string, string>;
+  setNewItemText: Dispatch<SetStateAction<Record<string, string>>>;
+  newItemAlertTime: Record<string, string>;
+  setNewItemAlertTime: Dispatch<SetStateAction<Record<string, string>>>;
   editingSubId: string | number | null;
   setEditingSubId: Dispatch<SetStateAction<string | number | null>>;
   editingSubText: string;
@@ -130,14 +130,14 @@ export interface TaskManagerReturn {
   setModal: Dispatch<SetStateAction<ModalState | null>>;
   form: TaskForm;
   setForm: Dispatch<SetStateAction<TaskForm>>;
-  deleteConfirm: number | null;
-  setDeleteConfirm: Dispatch<SetStateAction<number | null>>;
+  deleteConfirm: string | null;
+  setDeleteConfirm: Dispatch<SetStateAction<string | null>>;
 
   // Subtask CRUD
-  addSubItem: (taskId: number, inputRef: RefObject<HTMLInputElement | null>) => void;
-  deleteSubItem: (taskId: number, subId: string | number) => void;
+  addSubItem: (taskId: string, inputRef: RefObject<HTMLInputElement | null>) => void;
+  deleteSubItem: (taskId: string, subId: string | number) => void;
   startEditSub: (sub: Subtask) => void;
-  saveEditSub: (taskId: number) => void;
+  saveEditSub: (taskId: string) => void;
   cancelEditSub: () => void;
 
   // Task CRUD
@@ -145,9 +145,9 @@ export interface TaskManagerReturn {
   openEdit: (task: Task, e: MouseEvent) => void;
   setFormField: <K extends keyof TaskForm>(f: K, v: TaskForm[K]) => void;
   saveTask: () => void;
-  deleteTask: (id: number) => void;
-  togglePinTask: (id: number) => void;
-  toggleSkipTask: (id: number) => void;
+  deleteTask: (id: string) => void;
+  togglePinTask: (id: string) => void;
+  toggleSkipTask: (id: string) => void;
 
   // Actions
   sendToSheets: () => Promise<void>;
