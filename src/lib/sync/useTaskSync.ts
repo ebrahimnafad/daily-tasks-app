@@ -5,7 +5,8 @@ import type { Task } from '@/types';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import { LEGACY_TIME_TO_BLOCK } from '@/features/tasks/data/scheduleConfig';
-import { enqueuePending, isNetworkError } from './syncQueue';
+import { enqueuePending, isNetworkError, dequeuePendingEntity } from './syncQueue';
+import { mergeArrays } from './reconcile';
 
 export interface TasksResponse {
   tasks: Task[];
@@ -26,10 +27,14 @@ export const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }
     const data = (await res.json()) as TasksResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
     if (data.tasks) {
-      const migrated = migrateTasks(data.tasks);
-      lsSet('mhm_tasks', migrated);
+      const serverTasks = migrateTasks(data.tasks);
+      const localTasks = migrateTasks(lsGet<Task[]>('mhm_tasks', []));
+
+      const merged = mergeArrays(localTasks, serverTasks);
+
+      lsSet('mhm_tasks', merged);
       lsSet('mhm_tasks_timestamp', timestamp);
-      return { tasks: migrated, timestamp };
+      return { tasks: merged, timestamp };
     }
   } catch (err) {
     console.error('Fetch tasks failed, using local fallback:', err);
@@ -85,8 +90,19 @@ export function useTaskSync({
         body: JSON.stringify({ tasks: newTasks }),
       });
       if (!res.ok) {
-        const text = await res.text().catch(() => '');
-        throw new Error(`Tasks Sync API error ${res.status}: ${text}`);
+        let errData;
+        try {
+          errData = await res.json();
+        } catch (e) {
+          /* ignore */
+        }
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const err: any = new Error(errData?.error || `Tasks Sync API error ${res.status}`);
+        err.status = res.status;
+        err.serverData = errData?.serverData;
+        err.entityId = errData?.entityId;
+        throw err;
       }
       return res.json();
     },
@@ -105,13 +121,49 @@ export function useTaskSync({
       }
       setHasError(false);
     },
-    onError: async (err, variables) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onError: async (err: any, variables) => {
       const isOfflineStatus = !navigator.onLine || isNetworkError(err);
       if (isOfflineStatus) {
         enqueuePending('tasks', variables);
         notify('أنت غير متصل — تم حفظ المهام محلياً وستُزامَن عند اتصالك', 'offline');
         return;
       }
+
+      if (err.status === 409 || err.status === 410) {
+        if (err.entityId) {
+          dequeuePendingEntity('tasks', err.entityId);
+        }
+
+        let updatedTasks: Task[] = [];
+        queryClient.setQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'], (old) => {
+          if (!old) return old;
+          updatedTasks = old.tasks;
+          if (err.status === 410) {
+            updatedTasks = updatedTasks.filter((t) => String(t.id) !== String(err.entityId));
+          } else if (err.status === 409 && err.serverData) {
+            updatedTasks = updatedTasks.map((t) =>
+              String(t.id) === String(err.entityId) ? { ...t, ...err.serverData } : t
+            );
+          }
+          lsSet('mhm_tasks', updatedTasks);
+          return { ...old, tasks: updatedTasks };
+        });
+
+        if (updatedTasks.length > 0) {
+          // Trigger a background retry for the newly merged batch
+          updateTasksMutAsync(updatedTasks).catch(() => {});
+        }
+
+        notify(
+          err.status === 410
+            ? 'تم حذف المهمة لتزامن الحذف من جهاز آخر'
+            : 'تم تحديث المهمة بنسخة أحدث',
+          'warn'
+        );
+        return;
+      }
+
       console.error('Tasks sync error:', err);
       notify(`خطأ في مزامنة المهام: ${err.message}`, 'error');
       setHasError(true);

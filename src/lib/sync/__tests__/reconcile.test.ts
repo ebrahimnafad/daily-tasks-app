@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { reconcile, reconcileChecked, type LocalState, type RemoteState } from '../reconcile';
+import {
+  reconcile,
+  reconcileChecked,
+  mergeArrays,
+  type LocalState,
+  type RemoteState,
+} from '../reconcile';
 
 describe('reconcile', () => {
   describe('reconcile (generic)', () => {
@@ -165,6 +171,79 @@ describe('reconcile', () => {
 
       expect(result.winner).toBe('local');
       expect(result.mergedData).toEqual({ task1: true });
+    });
+  });
+
+  describe('mergeArrays', () => {
+    it('clock-skew: should merge deterministically using updatedAt, preferring newer timestamps', () => {
+      const local = [
+        { id: 1, title: 'Local Old', updatedAt: '2023-01-01T10:00:00.000Z' },
+        { id: 2, title: 'Local New', updatedAt: '2023-01-01T12:00:00.000Z' },
+      ];
+      const remote = [
+        { id: 1, title: 'Remote New', updatedAt: '2023-01-01T11:00:00.000Z' }, // remote wins
+        { id: 2, title: 'Remote Old', updatedAt: '2023-01-01T09:00:00.000Z' }, // local wins
+      ];
+
+      const result = mergeArrays(local, remote);
+      expect(result.find((r) => r.id === 1)?.title).toBe('Remote New');
+      expect(result.find((r) => r.id === 2)?.title).toBe('Local New');
+    });
+
+    it('delete vs. edit: deletedAt from newer server soft-delete removes the item', () => {
+      const local = [{ id: 1, title: 'Local Edited', updatedAt: '2023-01-01T10:00:00.000Z' }];
+      const remote = [
+        {
+          id: 1,
+          title: 'Remote Deleted',
+          updatedAt: '2023-01-01T11:00:00.000Z',
+          deletedAt: '2023-01-01T11:00:00.000Z',
+        },
+      ];
+
+      const result = mergeArrays(local, remote);
+      expect(result).toHaveLength(0); // Should be removed
+    });
+
+    it('delete vs. edit: older server delete does not remove newer local edit', () => {
+      const local = [{ id: 1, title: 'Local Edited', updatedAt: '2023-01-01T12:00:00.000Z' }];
+      const remote = [
+        {
+          id: 1,
+          title: 'Remote Deleted',
+          updatedAt: '2023-01-01T11:00:00.000Z',
+          deletedAt: '2023-01-01T11:00:00.000Z',
+        },
+      ];
+
+      const result = mergeArrays(local, remote);
+      expect(result).toHaveLength(1); // Local edit wins
+      expect(result[0].title).toBe('Local Edited');
+    });
+
+    it('tiebreaker: identical timestamps favor the server', () => {
+      const local = [{ id: 1, title: 'Local Content', updatedAt: '2023-01-01T10:00:00.000Z' }];
+      const remote = [{ id: 1, title: 'Server Content', updatedAt: '2023-01-01T10:00:00.000Z' }];
+
+      const result = mergeArrays(local, remote);
+      expect(result[0].title).toBe('Server Content');
+    });
+
+    it('should push new server items if they are not deleted', () => {
+      const local: { id: number; title: string; updatedAt: string; deletedAt?: string }[] = [];
+      const remote = [
+        { id: 1, title: 'Server New', updatedAt: '2023-01-01T10:00:00.000Z' },
+        {
+          id: 2,
+          title: 'Server Deleted New',
+          updatedAt: '2023-01-01T10:00:00.000Z',
+          deletedAt: '2023-01-01T10:00:00.000Z',
+        },
+      ];
+
+      const result = mergeArrays(local, remote);
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
     });
   });
 });

@@ -70,7 +70,14 @@ export async function handleFinance(
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: unknown) {
+  } catch (error: any) {
+    if (error && (error.status === 409 || error.status === 410)) {
+      return res.status(error.status).json({
+        error: error.message,
+        serverData: error.serverData,
+        entityId: error.entityId,
+      });
+    }
     console.error(`Finance Error (${handler.field}):`, error);
     const message = error instanceof Error ? error.message : 'Unknown error';
     return res.status(500).json({ error: 'خطأ داخلي في الخادم', details: message });

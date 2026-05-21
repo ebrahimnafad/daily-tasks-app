@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '../db.js';
 import { financeTransactions } from '../../../src/db/schema.js';
-import { eq, notInArray, and } from 'drizzle-orm';
+import { eq, notInArray, and, isNull } from 'drizzle-orm';
 import { TransactionSchema } from '../../../src/validation/schemas.js';
 import type { FinanceResourceHandler } from './types.js';
 
@@ -13,7 +13,7 @@ export const transactionsHandler: FinanceResourceHandler = {
     const rows = await db
       .select()
       .from(financeTransactions)
-      .where(eq(financeTransactions.userId, userId));
+      .where(and(eq(financeTransactions.userId, userId), isNull(financeTransactions.deletedAt)));
 
     return rows.map((r: typeof financeTransactions.$inferSelect) => ({
       id: r.id,
@@ -36,18 +36,58 @@ export const transactionsHandler: FinanceResourceHandler = {
       .map((d: any) => String(d.id))
       .filter((id: string) => id !== 'undefined' && id !== 'null');
 
+    const existingRecords = await tx
+      .select({
+        id: financeTransactions.id,
+        updatedAt: financeTransactions.updatedAt,
+        deletedAt: financeTransactions.deletedAt,
+      })
+      .from(financeTransactions)
+      .where(eq(financeTransactions.userId, userId));
+    const existingMap = new Map(existingRecords.map((r: any) => [r.id, r]));
+
     if (itemIds.length > 0) {
       await tx
-        .delete(financeTransactions)
+        .update(financeTransactions)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
         .where(
-          and(eq(financeTransactions.userId, userId), notInArray(financeTransactions.id, itemIds))
+          and(
+            eq(financeTransactions.userId, userId),
+            notInArray(financeTransactions.id, itemIds),
+            isNull(financeTransactions.deletedAt)
+          )
         );
     } else {
-      await tx.delete(financeTransactions).where(eq(financeTransactions.userId, userId));
+      await tx
+        .update(financeTransactions)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(financeTransactions.userId, userId), isNull(financeTransactions.deletedAt)));
     }
 
     for (const item of data) {
       if (!item.id || !item.categoryId) continue;
+      const existing = existingMap.get(String(item.id));
+      if (existing) {
+        if (existing.deletedAt) {
+          throw {
+            status: 410,
+            message: 'Conflict: Deleted',
+            serverData: existing,
+            entityId: existing.id,
+          };
+        }
+        const clientTs = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+        const serverTs = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        if (clientTs < serverTs) {
+          throw {
+            status: 409,
+            message: 'Conflict: Outdated',
+            serverData: existing,
+            entityId: existing.id,
+          };
+        }
+      }
+
       const insertData = {
         id: String(item.id),
         userId: userId,
@@ -61,19 +101,14 @@ export const transactionsHandler: FinanceResourceHandler = {
         exchangeRate: item.exchangeRate ? String(item.exchangeRate) : null,
         originalAmount: item.originalAmount ? String(item.originalAmount) : null,
         createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
-        updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
+        updatedAt: new Date(),
+        deletedAt: item.deletedAt ? new Date(item.deletedAt as string) : null,
       };
 
-      await tx
-        .insert(financeTransactions)
-        .values(insertData)
-        .onConflictDoUpdate({
-          target: financeTransactions.id,
-          set: {
-            ...insertData,
-            updatedAt: new Date(),
-          },
-        });
+      await tx.insert(financeTransactions).values(insertData).onConflictDoUpdate({
+        target: financeTransactions.id,
+        set: insertData,
+      });
     }
   },
 };

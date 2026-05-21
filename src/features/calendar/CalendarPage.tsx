@@ -4,7 +4,6 @@ import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
 import NotesPanel from './NotesPanel';
 import HistoryPanel from './HistoryPanel';
 import SyncStatusBar from './SyncStatusBar';
-import ConflictDialog from './ConflictDialog';
 import { HOLIDAY_COLOR, HOLIDAY_GROUPS, addDays } from './holidays';
 import CalendarHeader from './components/CalendarHeader';
 import CalendarGrid from './components/CalendarGrid';
@@ -83,9 +82,6 @@ export default function CalendarPage(props: CalendarPageProps) {
     syncStatus,
     syncError,
     retrySync,
-    conflictState,
-    resolveKeepLocal,
-    resolveUseServer,
     searchQuery,
     setSearchQuery,
     searchResults,
@@ -605,11 +601,6 @@ export default function CalendarPage(props: CalendarPageProps) {
           </div>
         </>
       )}
-      <ConflictDialog
-        visible={!!conflictState}
-        onKeepLocal={resolveKeepLocal}
-        onUseServer={resolveUseServer}
-      />
     </div>
   );
 }

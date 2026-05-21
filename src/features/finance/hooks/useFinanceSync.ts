@@ -10,6 +10,7 @@ import type {
 import { DEFAULT_CATEGORIES, DEFAULT_SETTINGS } from '../constants';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
+import { mergeArrays } from '@/lib/sync/reconcile';
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
 export const KEYS = {
@@ -19,7 +20,6 @@ export const KEYS = {
   transactions: 'mhm_fin2_transactions',
   goals: 'mhm_fin2_goals',
   settings: 'mhm_fin2_settings',
-  localTs: 'mhm_fin2_local_ts',
 };
 
 type SetterFn<T> = T | ((prev: T) => T);
@@ -64,7 +64,6 @@ export default function useFinanceSync(onQuota?: () => void) {
       setIncomeState((prev) => {
         const next = typeof v === 'function' ? (v as (p: Income[]) => Income[])(prev) : v;
         lsSet(KEYS.income, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -77,7 +76,6 @@ export default function useFinanceSync(onQuota?: () => void) {
         const next =
           typeof v === 'function' ? (v as (p: ExpenseCategory[]) => ExpenseCategory[])(prev) : v;
         lsSet(KEYS.categories, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -89,7 +87,6 @@ export default function useFinanceSync(onQuota?: () => void) {
       setExpensesState((prev) => {
         const next = typeof v === 'function' ? (v as (p: Expense[]) => Expense[])(prev) : v;
         lsSet(KEYS.expenses, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -101,7 +98,6 @@ export default function useFinanceSync(onQuota?: () => void) {
       setTransactionsState((prev) => {
         const next = typeof v === 'function' ? (v as (p: Transaction[]) => Transaction[])(prev) : v;
         lsSet(KEYS.transactions, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -113,7 +109,6 @@ export default function useFinanceSync(onQuota?: () => void) {
       setGoalsState((prev) => {
         const next = typeof v === 'function' ? (v as (p: Goal[]) => Goal[])(prev) : v;
         lsSet(KEYS.goals, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -126,7 +121,6 @@ export default function useFinanceSync(onQuota?: () => void) {
         const next =
           typeof v === 'function' ? (v as (p: FinanceSettings) => FinanceSettings)(prev) : v;
         lsSet(KEYS.settings, next, onQuota);
-        lsSet(KEYS.localTs, new Date().toISOString(), onQuota);
         return next;
       });
     },
@@ -152,12 +146,66 @@ export default function useFinanceSync(onQuota?: () => void) {
           })
         )
       );
-      if (results.some((r) => !r.ok)) throw new Error('API error');
+
+      let needsRetry = false;
+      for (let i = 0; i < results.length; i++) {
+        const res = results[i];
+        if (!res.ok) {
+          let errData;
+          try {
+            errData = await res.json();
+          } catch (e) {
+            /* ignore */
+          }
+
+          if (res.status === 409 || res.status === 410) {
+            const serverData = errData?.serverData;
+            const entityId = errData?.entityId;
+            if (serverData && entityId) {
+              const setter = [
+                setIncomeState,
+                setCategoriesState,
+                setExpensesState,
+                setTransactionsState,
+                setGoalsState,
+              ][i];
+              const lsKey = [
+                KEYS.income,
+                KEYS.categories,
+                KEYS.expenses,
+                KEYS.transactions,
+                KEYS.goals,
+              ][i];
+
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (setter as React.Dispatch<React.SetStateAction<any[]>>)((prev) => {
+                let next;
+                if (res.status === 410) {
+                  next = prev.filter((p) => String(p.id) !== String(entityId));
+                } else {
+                  next = prev.map((p) =>
+                    String(p.id) === String(entityId) ? { ...p, ...serverData } : p
+                  );
+                }
+                lsSet(lsKey, next, onQuota);
+                return next;
+              });
+              needsRetry = true;
+            }
+          } else {
+            throw new Error('API error');
+          }
+        }
+      }
+
+      if (needsRetry) {
+        return; // State updates will trigger another sync
+      }
       setSyncStatus('synced');
     } catch {
       setSyncStatus(navigator.onLine ? 'error' : 'offline');
     }
-  }, [income, categories, expenses, transactions, goals]);
+  }, [income, categories, expenses, transactions, goals, onQuota]);
 
   const scheduleSync = useCallback(() => {
     if (!dbAvailable.current) return;
@@ -181,30 +229,27 @@ export default function useFinanceSync(onQuota?: () => void) {
       const data = await Promise.all(responses.map((r) => r.json()));
       dbAvailable.current = true;
 
-      const localTs = lsGet<string | null>(KEYS.localTs, null);
-      const localTime = localTs ? new Date(localTs).getTime() : 0;
-      const dbTimes = data.map((d) => (d.updatedAt ? new Date(d.updatedAt).getTime() : 0));
-      const dbNewest = Math.max(...dbTimes);
+      const setters = [
+        setIncomeState,
+        setCategoriesState,
+        setExpensesState,
+        setTransactionsState,
+        setGoalsState,
+      ] as const;
+      const keys = [KEYS.income, KEYS.categories, KEYS.expenses, KEYS.transactions, KEYS.goals];
 
-      if (dbNewest > localTime) {
-        const setters = [
-          setIncomeState,
-          setCategoriesState,
-          setExpensesState,
-          setTransactionsState,
-          setGoalsState,
-        ] as const;
-        const keys = [KEYS.income, KEYS.categories, KEYS.expenses, KEYS.transactions, KEYS.goals];
-        const fields = resources;
+      resources.forEach((field, i) => {
+        const serverArr = data[i]?.[field];
+        if (Array.isArray(serverArr)) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          (setters[i] as React.Dispatch<React.SetStateAction<any[]>>)((prevLocalArr) => {
+            const merged = mergeArrays(prevLocalArr, serverArr);
+            lsSet(keys[i], merged, onQuota);
+            return merged;
+          });
+        }
+      });
 
-        fields.forEach((field, i) => {
-          const arr = data[i]?.[field];
-          if (Array.isArray(arr) && arr.length > 0) {
-            (setters[i] as React.Dispatch<React.SetStateAction<unknown[]>>)(arr);
-            lsSet(keys[i], arr, onQuota);
-          }
-        });
-      }
       setSyncStatus('synced');
     } catch {
       setSyncStatus('offline');

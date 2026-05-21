@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
+import { mergeArrays } from '@/lib/sync/reconcile';
 import type { CalendarNote } from './types';
 
 // ── Keys ──────────────────────────────────────────────────────────────────
@@ -74,15 +75,6 @@ interface UseNotesSyncReturn {
   syncError: string | null;
   /** Manually re-trigger the sync after a failure. */
   retrySync: () => void;
-  /**
-   * C-3: Non-null when the server has newer data BUT local also has notes
-   * that are newer than the server timestamp. User must choose explicitly.
-   */
-  conflictState: { serverNotes: CalendarNote[] } | null;
-  /** C-3: Keep local version and push it to the server immediately. */
-  resolveKeepLocal: () => void;
-  /** C-3: Accept the server version, discarding local changes. */
-  resolveUseServer: () => void;
 }
 
 function nanoid(): string {
@@ -93,8 +85,6 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
   const [notes, setNotesState] = useState<CalendarNote[]>(() => initialLoad(onQuota));
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [syncError, setSyncError] = useState<string | null>(null);
-  // C-3: holds the server array while user decides which version to keep
-  const [conflictState, setConflictState] = useState<{ serverNotes: CalendarNote[] } | null>(null);
 
   const dbAvailable = useRef(false);
   const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,7 +164,44 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ notes: currentNotes }),
         });
-        if (!res.ok) throw new Error('API error');
+        if (!res.ok) {
+          let errData;
+          try {
+            errData = await res.json();
+          } catch (e) {
+            /* ignore */
+          }
+
+          if (res.status === 409 || res.status === 410) {
+            const serverData = errData?.serverData;
+            const entityId = errData?.entityId;
+            if (entityId) {
+              setNotesState((prev) => {
+                let next;
+                if (res.status === 410) {
+                  next = prev.filter((p) => String(p.id) !== String(entityId));
+                } else if (serverData) {
+                  next = prev.map((p) =>
+                    String(p.id) === String(entityId) ? { ...p, ...serverData } : p
+                  );
+                } else {
+                  next = prev;
+                }
+                persist(next);
+                committedRef.current = next;
+                return next;
+              });
+
+              setSyncError(
+                res.status === 410
+                  ? 'تم حذف ملاحظة لتزامن الحذف من جهاز آخر'
+                  : 'تم استرجاع نسخة أحدث من ملاحظة'
+              );
+              return; // state update triggers retry
+            }
+          }
+          throw new Error('API error');
+        }
         // Success — advance the committed snapshot and clear any error
         committedRef.current = currentNotes;
         setSyncStatus('synced');
@@ -223,60 +250,22 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
       const data = (await res.json()) as { notes: CalendarNote[] | null; updatedAt: string | null };
       dbAvailable.current = true;
 
-      const localTs = lsGet<string | null>(LS_TS_KEY, null);
-      const localTime = localTs ? new Date(localTs).getTime() : 0;
-      const dbTime = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
-
-      if (dbTime > localTime && Array.isArray(data.notes) && data.notes.length > 0) {
-        // C-3: Before accepting the server version, check if any LOCAL note
-        // has an updatedAt newer than dbTime. If so, the user edited on this
-        // device after the last server write — show a conflict prompt instead
-        // of silently discarding their changes.
-        const localNewerExists = notes.some((n) => {
-          const t = n.updatedAt ? new Date(n.updatedAt).getTime() : 0;
-          return t > dbTime;
+      if (Array.isArray(data.notes)) {
+        setNotesState((prevLocal) => {
+          const merged = mergeArrays(prevLocal, data.notes as CalendarNote[]);
+          persist(merged);
+          committedRef.current = merged;
+          return merged;
         });
 
-        if (localNewerExists) {
-          // Hold the server version in state; user must choose.
-          setConflictState({ serverNotes: data.notes });
-          setSyncStatus('synced');
-          return; // Do NOT overwrite local state
-        }
-
-        // No conflict — safe to accept server version
-        setNotesState(data.notes);
-        committedRef.current = data.notes;
-        lsSet(LS_KEY, data.notes, onQuota);
-        lsSet(LS_TS_KEY, data.updatedAt!, onQuota);
-      } else {
-        // Local is already up-to-date; commit whatever is currently loaded
-        committedRef.current = notes;
+        lsSet(LS_TS_KEY, data.updatedAt || new Date().toISOString(), onQuota);
       }
       setSyncStatus('synced');
       setSyncError(null);
     } catch {
       setSyncStatus('offline');
     }
-  }, [onQuota, notes]);
-
-  // C-3: User chose to keep their local version — push it to the server
-  const resolveKeepLocal = useCallback(() => {
-    setConflictState(null);
-    void doSync(notes);
-  }, [doSync, notes]);
-
-  // C-3: User chose to accept the server version
-  const resolveUseServer = useCallback(() => {
-    if (!conflictState) return;
-    const serverNotes = conflictState.serverNotes;
-    setNotesState(serverNotes);
-    committedRef.current = serverNotes;
-    lsSet(LS_KEY, serverNotes, onQuota);
-    lsSet(LS_TS_KEY, new Date().toISOString(), onQuota);
-    setConflictState(null);
-    setSyncStatus('synced');
-  }, [conflictState, onQuota]);
+  }, [onQuota, persist]);
 
   // Trigger sync whenever notes change (after mount)
   useEffect(() => {
@@ -321,8 +310,5 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
     syncStatus,
     syncError,
     retrySync,
-    conflictState,
-    resolveKeepLocal,
-    resolveUseServer,
   };
 }

@@ -143,6 +143,7 @@ export const financeIncomes = pgTable('finance_incomes', {
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const financeCategories = pgTable('finance_categories', {
@@ -158,6 +159,7 @@ export const financeCategories = pgTable('finance_categories', {
   displayOrder: integer('display_order'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const financeExpenses = pgTable('finance_expenses', {
@@ -182,6 +184,7 @@ export const financeExpenses = pgTable('finance_expenses', {
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const financeTransactions = pgTable('finance_transactions', {
@@ -202,6 +205,7 @@ export const financeTransactions = pgTable('finance_transactions', {
   originalAmount: numeric('original_amount'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const financeGoalsRel = pgTable('finance_goals_rel', {
@@ -219,6 +223,7 @@ export const financeGoalsRel = pgTable('finance_goals_rel', {
   notes: text('notes'),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
 });
 
 export const calendarNotesRel = pgTable(
@@ -234,6 +239,7 @@ export const calendarNotesRel = pgTable(
     tags: jsonb('tags').default([]),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+    deletedAt: timestamp('deleted_at', { withTimezone: true }),
   },
   (table) => ({
     updatedAtIndex: index('idx_calendar_notes_updated_at').on(table.updatedAt),

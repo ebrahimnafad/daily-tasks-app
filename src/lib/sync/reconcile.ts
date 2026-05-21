@@ -100,3 +100,36 @@ export function reconcileChecked(
     remoteTimestamp,
   };
 }
+
+export function mergeArrays<
+  T extends { id: string | number; updatedAt?: string; deletedAt?: string | null },
+>(local: T[], remote: T[]): T[] {
+  const localArr = [...local];
+
+  remote.forEach((serverItem) => {
+    const localIndex = localArr.findIndex(
+      (localItem) => String(localItem.id) === String(serverItem.id)
+    );
+    if (localIndex === -1) {
+      if (!serverItem.deletedAt) {
+        localArr.push(serverItem);
+      }
+    } else {
+      const localTs = localArr[localIndex].updatedAt
+        ? new Date(localArr[localIndex].updatedAt!).getTime()
+        : 0;
+      const serverTs = serverItem.updatedAt ? new Date(serverItem.updatedAt!).getTime() : 0;
+
+      // Tiebreaker: If server timestamp >= local timestamp, server wins
+      if (serverTs >= localTs) {
+        if (serverItem.deletedAt) {
+          localArr.splice(localIndex, 1);
+        } else {
+          localArr[localIndex] = serverItem;
+        }
+      }
+    }
+  });
+
+  return localArr;
+}

@@ -39,6 +39,8 @@ export interface Task {
   brief: Brief;
   /** Legacy field — kept for migration only, do not use */
   time?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ── Daily Snapshot ────────────────────────────────────────────────────────────────────────────────

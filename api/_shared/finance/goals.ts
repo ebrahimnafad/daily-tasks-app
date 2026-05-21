@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '../db.js';
 import { financeGoalsRel } from '../../../src/db/schema.js';
-import { eq, notInArray, and } from 'drizzle-orm';
+import { eq, notInArray, and, isNull } from 'drizzle-orm';
 import { GoalSchema } from '../../../src/validation/schemas.js';
 import type { FinanceResourceHandler } from './types.js';
 
@@ -10,7 +10,10 @@ export const goalsHandler: FinanceResourceHandler = {
   schema: GoalSchema.passthrough(),
 
   get: async (userId: number) => {
-    const rows = await db.select().from(financeGoalsRel).where(eq(financeGoalsRel.userId, userId));
+    const rows = await db
+      .select()
+      .from(financeGoalsRel)
+      .where(and(eq(financeGoalsRel.userId, userId), isNull(financeGoalsRel.deletedAt)));
 
     return rows.map((r: typeof financeGoalsRel.$inferSelect) => ({
       id: r.id,
@@ -32,16 +35,58 @@ export const goalsHandler: FinanceResourceHandler = {
       .map((d: any) => String(d.id))
       .filter((id: string) => id !== 'undefined' && id !== 'null');
 
+    const existingRecords = await tx
+      .select({
+        id: financeGoalsRel.id,
+        updatedAt: financeGoalsRel.updatedAt,
+        deletedAt: financeGoalsRel.deletedAt,
+      })
+      .from(financeGoalsRel)
+      .where(eq(financeGoalsRel.userId, userId));
+    const existingMap = new Map(existingRecords.map((r: any) => [r.id, r]));
+
     if (itemIds.length > 0) {
       await tx
-        .delete(financeGoalsRel)
-        .where(and(eq(financeGoalsRel.userId, userId), notInArray(financeGoalsRel.id, itemIds)));
+        .update(financeGoalsRel)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(
+          and(
+            eq(financeGoalsRel.userId, userId),
+            notInArray(financeGoalsRel.id, itemIds),
+            isNull(financeGoalsRel.deletedAt)
+          )
+        );
     } else {
-      await tx.delete(financeGoalsRel).where(eq(financeGoalsRel.userId, userId));
+      await tx
+        .update(financeGoalsRel)
+        .set({ deletedAt: new Date(), updatedAt: new Date() })
+        .where(and(eq(financeGoalsRel.userId, userId), isNull(financeGoalsRel.deletedAt)));
     }
 
     for (const item of data) {
       if (!item.id) continue;
+      const existing = existingMap.get(String(item.id));
+      if (existing) {
+        if (existing.deletedAt) {
+          throw {
+            status: 410,
+            message: 'Conflict: Deleted',
+            serverData: existing,
+            entityId: existing.id,
+          };
+        }
+        const clientTs = item.updatedAt ? new Date(item.updatedAt).getTime() : 0;
+        const serverTs = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
+        if (clientTs < serverTs) {
+          throw {
+            status: 409,
+            message: 'Conflict: Outdated',
+            serverData: existing,
+            entityId: existing.id,
+          };
+        }
+      }
+
       const insertData = {
         id: String(item.id),
         userId: userId,
@@ -54,19 +99,14 @@ export const goalsHandler: FinanceResourceHandler = {
         isActive: Boolean(item.isActive ?? true),
         notes: item.notes ? String(item.notes) : null,
         createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
-        updatedAt: item.updatedAt ? new Date(item.updatedAt as string) : new Date(),
+        updatedAt: new Date(),
+        deletedAt: item.deletedAt ? new Date(item.deletedAt as string) : null,
       };
 
-      await tx
-        .insert(financeGoalsRel)
-        .values(insertData)
-        .onConflictDoUpdate({
-          target: financeGoalsRel.id,
-          set: {
-            ...insertData,
-            updatedAt: new Date(),
-          },
-        });
+      await tx.insert(financeGoalsRel).values(insertData).onConflictDoUpdate({
+        target: financeGoalsRel.id,
+        set: insertData,
+      });
     }
   },
 };

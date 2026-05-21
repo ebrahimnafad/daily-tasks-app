@@ -45,21 +45,36 @@ export const flushSnapshotQueue = async (): Promise<void> => {
 export const PENDING_SYNC_KEY = 'mhm_pending_sync';
 
 export type PendingItem = {
-  type: 'tasks' | 'daily' | 'schedule';
+  type: 'tasks' | 'daily' | 'schedule' | 'finance' | 'notes';
   payload: unknown;
   queuedAt: number;
+  entityId?: string | number;
 };
 
-export function enqueuePending(type: PendingItem['type'], payload: unknown): void {
-  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []);
-  const filtered = queue.filter((q) => q.type !== type);
-  filtered.push({ type, payload, queuedAt: Date.now() });
+export function enqueuePending(
+  type: PendingItem['type'],
+  payload: unknown,
+  entityId?: string | number
+): void {
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []) || [];
+  // If entityId is provided, filter out only the previous mutation for this exact entity.
+  // Otherwise, filter out all previous mutations of this type (legacy behavior).
+  const filtered = entityId
+    ? queue.filter((q) => !(q.type === type && q.entityId === entityId))
+    : queue.filter((q) => q.type !== type);
+  filtered.push({ type, payload, queuedAt: Date.now(), entityId });
+  lsSet(PENDING_SYNC_KEY, filtered);
+}
+
+export function dequeuePendingEntity(type: PendingItem['type'], entityId: string | number): void {
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []) || [];
+  const filtered = queue.filter((q) => !(q.type === type && q.entityId === entityId));
   lsSet(PENDING_SYNC_KEY, filtered);
 }
 
 export function flushPending(): PendingItem[] {
-  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []);
-  lsSet(PENDING_SYNC_KEY, null);
+  const queue: PendingItem[] = lsGet<PendingItem[]>(PENDING_SYNC_KEY, []) || [];
+  lsSet(PENDING_SYNC_KEY, []);
   return queue;
 }
 
