@@ -671,7 +671,6 @@ export function useCalendarState({
     snapSummaries,
     selectedSnapshot,
     loadingSnapshot,
-    refreshSnapSummaries,
 
     // Selected-date flags
     selectedDateIsStructurallyOff,

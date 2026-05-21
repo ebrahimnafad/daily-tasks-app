@@ -100,7 +100,7 @@ export default function useTaskManager(
       void saveSnapshot({
         date: today,
         tasks: otherTasks,
-        checked,
+        checked: { ...checked, ...subChecked },
         skipped,
         progress,
         countDone,
@@ -126,24 +126,58 @@ export default function useTaskManager(
       return n;
     });
 
-    // Auto-delete ALL once-tasks on reset — a "مرة واحدة" task belongs to a
-    // specific day. Once the day resets, it disappears whether done or not.
-    // Previously only completed ones were deleted, leaving uncompleted tasks
-    // reappearing as unchecked on the next day (bug).
-    const onceIds = new Set(
-      tasks.filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة').map((t) => t.id)
-    );
-    if (onceIds.size > 0) {
-      setTasks((prev) => prev.filter((t) => !onceIds.has(t.id)));
-      // Also clean up their checked/skipped/subChecked entries
+    const onceTasks = tasks.filter((t) => (t.recurrence ?? 'يومي') === 'مرة واحدة');
+    if (onceTasks.length > 0) {
+      let hasOnceTaskChanges = false;
+      const onceUpdates = new Map<number, Task | null>(); // null means delete
+
+      onceTasks.forEach((t) => {
+        if (!t.subtasks || t.subtasks.length === 0) {
+          if (checked[t.id]) {
+            hasOnceTaskChanges = true;
+            onceUpdates.set(t.id, null);
+          }
+        } else {
+          const remainingSubtasks = t.subtasks.filter((s) => !subChecked[s.id]);
+          if (remainingSubtasks.length === 0) {
+            hasOnceTaskChanges = true;
+            onceUpdates.set(t.id, null);
+          } else if (remainingSubtasks.length < t.subtasks.length) {
+            hasOnceTaskChanges = true;
+            onceUpdates.set(t.id, { ...t, subtasks: remainingSubtasks });
+          }
+        }
+      });
+
+      if (hasOnceTaskChanges) {
+        setTasks(
+          (prev) =>
+            prev
+              .map((t) => {
+                if (onceUpdates.has(t.id)) return onceUpdates.get(t.id);
+                return t;
+              })
+              .filter(Boolean) as Task[]
+        );
+      }
+
+      // Always clear daily states for ALL once-tasks because even the ones that
+      // roll over should start unchecked on the new day.
       setChecked((p) => {
         const n = { ...p };
-        onceIds.forEach((id) => delete n[id]);
+        onceTasks.forEach((t) => delete n[t.id]);
         return n;
       });
       setSkipped((p) => {
         const n = { ...p };
-        onceIds.forEach((id) => delete n[id]);
+        onceTasks.forEach((t) => delete n[t.id]);
+        return n;
+      });
+      setSubChecked((p) => {
+        const n = { ...p };
+        onceTasks.forEach((t) => {
+          if (t.subtasks) t.subtasks.forEach((s) => delete n[s.id]);
+        });
         return n;
       });
     }

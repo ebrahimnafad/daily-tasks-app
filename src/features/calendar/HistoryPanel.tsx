@@ -7,7 +7,6 @@ interface HistoryPanelProps {
   snapSummaries: Record<string, SnapshotSummary>;
   selectedSnapshot: DailySnapshot | null;
   loadingSnapshot: boolean;
-  onRefresh: () => void;
 }
 
 export default function HistoryPanel({
@@ -16,7 +15,6 @@ export default function HistoryPanel({
   snapSummaries,
   selectedSnapshot,
   loadingSnapshot,
-  onRefresh,
 }: HistoryPanelProps) {
   if (selectedDate >= today) return null;
 
@@ -28,25 +26,6 @@ export default function HistoryPanel({
         {snapSummaries[selectedDate] && (
           <span className="cal-history__badge">{snapSummaries[selectedDate].progress}%</span>
         )}
-        {/* M-7: Manual refresh button */}
-        <button
-          onClick={onRefresh}
-          title="تحديث سجل الإنجاز"
-          style={{
-            marginRight: 'auto',
-            marginLeft: '6px',
-            background: 'none',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--text-secondary)',
-            fontSize: '0.85rem',
-            padding: '2px 6px',
-            borderRadius: '4px',
-          }}
-          aria-label="تحديث سجل الإنجاز"
-        >
-          ↻
-        </button>
       </div>
 
       {loadingSnapshot && <div className="cal-history__loading">جاري التحميل...</div>}
@@ -86,10 +65,16 @@ export default function HistoryPanel({
           {/* Task state list */}
           <div className="cal-history__tasks">
             {selectedSnapshot.tasks.map((t) => {
-              const isDone =
-                t.subtasks.length > 0
-                  ? t.subtasks.every((s) => selectedSnapshot.checked[s.id as number])
-                  : !!selectedSnapshot.checked[t.id];
+              const isDone = (() => {
+                if (t.subtasks && t.subtasks.length > 0) {
+                  const required = t.subtasks.filter((s) => !s.isOptional);
+                  if (required.length === 0) {
+                    return t.subtasks.every((s) => selectedSnapshot.checked[s.id as number]);
+                  }
+                  return required.every((s) => selectedSnapshot.checked[s.id as number]);
+                }
+                return !!selectedSnapshot.checked[t.id];
+              })();
               const isSkipped = !!selectedSnapshot.skipped[t.id];
               return (
                 <div

@@ -479,18 +479,46 @@ export default function useSync(
         // BEFORE the daily state is cleared.
         const currentTasks =
           queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks ?? [];
-        const yesterdayDaily = queryClient.getQueryData<{
-          daily: DailyState;
-          timestamp: number;
-        }>(['daily', storedDate])?.daily ?? { checked: {}, subChecked: {}, skipped: {} };
 
-        const filteredTasks = currentTasks.filter(
-          (t) => !(t.recurrence === 'مرة واحدة' && !!yesterdayDaily.checked[t.id])
-        );
-        if (filteredTasks.length < currentTasks.length) {
-          queryClient.setQueryData(['tasks'], { tasks: filteredTasks, timestamp: Date.now() });
-          lsSet('mhm_tasks', filteredTasks, onQuota);
-          updateTasksMutRef.current(filteredTasks);
+        // Get state BEFORE clearing it
+        const currentChecked = lsGet<Record<string, boolean>>('mhm_checked', {});
+        const currentSubChecked = lsGet<Record<string, boolean>>('mhm_sub_checked', {});
+
+        let hasOnceTaskChanges = false;
+        const newTasks = currentTasks
+          .map((t) => {
+            if (t.recurrence !== 'مرة واحدة') return t;
+
+            // Process 'مرة واحدة' task
+            if (!t.subtasks || t.subtasks.length === 0) {
+              // No subtasks
+              const isDone = !!currentChecked[t.id];
+              if (isDone) {
+                hasOnceTaskChanges = true;
+                return null; // Delete completed task
+              }
+              return t; // Keep uncompleted task (rolls over)
+            } else {
+              // Has subtasks
+              const remainingSubtasks = t.subtasks.filter((s) => !currentSubChecked[s.id]);
+
+              if (remainingSubtasks.length === 0) {
+                hasOnceTaskChanges = true;
+                return null; // All subtasks done, delete task
+              } else if (remainingSubtasks.length < t.subtasks.length) {
+                hasOnceTaskChanges = true;
+                // Partially done, keep task but remove done subtasks
+                return { ...t, subtasks: remainingSubtasks };
+              }
+              return t; // None done, keep task as is (rolls over)
+            }
+          })
+          .filter(Boolean) as Task[];
+
+        if (hasOnceTaskChanges) {
+          queryClient.setQueryData(['tasks'], { tasks: newTasks, timestamp: Date.now() });
+          lsSet('mhm_tasks', newTasks, onQuota);
+          updateTasksMutRef.current(newTasks);
         }
 
         queryClient.setQueryData(['daily', today], { checked: {}, subChecked: {}, skipped: {} });
@@ -501,6 +529,10 @@ export default function useSync(
         onNewDay?.();
       }
     };
+
+    // Run immediately on mount to catch snapshots if the app was closed during midnight rollover
+    tick();
+
     const t = setInterval(tick, 60_000);
     return () => clearInterval(t);
   }, [shiftEpoch, schedule, dayStartHour, onNewDay, onQuota, queryClient, onAutoSnapshotNeeded]);

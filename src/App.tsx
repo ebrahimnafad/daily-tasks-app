@@ -1,4 +1,13 @@
-import { useState, useEffect, useMemo, useRef, useCallback, Suspense, lazy } from 'react';
+import {
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  Suspense,
+  lazy,
+} from 'react';
 import './app.css';
 import { useSync } from '@/lib/sync';
 import { useNotifications, useToasts } from '@/shared/hooks';
@@ -81,16 +90,106 @@ function AppContent({ logout }: { logout: () => void }) {
   // freshest render values so the midnight tick never reads stale progress data.
   // This is the correct data source: same otherTasks/progress/countDone/totalOther
   // the user sees on screen, not an ad-hoc recomputation over all tasks.
-  useEffect(() => {
+  //
+  // When snapshotting a past date (e.g., 4 AM May 21 taking May 20 snapshot),
+  // we must recalculate countDone/totalOther based on that day's actual tasks,
+  // not today's filtered visibility. Otherwise, if May 20 had only "مرة واحدة" tasks
+  // (deleted at midnight), the snapshot would show 0% progress despite tasks being done.
+  useLayoutEffect(() => {
     autoSnapshotFnRef.current = (date?: string) => {
+      const targetDate = date || getLogicalDateISO(dayStartHour);
+      const logicalToday = getLogicalDateISO(dayStartHour);
+
+      let snapshotCountDone = tm.countDone;
+      let snapshotTotalOther = tm.totalOther;
+      let snapshotProgress = tm.progress;
+      let snapshotTasks = tm.otherTasks;
+      let snapshotPrayersDone = prayersDone;
+      let snapshotPrayerTotal = prayerTotal;
+
+      if (targetDate !== logicalToday) {
+        const targetDateObj = new Date(targetDate + 'T12:00:00');
+        const dayOfWeek = targetDateObj.getDay();
+
+        const workExceptions = JSON.parse(localStorage.getItem('mhm_work_exceptions') || '[]');
+        const vacationDays = JSON.parse(localStorage.getItem('mhm_vacation_days') || '[]');
+        const isExceptionalOffDay =
+          workExceptions.includes(targetDate) || vacationDays.includes(targetDate);
+        const workday = isExceptionalOffDay
+          ? false
+          : (schedule.find((s) => s.id === shift)?.offDays || []).includes(dayOfWeek) === false;
+
+        const allTasksForDate = tasks.filter((t) => {
+          const taskShifts = t.shifts ?? ['morning', 'evening'];
+          if (!taskShifts.includes(shift)) return false;
+
+          // Exclude tasks that were created logically AFTER the snapshot target date
+          // We must cast t to any because createdAt is not explicitly in the Task interface
+          const createdStr = (t as any).createdAt;
+          if (createdStr) {
+            const logicalCreated = getLogicalDateISO(dayStartHour, new Date(createdStr));
+            if (logicalCreated > targetDate) return false;
+          }
+
+          const rec = t.recurrence ?? 'يومي';
+          if (rec === 'أيام العمل' && !workday) return false;
+          if (rec === 'موعد محدد') {
+            if (!t.date || t.date !== targetDate) return false;
+          }
+          if (rec === 'شهري') {
+            if (!t.date) return true;
+            const anchor = new Date(t.date + 'T12:00:00');
+            return anchor.getDate() === targetDateObj.getDate();
+          }
+          if (rec === 'أسبوعي') {
+            if (!t.date) return true;
+            const anchor = new Date(t.date + 'T12:00:00');
+            return anchor.getDay() === targetDateObj.getDay();
+          }
+          return true;
+        });
+
+        snapshotTasks = allTasksForDate.filter((t) => !t.isPrayerTask);
+
+        const skippedOther = snapshotTasks.filter((t) => skipped[t.id]);
+        snapshotTotalOther = snapshotTasks.length - skippedOther.length;
+
+        snapshotCountDone = snapshotTasks.filter((t) => {
+          if (t.subtasks && t.subtasks.length > 0) {
+            const required = t.subtasks.filter((s) => !s.isOptional);
+            if (required.length === 0) {
+              return t.subtasks.every((s) => subChecked[s.id]);
+            }
+            return required.every((s) => subChecked[s.id]);
+          }
+          return checked[t.id];
+        }).length;
+
+        const pt = allTasksForDate.find((t) => t.isPrayerTask);
+        const reqSubs = pt ? pt.subtasks.filter((s) => !s.isOptional) : [];
+        snapshotPrayerTotal = reqSubs.length;
+        snapshotPrayersDone = reqSubs.filter((s) => subChecked[s.id]).length;
+
+        snapshotProgress =
+          snapshotTotalOther > 0
+            ? Math.round(
+                ((snapshotCountDone + snapshotPrayersDone) /
+                  (snapshotTotalOther + snapshotPrayerTotal)) *
+                  100
+              )
+            : snapshotPrayerTotal > 0
+              ? Math.round((snapshotPrayersDone / snapshotPrayerTotal) * 100)
+              : 0;
+      }
+
       void saveSnapshot({
-        date: date || getLogicalDateISO(dayStartHour),
-        tasks: tm.otherTasks,
-        checked,
+        date: targetDate,
+        tasks: snapshotTasks,
+        checked: { ...checked, ...subChecked },
         skipped,
-        progress: tm.progress,
-        countDone: tm.countDone,
-        totalOther: tm.totalOther,
+        progress: snapshotProgress,
+        countDone: snapshotCountDone,
+        totalOther: snapshotTotalOther,
       });
     };
   });

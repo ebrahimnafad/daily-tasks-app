@@ -70,7 +70,6 @@ export default function CalendarPage(props: CalendarPageProps) {
     snapSummaries,
     selectedSnapshot,
     loadingSnapshot,
-    refreshSnapSummaries,
     selectedDateIsStructurallyOff,
     selectedDateIsVacation,
     selectedDateTasks,
@@ -600,7 +599,6 @@ export default function CalendarPage(props: CalendarPageProps) {
               snapSummaries={snapSummaries}
               selectedSnapshot={selectedSnapshot}
               loadingSnapshot={loadingSnapshot}
-              onRefresh={refreshSnapSummaries}
             />
 
             <SyncStatusBar syncStatus={syncStatus} syncError={syncError} onRetry={retrySync} />
