@@ -6,7 +6,7 @@
 
 import { useMemo, useState, useEffect, useCallback } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { fetchSchedule } from '@/lib/sync/useSync';
+import { fetchSchedule } from '@/lib/sync/useScheduleSync';
 import type { Task } from '@/types';
 import type { SnapshotSummary, DailySnapshot } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
@@ -105,7 +105,14 @@ export function useCalendarState({
   );
 
   const queryClient = useQueryClient();
-  const { data: scheduleData } = useQuery({
+  const { data: scheduleData } = useQuery<{
+    schedule: ShiftConfig[];
+    offExceptions: string[];
+    workExceptions: string[];
+    vacationDays: string[];
+    vacationBalance: number;
+    timestamp: number;
+  }>({
     queryKey: ['schedule'],
     queryFn: fetchSchedule,
   });
