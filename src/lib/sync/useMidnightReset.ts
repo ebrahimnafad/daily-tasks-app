@@ -65,7 +65,16 @@ export function useMidnightReset({
         Object.keys(daily.checked).length > 0 || Object.keys(daily.skipped).length > 0;
       if (!hasActivity) return;
 
-      const nonPrayer = currentTasks.filter((t) => t.recurrence !== 'صلاة');
+      const prayerTask = currentTasks.find((t) => t.isPrayerTask);
+      const reqSubs = prayerTask ? prayerTask.subtasks.filter((s) => !s.isOptional) : [];
+      const optSubs = prayerTask ? prayerTask.subtasks.filter((s) => s.isOptional) : [];
+      const prayersDone = reqSubs.filter((s) => daily.subChecked?.[s.id]).length;
+      const prayerTotal = reqSubs.length;
+      const prayerOptionalDone = optSubs.filter((s) => daily.subChecked?.[s.id]).length;
+
+      // Notice: Auto-snapshot progress currently only represents non-prayer tasks
+      // (consistent with previous behavior)
+      const nonPrayer = currentTasks.filter((t) => !t.isPrayerTask);
       const totalOtherAuto = nonPrayer.length;
       const countDoneAuto = nonPrayer.filter((t) => {
         if (t.subtasks && t.subtasks.length > 0)
@@ -88,6 +97,9 @@ export function useMidnightReset({
             progress: progressAuto,
             countDone: countDoneAuto,
             totalOther: totalOtherAuto,
+            prayersDone,
+            prayerTotal,
+            prayerOptionalDone,
           },
         }),
       })
@@ -101,6 +113,9 @@ export function useMidnightReset({
               progress: progressAuto,
               countDone: countDoneAuto,
               totalOther: totalOtherAuto,
+              prayersDone,
+              prayerTotal,
+              prayerOptionalDone,
             });
         })
         .catch(() =>
@@ -112,6 +127,9 @@ export function useMidnightReset({
             progress: progressAuto,
             countDone: countDoneAuto,
             totalOther: totalOtherAuto,
+            prayersDone,
+            prayerTotal,
+            prayerOptionalDone,
           })
         );
     };

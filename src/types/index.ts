@@ -53,6 +53,9 @@ export interface DailySnapshot {
   progress: number;
   countDone: number;
   totalOther: number;
+  prayersDone?: number;
+  prayerTotal?: number;
+  prayerOptionalDone?: number;
 }
 
 export interface SnapshotSummary {
@@ -60,6 +63,9 @@ export interface SnapshotSummary {
   progress: number;
   countDone: number;
   totalOther: number;
+  prayersDone?: number;
+  prayerTotal?: number;
+  prayerOptionalDone?: number;
 }
 
 export interface Category {

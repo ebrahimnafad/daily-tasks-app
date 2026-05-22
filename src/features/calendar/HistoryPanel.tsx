@@ -60,6 +60,35 @@ export default function HistoryPanel({
                 }}
               />
             </div>
+            {selectedSnapshot.prayerTotal !== undefined && selectedSnapshot.prayerTotal > 0 && (
+              <>
+                <div className="cal-history__prog-row" style={{ marginTop: '12px' }}>
+                  <span>
+                    🕌 {selectedSnapshot.prayersDone} / {selectedSnapshot.prayerTotal}
+                    {selectedSnapshot.prayerOptionalDone ? (
+                      <span style={{ color: 'var(--gold)', marginLeft: '6px', fontSize: '0.9em' }}>
+                        +{selectedSnapshot.prayerOptionalDone}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="cal-history__prog-pct" style={{ color: 'var(--gold)' }}>
+                    {Math.round(
+                      ((selectedSnapshot.prayersDone || 0) / selectedSnapshot.prayerTotal) * 100
+                    )}
+                    %
+                  </span>
+                </div>
+                <div className="cal-history__prog-track">
+                  <div
+                    className="cal-history__prog-fill"
+                    style={{
+                      width: `${((selectedSnapshot.prayersDone || 0) / selectedSnapshot.prayerTotal) * 100}%`,
+                      background: 'var(--gold)',
+                    }}
+                  />
+                </div>
+              </>
+            )}
           </div>
 
           {/* Task state list */}

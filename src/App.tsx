@@ -90,7 +90,7 @@ function AppContent({ logout }: { logout: () => void }) {
     saveSnapshot,
     addSyncToast
   );
-  const { prayersDone, prayerTotal } = tm;
+  const { prayersDone, prayerTotal, prayerOptionalDone } = tm;
 
   // ── Keep autoSnapshotFnRef populated with the latest shift-filtered data ──────
   // No dependency array — intentional. We want this ref to always capture the
@@ -120,6 +120,7 @@ function AppContent({ logout }: { logout: () => void }) {
       let snapshotTasks = tm.otherTasks;
       let snapshotPrayersDone = prayersDone;
       let snapshotPrayerTotal = prayerTotal;
+      let snapshotPrayerOptionalDone = prayerOptionalDone;
 
       if (targetDate !== logicalToday) {
         const targetDateObj = new Date(targetDate + 'T12:00:00');
@@ -181,8 +182,10 @@ function AppContent({ logout }: { logout: () => void }) {
 
         const pt = allTasksForDate.find((t) => t.isPrayerTask);
         const reqSubs = pt ? pt.subtasks.filter((s) => !s.isOptional) : [];
+        const optSubs = pt ? pt.subtasks.filter((s) => s.isOptional) : [];
         snapshotPrayerTotal = reqSubs.length;
         snapshotPrayersDone = reqSubs.filter((s) => resolvedSubChecked[s.id]).length;
+        snapshotPrayerOptionalDone = optSubs.filter((s) => resolvedSubChecked[s.id]).length;
 
         snapshotProgress =
           snapshotTotalOther > 0
@@ -204,6 +207,9 @@ function AppContent({ logout }: { logout: () => void }) {
         progress: snapshotProgress,
         countDone: snapshotCountDone,
         totalOther: snapshotTotalOther,
+        prayersDone: snapshotPrayersDone,
+        prayerTotal: snapshotPrayerTotal,
+        prayerOptionalDone: snapshotPrayerOptionalDone,
       });
     };
   });
