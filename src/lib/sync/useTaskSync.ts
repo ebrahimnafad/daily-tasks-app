@@ -101,7 +101,7 @@ export function useTaskSync({
         let errData;
         try {
           errData = await res.json();
-        } catch (e) {
+        } catch {
           /* ignore */
         }
 
@@ -132,9 +132,14 @@ export function useTaskSync({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: async (err: any, variables) => {
       const isOfflineStatus = !navigator.onLine || isNetworkError(err);
-      if (isOfflineStatus) {
+      if (isOfflineStatus || (err.status !== 409 && err.status !== 410)) {
         enqueuePending('tasks', variables);
-        notify('أنت غير متصل — تم حفظ المهام محلياً وستُزامَن عند اتصالك', 'offline');
+        notify(
+          isOfflineStatus
+            ? 'أنت غير متصل — تم حفظ المهام محلياً وستُزامَن عند اتصالك'
+            : 'حدث خطأ غير متوقع — تم حفظ المهام محلياً وسيتم المحاولة لاحقاً',
+          isOfflineStatus ? 'offline' : 'warn'
+        );
         return;
       }
 

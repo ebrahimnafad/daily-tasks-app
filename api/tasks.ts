@@ -74,6 +74,9 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         updatedAt: r.updatedAt
           ? new Date(r.updatedAt as string | number | Date).toISOString()
           : new Date().toISOString(),
+        deletedAt: r.deletedAt
+          ? new Date(r.deletedAt as string | number | Date).toISOString()
+          : null,
       }));
 
       let maxUpdatedAt = null;
@@ -115,6 +118,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
       }
 
       // JSONB Validation & Size Hardening
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const validateTaskJSONB = (task: any) => {
         if (task.shifts) {
           assertPayloadSize(task.shifts, 'shifts');
@@ -132,6 +136,14 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
       if (req.query.syncMode === 'delta') {
         const parsedChanged = z.array(TaskSchema).safeParse(body.changed || []);
         if (!parsedChanged.success) {
+          console.error(
+            'Delta Validation Error:',
+            JSON.stringify(parsedChanged.error.format(), null, 2)
+          );
+          console.error(
+            'Failed Payload Sample:',
+            JSON.stringify((body.changed || []).slice(0, 2), null, 2)
+          );
           return res
             .status(400)
             .json({ error: 'البيانات غير صالحة', details: parsedChanged.error.issues });
@@ -159,7 +171,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
             const { id, ...taskData } = task;
 
             const insertData = {
-              id: id,
+              id: id as string,
               userId: userId,
               icon: taskData.icon || null,
               title: taskData.title || '',
@@ -213,7 +225,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
           const { id, ...taskData } = task;
 
           const insertData = {
-            id: id,
+            id: id as string,
             userId: userId,
             icon: taskData.icon || null,
             title: taskData.title || '',
