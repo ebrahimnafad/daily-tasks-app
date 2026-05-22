@@ -85,7 +85,10 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
             })
             .from(calendarNotesRel)
             .where(eq(calendarNotesRel.userId, userId));
-          const existingMap = new Map(existingRecords.map((r: any) => [r.id, r]));
+          type ExistingRec = { id: string; updatedAt: Date | null; deletedAt: Date | null };
+          const existingMap = new Map<string, ExistingRec>(
+            (existingRecords as ExistingRec[]).map((r) => [r.id, r])
+          );
 
           if (itemIds.length > 0) {
             await tx
@@ -137,9 +140,11 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
               noteText: item.text ? String(item.text) : '',
               isPinned: Boolean(item.isPinned ?? item.pinned ?? false),
               tags: Array.isArray(item.tags) ? item.tags : [],
-              createdAt: item.createdAt ? new Date(item.createdAt as string) : new Date(),
+              createdAt: item.createdAt
+                ? new Date(item.createdAt as unknown as string)
+                : new Date(),
               updatedAt: new Date(),
-              deletedAt: item.deletedAt ? new Date(item.deletedAt as string) : null,
+              deletedAt: item.deletedAt ? new Date(item.deletedAt as unknown as string) : null,
             };
 
             await tx.insert(calendarNotesRel).values(insertData).onConflictDoUpdate({
@@ -154,12 +159,18 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     }
 
     return res.status(405).json({ error: `الطريقة ${method} غير مدعومة` });
-  } catch (error: any) {
-    if (error && (error.status === 409 || error.status === 410)) {
-      return res.status(error.status).json({
-        error: error.message,
-        serverData: error.serverData,
-        entityId: error.entityId,
+  } catch (error: unknown) {
+    const err = error as {
+      status?: number;
+      message?: string;
+      serverData?: unknown;
+      entityId?: string;
+    };
+    if (err && (err.status === 409 || err.status === 410)) {
+      return res.status(err.status).json({
+        error: err.message,
+        serverData: err.serverData,
+        entityId: err.entityId,
       });
     }
     console.error('Notes Error:', error);

@@ -42,7 +42,10 @@ export const incomeHandler: FinanceResourceHandler = {
       })
       .from(financeIncomes)
       .where(eq(financeIncomes.userId, userId));
-    const existingMap = new Map(existingRecords.map((r: any) => [r.id, r]));
+    type ExistingRec = { id: string; updatedAt: Date | null; deletedAt: Date | null };
+    const existingMap = new Map<string, ExistingRec>(
+      (existingRecords as ExistingRec[]).map((r) => [r.id, r])
+    );
 
     if (itemIds.length > 0) {
       await tx
