@@ -71,8 +71,14 @@ export function useTaskSync({
     queryFn: fetchTasks,
     initialData: () => {
       const local = lsGet<Task[]>('mhm_tasks', []);
-      const localMigrated = local.length > 0 ? migrateTasks(local) : initialTasks;
-      return { tasks: localMigrated, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
+      if (local.length > 0) {
+        return { tasks: migrateTasks(local), timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
+      }
+      // First load (or after cache wipe): seed with INITIAL_TASKS and persist
+      // to localStorage so fetchTasks' mergeArrays can include them when
+      // merging with the (possibly empty) server response.
+      lsSet('mhm_tasks', initialTasks);
+      return { tasks: initialTasks, timestamp: 0 };
     },
     initialDataUpdatedAt: 0,
     enabled: isOnline,
