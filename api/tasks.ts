@@ -99,24 +99,6 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
     if (method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
 
-      const parsedTasks = z.array(TaskSchema).safeParse(body.tasks);
-      if (!parsedTasks.success) {
-        return res
-          .status(400)
-          .json({ error: 'البيانات غير صالحة', details: parsedTasks.error.issues });
-      }
-      const incomingTasks = parsedTasks.data;
-
-      if (incomingTasks.length > 500) {
-        return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
-      }
-
-      if (incomingTasks.length === 0 && !body.confirmClear) {
-        return res.status(400).json({
-          error: 'Empty task array rejected. Pass confirmClear: true to wipe all tasks.',
-        });
-      }
-
       // JSONB Validation & Size Hardening
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const validateTaskJSONB = (task: any) => {
@@ -133,6 +115,9 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         }
       };
 
+      // ── Delta sync path ─────────────────────────────────────────────
+      // Must be checked BEFORE the full-sync body.tasks validation,
+      // because delta payloads use { changed, deletedIds } — not { tasks }.
       if (req.query.syncMode === 'delta') {
         const parsedChanged = z.array(TaskSchema).safeParse(body.changed || []);
         if (!parsedChanged.success) {
@@ -199,6 +184,25 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         });
 
         return res.status(200).json({ ok: true });
+      }
+
+      // ── Full-sync path (non-delta) ────────────────────────────────
+      const parsedTasks = z.array(TaskSchema).safeParse(body.tasks);
+      if (!parsedTasks.success) {
+        return res
+          .status(400)
+          .json({ error: 'البيانات غير صالحة', details: parsedTasks.error.issues });
+      }
+      const incomingTasks = parsedTasks.data;
+
+      if (incomingTasks.length > 500) {
+        return res.status(400).json({ error: 'عدد المهام تجاوز الحد المسموح (500)' });
+      }
+
+      if (incomingTasks.length === 0 && !body.confirmClear) {
+        return res.status(400).json({
+          error: 'Empty task array rejected. Pass confirmClear: true to wipe all tasks.',
+        });
       }
 
       for (const task of incomingTasks) {

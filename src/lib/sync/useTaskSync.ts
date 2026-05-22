@@ -81,6 +81,12 @@ export function useTaskSync({
 
   const tasks = tasksResp?.tasks ?? initialTasks;
 
+  // Capture prev tasks before onMutate overwrites the cache.
+  // React Query calls onMutate → mutationFn sequentially, so by the time
+  // mutationFn reads the query cache, it already contains newTasks.
+  // We store the real previous state here so the delta is computed correctly.
+  const prevTasksRef = { current: [] as Task[] };
+
   const { mutate: updateTasksMut, mutateAsync: updateTasksMutAsync } = useMutation<
     { tasks?: Task[] },
     Error,
@@ -88,9 +94,12 @@ export function useTaskSync({
     { prevTasks: { tasks: Task[]; timestamp: number } | undefined }
   >({
     mutationFn: async (newTasks) => {
-      const prevTasks =
-        queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks'])?.tasks || [];
-      const delta = computeTaskDelta(prevTasks, newTasks);
+      const delta = computeTaskDelta(prevTasksRef.current, newTasks);
+
+      // Skip no-op delta (nothing changed)
+      if (delta.changed.length === 0 && delta.deletedIds.length === 0) {
+        return { ok: true };
+      }
 
       const res = await authFetch('/api/tasks?syncMode=delta', {
         method: 'POST',
@@ -117,6 +126,8 @@ export function useTaskSync({
     onMutate: async (newTasks) => {
       await queryClient.cancelQueries({ queryKey: ['tasks'] });
       const prevTasks = queryClient.getQueryData<{ tasks: Task[]; timestamp: number }>(['tasks']);
+      // Capture real previous state for delta computation in mutationFn
+      prevTasksRef.current = prevTasks?.tasks ?? [];
       queryClient.setQueryData(['tasks'], { tasks: newTasks, timestamp: Date.now() });
       lsSet('mhm_tasks', newTasks, onQuota);
       return { prevTasks };
