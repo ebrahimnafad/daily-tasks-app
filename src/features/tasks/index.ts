@@ -7,4 +7,6 @@ export { default as TasksHeader } from './components/TasksHeader';
 export { default as TasksProgress } from './components/TasksProgress';
 export { default as useTaskManager } from './hooks/useTaskManager';
 export { INITIAL_TASKS } from './data/initialTasks';
+export { TaskProvider } from './components/TaskProvider';
+export { TaskDialogs } from './components/TaskDialogs';
 export { TaskContext, useTaskContext } from './context/TaskContext';
