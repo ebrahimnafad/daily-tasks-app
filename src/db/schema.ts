@@ -118,6 +118,8 @@ export const tasks = pgTable(
     isPinned: boolean('is_pinned').default(false),
     subtasks: jsonb('subtasks').default([]),
     brief: jsonb('brief').default({}),
+    /** Phase 3: OKR task linking — nullable until Phase 3 ships */
+    linkedKeyResultId: uuid('linked_key_result_id'),
     createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
     updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
@@ -246,3 +248,94 @@ export const calendarNotesRel = pgTable(
     updatedAtIndex: index('idx_calendar_notes_updated_at').on(table.updatedAt),
   })
 );
+
+// ══════════════════════════════════════════════════════════════════════
+//  OKR — Personal Objectives & Key Results
+// ══════════════════════════════════════════════════════════════════════
+
+export const okrCycles = pgTable('okr_cycles', {
+  id: uuid('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  title: text('title').notNull(),
+  startDate: date('start_date').notNull(),
+  endDate: date('end_date').notNull(),
+  /** 'active' | 'archived' | 'draft' */
+  status: text('status').notNull().default('active'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const okrObjectives = pgTable('okr_objectives', {
+  id: uuid('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  cycleId: uuid('cycle_id')
+    .references(() => okrCycles.id)
+    .notNull(),
+  title: text('title').notNull(),
+  icon: text('icon'),
+  color: text('color'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+export const okrKeyResults = pgTable('okr_key_results', {
+  id: uuid('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  objectiveId: uuid('objective_id')
+    .references(() => okrObjectives.id)
+    .notNull(),
+  title: text('title').notNull(),
+  /** 'numeric' | 'binary' */
+  type: text('type').notNull().default('numeric'),
+  /** 'count' | 'percent' | 'currency' | 'custom' */
+  unit: text('unit').notNull().default('count'),
+  customUnit: text('custom_unit'),
+  /** Target value. For binary KRs this is always 1. */
+  targetValue: numeric('target_value').notNull().default('1'),
+  /**
+   * Denormalized current value — updated atomically on every check-in insert.
+   * Must never drift from the sum of check-ins (enforced server-side in a transaction).
+   */
+  currentValue: numeric('current_value').notNull().default('0'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  /** Phase 3: optional link to a daily task (manual, not auto-tracked in v1) */
+  linkedTaskId: uuid('linked_task_id'),
+  /** Phase 4 (v2): optional link to a finance goal for cross-feature progress */
+  linkedFinanceGoalId: uuid('linked_finance_goal_id'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  deletedAt: timestamp('deleted_at', { withTimezone: true }),
+});
+
+/**
+ * Check-ins are IMMUTABLE APPEND-ONLY records.
+ * - No updatedAt column (intentional — a check-in's value never changes after insert).
+ * - No deletedAt / soft-delete (intentional — cascade-delete by keyResultId only).
+ * - currentValue on okrKeyResults is updated atomically in the same DB transaction
+ *   to ensure it never drifts from the real sum of check-ins.
+ */
+export const okrCheckIns = pgTable('okr_check_ins', {
+  id: uuid('id').primaryKey(),
+  userId: integer('user_id')
+    .references(() => users.id)
+    .notNull(),
+  keyResultId: uuid('key_result_id')
+    .references(() => okrKeyResults.id)
+    .notNull(),
+  checkInDate: date('check_in_date').notNull(),
+  /** Delta value added (positive). For binary KRs this must be 0 or 1. */
+  value: numeric('value').notNull(),
+  note: text('note'),
+  /** 'manual' (user-entered) | 'task' (auto from linked daily task, Phase 3) */
+  source: text('source').notNull().default('manual'),
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+});

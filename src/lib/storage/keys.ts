@@ -40,6 +40,13 @@ export const LS_KEYS = {
   FIN_SETTINGS: 'mhm_fin2_settings',
   FIN_TIMESTAMP: 'mhm_fin2_timestamp',
   FIN_CYCLE_CONFIG: 'mhm_fin_cycle_config',
+  // OKR
+  OKR_CYCLES: 'mhm_okr_cycles',
+  OKR_OBJECTIVES: 'mhm_okr_objectives',
+  OKR_KEY_RESULTS: 'mhm_okr_key_results',
+  OKR_CHECK_INS: 'mhm_okr_check_ins',
+  /** ISO datetime of last successful OKR sync — used as `since` for incremental check-in fetch */
+  OKR_TIMESTAMP: 'mhm_okr_timestamp',
 } as const;
 
 export const QUERY_KEYS = {

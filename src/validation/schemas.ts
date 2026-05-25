@@ -8,6 +8,10 @@ import {
   financeGoalsRel,
   tasks,
   calendarNotesRel,
+  okrCycles,
+  okrObjectives,
+  okrKeyResults,
+  okrCheckIns,
 } from '../db/schema.js';
 
 const VALID_ICONS = [
@@ -362,3 +366,74 @@ export const NoteSchema = createInsertSchema(calendarNotesRel, {
     createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
     updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
   });
+
+// ── OKR Schemas ───────────────────────────────────────────────────────────
+
+export const okrCycleSchema = createInsertSchema(okrCycles, {
+  status: () => z.enum(['active', 'archived', 'draft']).default('active'),
+})
+  .omit({ userId: true })
+  .extend({
+    id: z.string().uuid().optional(),
+    startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'تاريخ البداية غير صالح'),
+    endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'تاريخ النهاية غير صالح'),
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    deletedAt: z.union([z.string(), z.number(), z.date()]).nullable().optional(),
+  });
+
+export const okrObjectiveSchema = createInsertSchema(okrObjectives)
+  .omit({ userId: true })
+  .extend({
+    id: z.string().uuid().optional(),
+    cycleId: z.string().uuid('معرّف الدورة غير صالح'),
+    title: z.string().min(1, 'اسم الهدف مطلوب').max(200, 'اسم الهدف طويل جداً'),
+    icon: z.string().max(10).nullable().optional(),
+    color: z.string().max(50).nullable().optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    deletedAt: z.union([z.string(), z.number(), z.date()]).nullable().optional(),
+  });
+
+export const okrKeyResultSchema = createInsertSchema(okrKeyResults, {
+  type: () => z.enum(['numeric', 'binary']).default('numeric'),
+  unit: () => z.enum(['count', 'percent', 'currency', 'custom']).default('count'),
+})
+  .omit({ userId: true })
+  .extend({
+    id: z.string().uuid().optional(),
+    objectiveId: z.string().uuid('معرّف الهدف غير صالح'),
+    title: z.string().min(1, 'اسم النتيجة مطلوب').max(200, 'اسم النتيجة طويل جداً'),
+    customUnit: z.string().max(30).nullable().optional(),
+    targetValue: z.coerce.number().min(0.01, 'القيمة المستهدفة يجب أن تكون أكبر من صفر'),
+    currentValue: z.coerce.number().min(0, 'القيمة الحالية لا يمكن أن تكون سالبة').optional(),
+    sortOrder: z.number().int().min(0).optional(),
+    linkedTaskId: z.string().uuid().nullable().optional(),
+    linkedFinanceGoalId: z.string().uuid().nullable().optional(),
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    updatedAt: z.union([z.string(), z.number(), z.date()]).optional(),
+    deletedAt: z.union([z.string(), z.number(), z.date()]).nullable().optional(),
+  });
+
+/**
+ * Check-ins are append-only — no updatedAt or deletedAt fields.
+ * The `value` must be positive (delta). For binary KRs, must be 0 or 1.
+ */
+export const okrCheckInSchema = createInsertSchema(okrCheckIns, {
+  source: () => z.enum(['manual', 'task']).default('manual'),
+})
+  .omit({ userId: true })
+  .extend({
+    id: z.string().uuid().optional(),
+    keyResultId: z.string().uuid('معرّف النتيجة غير صالح'),
+    checkInDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'تاريخ التسجيل غير صالح'),
+    value: z.coerce.number().min(0, 'القيمة لا يمكن أن تكون سالبة'),
+    note: z.string().max(500).nullable().optional(),
+    createdAt: z.union([z.string(), z.number(), z.date()]).optional(),
+  });
+
+export type OkrCycleInput = z.infer<typeof okrCycleSchema>;
+export type OkrObjectiveInput = z.infer<typeof okrObjectiveSchema>;
+export type OkrKeyResultInput = z.infer<typeof okrKeyResultSchema>;
+export type OkrCheckInInput = z.infer<typeof okrCheckInSchema>;

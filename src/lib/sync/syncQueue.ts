@@ -46,7 +46,7 @@ export const flushSnapshotQueue = async (): Promise<void> => {
 export const PENDING_SYNC_KEY = LS_KEYS.PENDING_SYNC;
 
 export type PendingItem = {
-  type: 'tasks' | 'daily' | 'schedule' | 'finance' | 'notes';
+  type: 'tasks' | 'daily' | 'schedule' | 'finance' | 'notes' | 'okr';
   payload: unknown;
   queuedAt: number;
   entityId?: string | number;
