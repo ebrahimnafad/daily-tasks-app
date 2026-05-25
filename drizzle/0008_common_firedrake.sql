@@ -1,0 +1,1 @@
+ALTER TABLE "schedule_config" ADD COLUMN "day_start_hour" integer DEFAULT 0 NOT NULL;

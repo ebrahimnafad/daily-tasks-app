@@ -2,12 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { Task, CheckedMap, SubCheckedMap, SyncStatus, DailySnapshot } from '@/types';
-import { lsGet, lsSet } from '@/lib/storage/localStorage';
-import {
-  type ShiftConfig,
-  type ShiftType,
-  DAY_START_HOUR_KEY,
-} from '@/features/tasks/data/scheduleConfig';
+import { type ShiftConfig, type ShiftType } from '@/features/tasks/data/scheduleConfig';
 import { localDateISO } from '@/lib/date/localDate';
 import { runBlockMigrationV2, isMigrationDone } from '@/lib/migrate/blockMigrationV2';
 import { flushSnapshotQueue, flushPending, hasStaleItems } from './syncQueue';
@@ -49,19 +44,6 @@ export default function useSync(
 ): UseSyncReturn {
   const queryClient = useQueryClient();
 
-  const [dayStartHour, setDayStartHourState] = useState<number>(() =>
-    lsGet<number>(DAY_START_HOUR_KEY, 0)
-  );
-
-  const setDayStartHour = useCallback(
-    (hour: number) => {
-      const clamped = Math.max(0, Math.min(23, Math.round(hour)));
-      setDayStartHourState(clamped);
-      lsSet(DAY_START_HOUR_KEY, clamped, onQuota);
-    },
-    [onQuota]
-  );
-
   const [isOnline, setIsOnline] = useState<boolean>(() => navigator.onLine);
   const [hasError, setHasError] = useState(false);
   const didMountRef = useRef(false);
@@ -87,6 +69,7 @@ export default function useSync(
   const {
     scheduleResp,
     schedule,
+    dayStartHour,
     setSchedule,
     shiftEpoch,
     shift,
@@ -95,12 +78,21 @@ export default function useSync(
     fetchingSchedule,
     updateScheduleMut,
     updateScheduleMutAsync,
+    updateDayStartHourMut,
   } = useScheduleSync({
     isOnline,
     onQuota,
     notify,
     setHasError,
   });
+
+  const setDayStartHour = useCallback(
+    (hour: number) => {
+      const clamped = Math.max(0, Math.min(23, Math.round(hour)));
+      updateDayStartHourMut(clamped);
+    },
+    [updateDayStartHourMut]
+  );
 
   const {
     checked,

@@ -9,6 +9,7 @@ import {
   assertPayloadSize,
   calendarExceptionsSchema,
   vacationBalanceSchema,
+  dayStartHourSchema,
 } from '../src/validation/schemas.js';
 import type { ApiRequest, ApiResponse } from './_shared/types.js';
 
@@ -30,6 +31,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
       const rows = await db.select().from(scheduleConfig).where(eq(scheduleConfig.userId, userId));
       return res.status(200).json({
         schedule: rows[0]?.data ?? null,
+        dayStartHour: rows[0]?.dayStartHour ?? 0,
         offExceptions: rows[0]?.offExceptions ?? [],
         workExceptions: rows[0]?.workExceptions ?? [],
         vacationDays: rows[0]?.vacationDays ?? [],
@@ -40,19 +42,31 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
 
     if (method === 'POST') {
       const body = typeof req.body === 'string' ? JSON.parse(req.body) : req.body || {};
-      const { schedule, offExceptions, workExceptions, vacationDays, vacationBalance } = body;
-
-      if (!Array.isArray(schedule)) {
-        return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
-      }
-
-      assertPayloadSize(schedule, 'schedule');
-      const validSchedule = scheduleDataSchema.parse(schedule);
+      const {
+        schedule,
+        dayStartHour,
+        offExceptions,
+        workExceptions,
+        vacationDays,
+        vacationBalance,
+      } = body;
 
       const updateData: Partial<typeof scheduleConfig.$inferInsert> = {
-        data: validSchedule,
         updatedAt: new Date(),
       };
+
+      if (schedule !== undefined) {
+        if (!Array.isArray(schedule)) {
+          return res.status(400).json({ error: 'schedule يجب أن يكون مصفوفة' });
+        }
+        assertPayloadSize(schedule, 'schedule');
+        updateData.data = scheduleDataSchema.parse(schedule);
+      }
+
+      if (dayStartHour !== undefined) {
+        updateData.dayStartHour = dayStartHourSchema.parse(dayStartHour);
+      }
+
       if (offExceptions !== undefined) {
         updateData.offExceptions = calendarExceptionsSchema.parse(offExceptions);
       }
@@ -66,9 +80,6 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         updateData.vacationBalance = vacationBalanceSchema.parse(vacationBalance);
       }
 
-      // Explicit upsert: avoids a Drizzle 0.45.x bug where onConflictDoUpdate
-      // targets the wrong column ("id" instead of "user_id") on tables that have
-      // both a bare `id` field and a primaryKey() defined in the table config.
       const existing = await db
         .select({ userId: scheduleConfig.userId })
         .from(scheduleConfig)
@@ -79,15 +90,12 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
       } else {
         await db.insert(scheduleConfig).values({
           userId,
-          data: validSchedule,
-          offExceptions:
-            offExceptions !== undefined ? calendarExceptionsSchema.parse(offExceptions) : [],
-          workExceptions:
-            workExceptions !== undefined ? calendarExceptionsSchema.parse(workExceptions) : [],
-          vacationDays:
-            vacationDays !== undefined ? calendarExceptionsSchema.parse(vacationDays) : [],
-          vacationBalance:
-            vacationBalance !== undefined ? vacationBalanceSchema.parse(vacationBalance) : 0,
+          data: updateData.data ?? [],
+          dayStartHour: updateData.dayStartHour ?? 0,
+          offExceptions: updateData.offExceptions ?? [],
+          workExceptions: updateData.workExceptions ?? [],
+          vacationDays: updateData.vacationDays ?? [],
+          vacationBalance: updateData.vacationBalance ?? 0,
           updatedAt: new Date(),
         });
       }

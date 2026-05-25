@@ -49,13 +49,30 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  await page.route('**/api/tasks', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
       body: JSON.stringify({
         ok: true,
         tasks: [],
+      }),
+    });
+  });
+
+  await page.route('**/api/daily', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
         checked: {},
         subChecked: {},
         skipped: {},
-        schedule: [],
       }),
     });
   });

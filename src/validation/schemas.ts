@@ -344,6 +344,7 @@ export const scheduleDataSchema = z.array(
 
 export const calendarExceptionsSchema = z.array(z.string().regex(DATE_REGEX));
 export const vacationBalanceSchema = z.number().int();
+export const dayStartHourSchema = z.number().int().min(0).max(23);
 
 export const NoteSchema = createInsertSchema(calendarNotesRel, {
   tags: () => z.array(z.string().max(50)).max(20).nullable().optional(),
