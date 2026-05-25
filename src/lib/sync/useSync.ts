@@ -44,11 +44,6 @@ export default function useSync(
   initialTasks: Task[],
   onNewDay?: () => void,
   onQuota?: () => void,
-  onAutoSnapshotNeeded?: (
-    date: string,
-    fallbackChecked?: CheckedMap,
-    fallbackSubChecked?: SubCheckedMap
-  ) => void,
   /** Non-blocking replacement for alert() — show sync errors as toasts. */
   onSyncError?: (message: string, type: 'offline' | 'error' | 'warn') => void
 ): UseSyncReturn {
@@ -128,10 +123,8 @@ export default function useSync(
   useMidnightReset({
     dayStartHour,
     shiftEpoch,
-    schedule,
     onNewDay,
     onQuota,
-    onAutoSnapshotNeeded,
     setShiftState,
     updateTasksMut,
   });
