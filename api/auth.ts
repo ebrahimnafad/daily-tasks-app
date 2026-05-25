@@ -1,5 +1,7 @@
-import { neon } from '@neondatabase/serverless';
 import bcrypt from 'bcryptjs';
+import { eq, sql } from 'drizzle-orm';
+import { db } from './_shared/db.js';
+import { users } from '../src/db/schema.js';
 import { setCorsHeaders } from './_shared/cors.js';
 import { requireAuth, signToken, signRefreshToken, verifyRefreshToken } from './_shared/auth.js';
 import type { ApiRequest, ApiResponse } from './_shared/types.js';
@@ -11,13 +13,6 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     return res.status(204).end();
   }
 
-  if (!process.env.DATABASE_URL) {
-    return res
-      .status(503)
-      .json({ error: 'DATABASE_URL غير مضبوط. فعّل Neon في Vercel Dashboard.' });
-  }
-
-  const sql = neon(process.env.DATABASE_URL);
   const { action } = req.query;
   const { method } = req;
 
@@ -56,8 +51,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       if (!envSecret || setupSecret !== envSecret) {
         return res.status(403).json({ error: 'مفتاح الإعداد غير صحيح أو مفقود' });
       }
-      const existing = await sql`SELECT COUNT(*) AS count FROM users`;
-      if (parseInt(existing[0].count) >= 10) {
+      const existing = await db.select({ count: sql<number>`count(*)` }).from(users);
+      const count = Number(existing[0].count);
+      if (count >= 10) {
         return res.status(409).json({ error: 'تم الوصول للحد الأقصى للمستخدمين (10)' });
       }
       const { username, password } = body;
@@ -68,7 +64,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(400).json({ error: 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' });
       }
       const hash = await bcrypt.hash(password, 12);
-      await sql`INSERT INTO users (username, password_hash) VALUES (${username}, ${hash})`;
+      await db.insert(users).values({ username, passwordHash: hash });
       return res.status(201).json({ ok: true });
     }
 
@@ -77,16 +73,16 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       if (!username || !password) {
         return res.status(400).json({ error: 'username و password مطلوبان' });
       }
-      const users = await sql`SELECT * FROM users WHERE username = ${username} LIMIT 1`;
-      if (!users.length) {
+      const foundUsers = await db.select().from(users).where(eq(users.username, username)).limit(1);
+      if (!foundUsers.length) {
         await bcrypt.compare(
           password,
           '$2b$12$invalidhashpadding000000000000000000000000000000000000'
         );
         return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
       }
-      const user = users[0];
-      const valid = await bcrypt.compare(password, user.password_hash);
+      const user = foundUsers[0];
+      const valid = await bcrypt.compare(password, user.passwordHash);
       if (!valid) {
         return res.status(401).json({ error: 'اسم المستخدم أو كلمة المرور غير صحيحة' });
       }
@@ -136,13 +132,13 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       if (newPassword.length < 6) {
         return res.status(400).json({ error: 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل' });
       }
-      const users = await sql`SELECT * FROM users WHERE id = ${payload.userId} LIMIT 1`;
-      const valid = await bcrypt.compare(currentPassword, users[0].password_hash);
+      const foundUsers = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+      const valid = await bcrypt.compare(currentPassword, foundUsers[0].passwordHash);
       if (!valid) {
         return res.status(401).json({ error: 'كلمة المرور الحالية غير صحيحة' });
       }
       const hash = await bcrypt.hash(newPassword, 12);
-      await sql`UPDATE users SET password_hash = ${hash} WHERE id = ${payload.userId}`;
+      await db.update(users).set({ passwordHash: hash }).where(eq(users.id, payload.userId));
       return res.status(200).json({ ok: true });
     }
 
