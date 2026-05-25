@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import type { Task } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
 import { KEYS } from '@/features/finance/hooks/useFinanceSync';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
@@ -50,7 +51,9 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
 
   const [expenses] = useState<Expense[]>(() => lsGet(KEYS.expenses, []));
   const [transactions] = useState<Transaction[]>(() => lsGet(KEYS.transactions, []));
-  const [notes, setNotes] = useState<Record<string, string>>(() => lsGet('mhm_calendar_notes', {}));
+  const [notes, setNotes] = useState<Record<string, string>>(() =>
+    lsGet(LS_KEYS.CALENDAR_NOTES_LEGACY, {})
+  );
 
   const handleNoteChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -61,7 +64,7 @@ export default function CalendarView({ tasks }: CalendarViewProps) {
       } else {
         newNotes[selectedDate] = val;
       }
-      lsSet('mhm_calendar_notes', newNotes);
+      lsSet(LS_KEYS.CALENDAR_NOTES_LEGACY, newNotes);
       return newNotes;
     });
   };
