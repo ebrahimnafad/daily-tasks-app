@@ -225,6 +225,43 @@ export default function ScheduleSettingsModal({
               </div>
             )}
           </div>
+
+          <div className="ss-input-group" style={{ marginTop: 'var(--space-md)' }}>
+            <label className="ss-label" htmlFor="global-week-start-hour">
+              وقت تبدّل الأسبوع (يوم الجمعة)
+              <span
+                style={{
+                  fontSize: '0.8em',
+                  color: 'rgba(var(--gold-rgb), 0.5)',
+                  marginRight: '6px',
+                }}
+              >
+                (الوقت الذي يُعدّ فيه الجمعة بداية للأسبوع الجديد)
+              </span>
+            </label>
+            <input
+              id="global-week-start-hour"
+              type="time"
+              className="form-input"
+              value={decimalHourToHHmm(editingSchedule[0]?.weekStartHour ?? 0)}
+              onChange={(e) => {
+                const newHour = hhmmToDecimalHour(e.target.value);
+                setEditingSchedule((prev) => prev.map((s) => ({ ...s, weekStartHour: newHour })));
+              }}
+            />
+            {(editingSchedule[0]?.weekStartHour ?? 0) > 0 && (
+              <div
+                style={{
+                  marginTop: 'var(--space-sm)',
+                  fontSize: 'var(--font-sm)',
+                  color: 'rgba(var(--gold-rgb), 0.55)',
+                }}
+              >
+                ℹ️ أي وقت قبل {decimalHourToHHmm(editingSchedule[0]?.weekStartHour ?? 0)} يوم الجمعة
+                يُعدّ من الأسبوع السابق.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Shift Selector Tabs */}
@@ -267,46 +304,6 @@ export default function ScheduleSettingsModal({
                 </div>
               );
             })}
-          </div>
-        </div>
-
-        {/* Week Start Hour — per shift */}
-        <div className="ss-card" style={{ marginBottom: 'var(--space-lg)' }}>
-          <div className="ss-section-title">🔄 بداية الأسبوع الجديد</div>
-          <div className="ss-input-group">
-            <label className="ss-label" htmlFor={`week-start-hour-${selectedShift.id}`}>
-              وقت تبدّل الأسبوع (يوم الجمعة)
-              <span
-                style={{
-                  fontSize: '0.8em',
-                  color: 'rgba(var(--gold-rgb), 0.5)',
-                  marginRight: '6px',
-                }}
-              >
-                (الوقت الذي يُعدّ فيه الجمعة بداية للأسبوع الجديد)
-              </span>
-            </label>
-            <input
-              id={`week-start-hour-${selectedShift.id}`}
-              type="time"
-              className="form-input"
-              value={decimalHourToHHmm(selectedShift.weekStartHour ?? 0)}
-              onChange={(e) =>
-                handleUpdateShift({ weekStartHour: hhmmToDecimalHour(e.target.value) })
-              }
-            />
-            {(selectedShift.weekStartHour ?? 0) > 0 && (
-              <div
-                style={{
-                  marginTop: 'var(--space-sm)',
-                  fontSize: 'var(--font-sm)',
-                  color: 'rgba(var(--gold-rgb), 0.55)',
-                }}
-              >
-                ℹ️ أي وقت قبل {decimalHourToHHmm(selectedShift.weekStartHour ?? 0)} يوم الجمعة يُعدّ
-                من الأسبوع السابق.
-              </div>
-            )}
           </div>
         </div>
 
