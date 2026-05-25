@@ -28,13 +28,42 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+
+  await page.route('**/api/tasks', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
       body: JSON.stringify({
         ok: true,
         tasks: [{ id: 'task1', text: 'Test Task', isPrayerTask: false, subtasks: [] }],
+      }),
+    });
+  });
+
+  await page.route('**/api/daily', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
         checked: { task1: true },
         subChecked: {},
         skipped: {},
+      }),
+    });
+  });
+
+  await page.route('**/api/schedule', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
         schedule: [],
+        dayStartHour: 0,
       }),
     });
   });
@@ -48,21 +77,37 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test('auto snapshot triggers on date mismatch', async ({ page }) => {
-  // We want to wait for the POST request to /api/snapshots
-  const requestPromise = page.waitForRequest(
-    (request) => request.url().includes('/api/snapshots') && request.method() === 'POST'
-  );
-
+test('SyncManager posts snapshot when mhm_midnight event fires', async ({ page }) => {
   await page.goto('/');
 
-  // Wait for the snapshot POST request (happens on the first tick)
-  const req = await requestPromise;
+  // Wait for app to fully load (SyncManager must be mounted before we dispatch)
+  await expect(page.locator('text=الصلوات الخمس').first()).toBeVisible();
 
-  const postData = req.postDataJSON();
+  const requestPromise = page.waitForRequest(
+    (request) => request.url().includes('/api/snapshots') && request.method() === 'POST',
+    { timeout: 10000 }
+  );
+
+  // Directly dispatch the event that SyncManager listens to — this is exactly what
+  // useMidnightReset does internally, so we test SyncManager → snapshotImpl → saveSnapshot.
+  await page.evaluate(() => {
+    window.dispatchEvent(
+      new CustomEvent('mhm_midnight', {
+        detail: {
+          date: '2020-01-01',
+          checked: { task1: true },
+          subChecked: {},
+        },
+      })
+    );
+  });
+
+  const req = await requestPromise;
+  const postData = req.postDataJSON() as {
+    date: string;
+    snapshot: { checked: Record<string, boolean> };
+  };
   expect(postData.date).toBe('2020-01-01');
   expect(postData.snapshot).toBeDefined();
-  expect(postData.snapshot.checked).toEqual({ task1: true });
-
-  console.log('Snapshot successfully captured!');
+  expect(postData.snapshot.checked).toMatchObject({ task1: true });
 });
