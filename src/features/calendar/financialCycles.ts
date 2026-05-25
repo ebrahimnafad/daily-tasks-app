@@ -22,7 +22,9 @@ export interface FinCycleConfig {
   eidBonusDaysBefore: number; // default 14
 }
 
-export const LS_FIN_CYCLE_CONFIG = 'mhm_fin_cycle_config';
+import { LS_KEYS } from '@/lib/storage/keys';
+
+export const LS_FIN_CYCLE_CONFIG = LS_KEYS.FIN_CYCLE_CONFIG;
 
 export function defaultFinConfig(): FinCycleConfig {
   return {

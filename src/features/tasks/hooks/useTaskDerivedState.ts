@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import {
   DEFAULT_SHIFTS,
   getCurrentBlockId,
@@ -17,8 +18,8 @@ import { lsGet } from '@/lib/storage/localStorage';
 const logicalTodayISO = (): string => getLogicalDateISO(lsGet<number>(DAY_START_HOUR_KEY, 0));
 
 // localStorage keys shared with CalendarPage for per-date overrides
-const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions'; // workday → exceptional off
-const LS_VACATION_DAYS_KEY = 'mhm_vacation_days'; // annual vacation days
+const LS_WORK_EXCEPTIONS_KEY = LS_KEYS.WORK_EXCEPTIONS; // workday → exceptional off
+const LS_VACATION_DAYS_KEY = LS_KEYS.VACATION_DAYS; // annual vacation days
 
 export interface TaskDerivedStateReturn {
   shiftTasks: Task[];

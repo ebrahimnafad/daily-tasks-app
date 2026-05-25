@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Task } from '@/types';
@@ -23,7 +24,7 @@ export const migrateTasks = (tasks: Task[]): Task[] =>
 
 export const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }> => {
   try {
-    const lastTimestamp = lsGet<number>('mhm_tasks_timestamp', 0);
+    const lastTimestamp = lsGet<number>(LS_KEYS.TASKS_TIMESTAMP, 0);
     const url = lastTimestamp > 0 ? `/api/tasks?since=${lastTimestamp}` : '/api/tasks';
     const res = await authFetch(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Network error');
@@ -31,19 +32,19 @@ export const fetchTasks = async (): Promise<{ tasks: Task[]; timestamp: number }
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
     if (data.tasks) {
       const serverTasks = migrateTasks(data.tasks);
-      const localTasks = migrateTasks(lsGet<Task[]>('mhm_tasks', []));
+      const localTasks = migrateTasks(lsGet<Task[]>(LS_KEYS.TASKS, []));
 
       const merged = mergeArrays(localTasks, serverTasks);
 
-      lsSet('mhm_tasks', merged);
-      lsSet('mhm_tasks_timestamp', timestamp);
+      lsSet(LS_KEYS.TASKS, merged);
+      lsSet(LS_KEYS.TASKS_TIMESTAMP, timestamp);
       return { tasks: merged, timestamp };
     }
   } catch (err) {
     console.error('Fetch tasks failed, using local fallback:', err);
   }
-  const localTasks = migrateTasks(lsGet<Task[]>('mhm_tasks', []));
-  return { tasks: localTasks, timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
+  const localTasks = migrateTasks(lsGet<Task[]>(LS_KEYS.TASKS, []));
+  return { tasks: localTasks, timestamp: lsGet<number>(LS_KEYS.TASKS_TIMESTAMP, 0) };
 };
 
 export interface UseTaskSyncProps {
@@ -70,14 +71,14 @@ export function useTaskSync({
     queryKey: ['tasks'],
     queryFn: fetchTasks,
     initialData: () => {
-      const local = lsGet<Task[]>('mhm_tasks', []);
+      const local = lsGet<Task[]>(LS_KEYS.TASKS, []);
       if (local.length > 0) {
-        return { tasks: migrateTasks(local), timestamp: lsGet<number>('mhm_tasks_timestamp', 0) };
+        return { tasks: migrateTasks(local), timestamp: lsGet<number>(LS_KEYS.TASKS_TIMESTAMP, 0) };
       }
       // First load (or after cache wipe): seed with INITIAL_TASKS and persist
       // to localStorage so fetchTasks' mergeArrays can include them when
       // merging with the (possibly empty) server response.
-      lsSet('mhm_tasks', initialTasks);
+      lsSet(LS_KEYS.TASKS, initialTasks);
       return { tasks: initialTasks, timestamp: 0 };
     },
     initialDataUpdatedAt: 0,
@@ -135,14 +136,14 @@ export function useTaskSync({
       // Capture real previous state for delta computation in mutationFn
       prevTasksRef.current = prevTasks?.tasks ?? [];
       queryClient.setQueryData(['tasks'], { tasks: newTasks, timestamp: Date.now() });
-      lsSet('mhm_tasks', newTasks, onQuota);
+      lsSet(LS_KEYS.TASKS, newTasks, onQuota);
       return { prevTasks };
     },
     onSuccess: (response) => {
       if (response && response.tasks) {
         // Server is ground truth. Replace optimistic state entirely with DB-assigned IDs.
         queryClient.setQueryData(['tasks'], { tasks: response.tasks, timestamp: Date.now() });
-        lsSet('mhm_tasks', response.tasks);
+        lsSet(LS_KEYS.TASKS, response.tasks);
       }
       setHasError(false);
     },
@@ -176,7 +177,7 @@ export function useTaskSync({
               String(t.id) === String(err.entityId) ? { ...t, ...err.serverData } : t
             );
           }
-          lsSet('mhm_tasks', updatedTasks);
+          lsSet(LS_KEYS.TASKS, updatedTasks);
           return { ...old, tasks: updatedTasks };
         });
 

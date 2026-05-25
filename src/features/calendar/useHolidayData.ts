@@ -3,6 +3,7 @@
 // 7-day localStorage cache. Falls back to static HOLIDAY_GROUPS if offline.
 
 import { useState, useEffect, useMemo } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { HOLIDAY_GROUPS, buildHolidayMap, addDays } from './holidays';
 import type { Holiday } from './holidays';
@@ -41,7 +42,7 @@ function parseDate(s: string): string {
 }
 
 async function fetchHijriYear(hijriYear: number): Promise<AlAdhanEntry[]> {
-  const key = `mhm_aladhan_${hijriYear}`;
+  const key = `${LS_KEYS.ALADHAN_PREFIX}${hijriYear}`;
   const cached = lsGet<AlAdhanCache | null>(key, null);
   if (cached && Date.now() - cached.fetchedAt < CACHE_TTL_MS) return cached.data;
 

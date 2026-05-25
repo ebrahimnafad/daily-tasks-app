@@ -2,8 +2,10 @@
 //  scheduleConfig.ts — Single source of truth for shift/block/day
 // ══════════════════════════════════════════════════════════════════
 
+import { LS_KEYS } from '@/lib/storage/keys';
+
 /** localStorage key for the user-configured day-start hour (0-23, default 0) */
-export const DAY_START_HOUR_KEY = 'mhm_day_start_hour';
+export const DAY_START_HOUR_KEY = LS_KEYS.DAY_START_HOUR;
 
 /**
  * Returns the "logical" date ISO string (YYYY-MM-DD).
@@ -114,7 +116,7 @@ export const DEFAULT_SHIFTS: ShiftConfig[] = [
  * Default: the most recent Friday (inclusive) is treated as the start of
  * an evening week when no epoch is stored yet.
  */
-export const DEFAULT_EPOCH_KEY = 'mhm_shift_epoch';
+export const DEFAULT_EPOCH_KEY = LS_KEYS.EPOCH;
 
 /** Returns the ISO date string (YYYY-MM-DD) of the most recent Friday ≤ today */
 export function getMostRecentFriday(from: Date = new Date()): string {

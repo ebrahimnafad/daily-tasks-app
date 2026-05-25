@@ -1,6 +1,7 @@
 import { getToken } from '@/features/auth/authFetch';
+import { LS_KEYS } from '@/lib/storage/keys';
 
-const STORAGE_KEY = 'mhm_error_logs';
+const STORAGE_KEY = LS_KEYS.ERROR_LOGS;
 const MAX_LOCAL_LOGS = 100;
 
 export interface LogEntry {
@@ -28,10 +29,10 @@ class Logger {
   }
 
   private getOrCreateSessionId(): string {
-    const stored = localStorage.getItem('mhm_session_id');
+    const stored = localStorage.getItem(LS_KEYS.SESSION_ID);
     if (stored) return stored;
     const id = crypto.randomUUID();
-    localStorage.setItem('mhm_session_id', id);
+    localStorage.setItem(LS_KEYS.SESSION_ID, id);
     return id;
   }
 

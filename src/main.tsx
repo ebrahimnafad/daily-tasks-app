@@ -3,21 +3,23 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { LS_KEYS } from '@/lib/storage/keys';
+
 const SCHEMA_VERSION = 'v2-uuid';
-if (localStorage.getItem('mhm_schema_version') !== SCHEMA_VERSION) {
+if (localStorage.getItem(LS_KEYS.SCHEMA_VERSION) !== SCHEMA_VERSION) {
   const keys = Object.keys(localStorage);
   keys.forEach((key) => {
     if (key.startsWith('mhm_')) {
       localStorage.removeItem(key);
     }
   });
-  localStorage.setItem('mhm_schema_version', SCHEMA_VERSION);
+  localStorage.setItem(LS_KEYS.SCHEMA_VERSION, SCHEMA_VERSION);
 } else {
   // Always ensure the old pending_sync queue is wiped when switching to delta sync
   // to avoid sending full arrays to the delta endpoint.
-  const legacyQueue = localStorage.getItem('mhm_pending_sync');
+  const legacyQueue = localStorage.getItem(LS_KEYS.PENDING_SYNC);
   if (legacyQueue && legacyQueue.includes('"tasks"')) {
-    localStorage.removeItem('mhm_pending_sync');
+    localStorage.removeItem(LS_KEYS.PENDING_SYNC);
   }
 }
 

@@ -1,4 +1,5 @@
 import { useRef, useCallback, useLayoutEffect } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { getLogicalDateISO } from '@/features/tasks/data/scheduleConfig';
 import type { ShiftType, ShiftConfig } from '@/features/tasks/data/scheduleConfig';
 import type { Task, CheckedMap, SubCheckedMap, DailySnapshot, TaskManagerReturn } from '@/types';
@@ -11,8 +12,8 @@ import { lsGet } from '@/lib/storage/localStorage';
 // established codebase convention for these two values.
 // TODO: Surface these through useSync's return if a full data-flow cleanup is
 //       ever undertaken, so they can be passed as typed deps instead.
-const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions';
-const LS_VACATION_DAYS_KEY = 'mhm_vacation_days';
+const LS_WORK_EXCEPTIONS_KEY = LS_KEYS.WORK_EXCEPTIONS;
+const LS_VACATION_DAYS_KEY = LS_KEYS.VACATION_DAYS;
 
 export interface DailySnapshotDeps {
   dayStartHour: number;

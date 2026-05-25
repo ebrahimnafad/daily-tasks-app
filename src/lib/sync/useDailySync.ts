@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { CheckedMap, SubCheckedMap, DailySnapshot } from '@/types';
@@ -38,25 +39,25 @@ export const fetchDaily = async (
       const checked = data.checked ?? {};
       const subChecked = data.subChecked ?? {};
       const skipped = data.skipped ?? {};
-      lsSet('mhm_checked', checked);
-      lsSet('mhm_sub_checked', subChecked);
-      lsSet('mhm_skipped', skipped);
-      lsSet('mhm_date', today);
-      lsSet('mhm_daily_timestamp', timestamp);
+      lsSet(LS_KEYS.CHECKED, checked);
+      lsSet(LS_KEYS.SUB_CHECKED, subChecked);
+      lsSet(LS_KEYS.SKIPPED, skipped);
+      lsSet(LS_KEYS.DATE, today);
+      lsSet(LS_KEYS.DAILY_TIMESTAMP, timestamp);
       return { daily: { checked, subChecked, skipped }, timestamp };
     }
   } catch (err) {
     console.error('Fetch daily failed, using local fallback:', err);
   }
-  const savedDate = lsGet<string | null>('mhm_date', null);
+  const savedDate = lsGet<string | null>(LS_KEYS.DATE, null);
   if (savedDate === today) {
     return {
       daily: {
-        checked: lsGet<CheckedMap>('mhm_checked', {}),
-        subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
-        skipped: lsGet<CheckedMap>('mhm_skipped', {}),
+        checked: lsGet<CheckedMap>(LS_KEYS.CHECKED, {}),
+        subChecked: lsGet<SubCheckedMap>(LS_KEYS.SUB_CHECKED, {}),
+        skipped: lsGet<CheckedMap>(LS_KEYS.SKIPPED, {}),
       },
-      timestamp: lsGet<number>('mhm_daily_timestamp', 0),
+      timestamp: lsGet<number>(LS_KEYS.DAILY_TIMESTAMP, 0),
     };
   }
   return { daily: { checked: {}, subChecked: {}, skipped: {} }, timestamp: 0 };
@@ -88,13 +89,13 @@ export function useDailySync({
     queryKey: ['daily', getLogicalDateISO(dayStartHour)],
     queryFn: () => fetchDaily(dayStartHour),
     initialData: () => {
-      const savedDate = lsGet<string | null>('mhm_date', null);
+      const savedDate = lsGet<string | null>(LS_KEYS.DATE, null);
       if (savedDate === getLogicalDateISO(dayStartHour)) {
         return {
           daily: {
-            checked: lsGet<CheckedMap>('mhm_checked', {}),
-            subChecked: lsGet<SubCheckedMap>('mhm_sub_checked', {}),
-            skipped: lsGet<CheckedMap>('mhm_skipped', {}),
+            checked: lsGet<CheckedMap>(LS_KEYS.CHECKED, {}),
+            subChecked: lsGet<SubCheckedMap>(LS_KEYS.SUB_CHECKED, {}),
+            skipped: lsGet<CheckedMap>(LS_KEYS.SKIPPED, {}),
           },
           timestamp: 0,
         };
@@ -140,10 +141,10 @@ export function useDailySync({
         daily: { checked: c, subChecked: sc, skipped: sk },
         timestamp: Date.now(),
       });
-      lsSet('mhm_checked', c, onQuota);
-      lsSet('mhm_sub_checked', sc, onQuota);
-      lsSet('mhm_skipped', sk, onQuota);
-      lsSet('mhm_date', today, onQuota);
+      lsSet(LS_KEYS.CHECKED, c, onQuota);
+      lsSet(LS_KEYS.SUB_CHECKED, sc, onQuota);
+      lsSet(LS_KEYS.SKIPPED, sk, onQuota);
+      lsSet(LS_KEYS.DATE, today, onQuota);
       return { prevDaily };
     },
     onSuccess: () => setHasError(false),
@@ -173,10 +174,10 @@ export function useDailySync({
 
       // Persist to localStorage immediately for offline resilience
       const today = getLogicalDateISO(dayStartHour);
-      lsSet('mhm_checked', next.checked, onQuota);
-      lsSet('mhm_sub_checked', next.subChecked, onQuota);
-      lsSet('mhm_skipped', next.skipped, onQuota);
-      lsSet('mhm_date', today, onQuota);
+      lsSet(LS_KEYS.CHECKED, next.checked, onQuota);
+      lsSet(LS_KEYS.SUB_CHECKED, next.subChecked, onQuota);
+      lsSet(LS_KEYS.SKIPPED, next.skipped, onQuota);
+      lsSet(LS_KEYS.DATE, today, onQuota);
 
       // Coalesce all synchronous calls into a single mutation
       if (flushTimerRef.current !== null) clearTimeout(flushTimerRef.current);

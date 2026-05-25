@@ -17,7 +17,9 @@ import {
   DEFAULT_SHIFTS,
 } from '@/features/tasks/data/scheduleConfig';
 
-const MIGRATION_FLAG = 'mhm_migration_blocks_v2';
+import { LS_KEYS } from '@/lib/storage/keys';
+
+const MIGRATION_FLAG = LS_KEYS.MIGRATION_BLOCKS_V2;
 
 /** True when the migration has already been applied in this browser. */
 export function isMigrationDone(): boolean {

@@ -5,7 +5,9 @@
 
 export type HolidayType = 'national' | 'eid' | 'islamic' | 'ramadan';
 
-export const LS_HOLIDAY_OFFSETS = 'mhm_holiday_offsets';
+import { LS_KEYS } from '@/lib/storage/keys';
+
+export const LS_HOLIDAY_OFFSETS = LS_KEYS.HOLIDAY_OFFSETS;
 
 export interface Holiday {
   date: string; // YYYY-MM-DD (after offset applied)

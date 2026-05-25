@@ -11,6 +11,7 @@ import type { Task } from '@/types';
 import type { SnapshotSummary, DailySnapshot } from '@/types';
 import type { Expense, Transaction } from '@/features/finance/types';
 import { KEYS } from '@/features/finance/hooks/useFinanceSync';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import useNotesSync from '../useNotesSync';
@@ -38,13 +39,13 @@ import type { DayShiftType } from '../constants';
 import type { CalendarNote, FinanceEvent } from '../types';
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
-const LS_SCHEDULE_KEY = 'mhm_schedule';
-const LS_OFF_EXCEPTIONS_KEY = 'mhm_off_exceptions';
-const LS_WORK_EXCEPTIONS_KEY = 'mhm_work_exceptions';
-const LS_VACATION_DAYS_KEY = 'mhm_vacation_days';
-const LS_VACATION_BALANCE_KEY = 'mhm_vacation_balance';
-const LS_SNAP_SUMMARIES_KEY = 'mhm_snap_summaries';
-const LS_LAST_SNAP_KEY = 'mhm_last_manual_snapshot_at';
+const LS_SCHEDULE_KEY = LS_KEYS.SCHEDULE;
+const LS_OFF_EXCEPTIONS_KEY = LS_KEYS.OFF_EXCEPTIONS;
+const LS_WORK_EXCEPTIONS_KEY = LS_KEYS.WORK_EXCEPTIONS;
+const LS_VACATION_DAYS_KEY = LS_KEYS.VACATION_DAYS;
+const LS_VACATION_BALANCE_KEY = LS_KEYS.VACATION_BALANCE;
+const LS_SNAP_SUMMARIES_KEY = LS_KEYS.SNAP_SUMMARIES;
+const LS_LAST_SNAP_KEY = LS_KEYS.LAST_MANUAL_SNAPSHOT;
 
 // ─── Hook input ───────────────────────────────────────────────────────────────
 interface UseCalendarStateInput {

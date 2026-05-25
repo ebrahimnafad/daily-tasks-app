@@ -1,13 +1,14 @@
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { authFetch } from '@/features/auth/authFetch';
 import type { DailySnapshot } from '@/types';
 
 // ── Snapshot offline retry queue ────────────────────────────────────────────
-export const SNAPSHOT_QUEUE_KEY = 'mhm_snapshot_queue';
+export const SNAPSHOT_QUEUE_KEY = LS_KEYS.SNAPSHOT_QUEUE;
 /** localStorage key — epoch ms of the last SUCCESSFUL manual saveSnapshot call.
  *  Read by the auto-snapshot path to prevent a stale tab from overwriting a
  *  correct manual snapshot (two-tab race guard). Shared across tabs via localStorage. */
-export const LAST_MANUAL_SNAPSHOT_KEY = 'mhm_last_manual_snapshot_at';
+export const LAST_MANUAL_SNAPSHOT_KEY = LS_KEYS.LAST_MANUAL_SNAPSHOT;
 /** Grace window: if a manual snapshot was saved within this many ms, skip auto. */
 export const MANUAL_SNAPSHOT_GRACE_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -42,7 +43,7 @@ export const flushSnapshotQueue = async (): Promise<void> => {
 };
 
 // ── Pending Sync offline queue (Phase 3) ────────────────────────────────────
-export const PENDING_SYNC_KEY = 'mhm_pending_sync';
+export const PENDING_SYNC_KEY = LS_KEYS.PENDING_SYNC;
 
 export type PendingItem = {
   type: 'tasks' | 'daily' | 'schedule' | 'finance' | 'notes';

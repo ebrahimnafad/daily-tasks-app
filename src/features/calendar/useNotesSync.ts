@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
 import { mergeArrays } from '@/lib/sync/reconcile';
@@ -12,9 +13,9 @@ import {
 import type { CalendarNote } from './types';
 
 // ── Keys ──────────────────────────────────────────────────────────────────
-const LS_KEY = 'mhm_calendar_notes_v2';
-const LS_TS_KEY = 'mhm_calendar_notes_v2_ts';
-const LEGACY_KEY = 'mhm_calendar_notes';
+const LS_KEY = LS_KEYS.CALENDAR_NOTES_V2;
+const LS_TS_KEY = LS_KEYS.CALENDAR_NOTES_V2_TS;
+const LEGACY_KEY = LS_KEYS.CALENDAR_NOTES_LEGACY;
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -150,7 +151,7 @@ export default function useNotesSync(onQuota?: () => void): UseNotesSyncReturn {
         let errData;
         try {
           errData = await res.json();
-        } catch (e) {
+        } catch {
           /* ignore */
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

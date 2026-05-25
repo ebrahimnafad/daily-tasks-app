@@ -1,4 +1,6 @@
-const CLIENT_ID_KEY = 'mhm_client_id';
+import { LS_KEYS } from '@/lib/storage/keys';
+
+const CLIENT_ID_KEY = LS_KEYS.CLIENT_ID;
 
 export function getClientId(): string {
   let id = localStorage.getItem(CLIENT_ID_KEY);

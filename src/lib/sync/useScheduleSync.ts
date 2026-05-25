@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
@@ -36,30 +37,33 @@ export const fetchSchedule = async (): Promise<{
     const data = (await res.json()) as ScheduleResponse;
     const timestamp = data.updatedAt ? new Date(data.updatedAt).getTime() : 0;
 
-    const schedule = data.schedule && Array.isArray(data.schedule) ? data.schedule : DEFAULT_SHIFTS;
+    const schedule =
+      data.schedule && Array.isArray(data.schedule) && data.schedule.length > 0
+        ? data.schedule
+        : DEFAULT_SHIFTS;
     const offExceptions = data.offExceptions || [];
     const workExceptions = data.workExceptions || [];
     const vacationDays = data.vacationDays || [];
     const vacationBalance = data.vacationBalance !== undefined ? data.vacationBalance : 30;
 
-    lsSet('mhm_schedule', schedule);
-    lsSet('mhm_off_exceptions', offExceptions);
-    lsSet('mhm_work_exceptions', workExceptions);
-    lsSet('mhm_vacation_days', vacationDays);
-    lsSet('mhm_vacation_balance', vacationBalance);
-    lsSet('mhm_schedule_timestamp', timestamp);
+    lsSet(LS_KEYS.SCHEDULE, schedule);
+    lsSet(LS_KEYS.OFF_EXCEPTIONS, offExceptions);
+    lsSet(LS_KEYS.WORK_EXCEPTIONS, workExceptions);
+    lsSet(LS_KEYS.VACATION_DAYS, vacationDays);
+    lsSet(LS_KEYS.VACATION_BALANCE, vacationBalance);
+    lsSet(LS_KEYS.SCHEDULE_TIMESTAMP, timestamp);
 
     return { schedule, offExceptions, workExceptions, vacationDays, vacationBalance, timestamp };
   } catch (err) {
     console.error('Fetch schedule failed, using local fallback:', err);
   }
   return {
-    schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
-    offExceptions: lsGet<string[]>('mhm_off_exceptions', []),
-    workExceptions: lsGet<string[]>('mhm_work_exceptions', []),
-    vacationDays: lsGet<string[]>('mhm_vacation_days', []),
-    vacationBalance: lsGet<number>('mhm_vacation_balance', 30),
-    timestamp: lsGet<number>('mhm_schedule_timestamp', 0),
+    schedule: lsGet<ShiftConfig[]>(LS_KEYS.SCHEDULE, DEFAULT_SHIFTS),
+    offExceptions: lsGet<string[]>(LS_KEYS.OFF_EXCEPTIONS, []),
+    workExceptions: lsGet<string[]>(LS_KEYS.WORK_EXCEPTIONS, []),
+    vacationDays: lsGet<string[]>(LS_KEYS.VACATION_DAYS, []),
+    vacationBalance: lsGet<number>(LS_KEYS.VACATION_BALANCE, 30),
+    timestamp: lsGet<number>(LS_KEYS.SCHEDULE_TIMESTAMP, 0),
   };
 };
 
@@ -92,11 +96,11 @@ export function useScheduleSync({ isOnline, onQuota, notify, setHasError }: UseS
     queryKey: ['schedule'],
     queryFn: fetchSchedule,
     initialData: () => ({
-      schedule: lsGet<ShiftConfig[]>('mhm_schedule', DEFAULT_SHIFTS),
-      offExceptions: lsGet<string[]>('mhm_off_exceptions', []),
-      workExceptions: lsGet<string[]>('mhm_work_exceptions', []),
-      vacationDays: lsGet<string[]>('mhm_vacation_days', []),
-      vacationBalance: lsGet<number>('mhm_vacation_balance', 30),
+      schedule: lsGet<ShiftConfig[]>(LS_KEYS.SCHEDULE, DEFAULT_SHIFTS),
+      offExceptions: lsGet<string[]>(LS_KEYS.OFF_EXCEPTIONS, []),
+      workExceptions: lsGet<string[]>(LS_KEYS.WORK_EXCEPTIONS, []),
+      vacationDays: lsGet<string[]>(LS_KEYS.VACATION_DAYS, []),
+      vacationBalance: lsGet<number>(LS_KEYS.VACATION_BALANCE, 30),
       timestamp: 0,
     }),
     initialDataUpdatedAt: 0,
@@ -130,7 +134,7 @@ export function useScheduleSync({ isOnline, onQuota, notify, setHasError }: UseS
         ['schedule']
       );
       queryClient.setQueryData(['schedule'], { schedule: newSchedule, timestamp: Date.now() });
-      lsSet('mhm_schedule', newSchedule, onQuota);
+      lsSet(LS_KEYS.SCHEDULE, newSchedule, onQuota);
       return { prevSchedule };
     },
     onSuccess: () => setHasError(false),
