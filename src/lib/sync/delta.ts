@@ -1,4 +1,5 @@
 import type { Task } from '@/types';
+import { isDeepEqual } from '@/lib/utils/deepEqual';
 
 export interface TaskDelta {
   changed: Task[];
@@ -23,7 +24,7 @@ export function computeTaskDelta(prevTasks: Task[], newTasks: Task[]): TaskDelta
       changed.push(nt);
     } else {
       // Safe deep comparison assuming JSON-serializable state
-      if (JSON.stringify(old) !== JSON.stringify(nt)) {
+      if (!isDeepEqual(old, nt)) {
         changed.push(nt);
       }
     }
