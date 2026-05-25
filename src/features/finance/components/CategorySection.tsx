@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import type { Expense, ExpenseCategory, Transaction, FinanceSettings } from '../types';
 import { FREQUENCY_LABELS } from '../constants';
 import { toMonthlyAmount, formatAmount } from '../utils';
+import './CategorySection.css';
 
 interface CategorySectionProps {
   category: ExpenseCategory;

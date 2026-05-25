@@ -1,4 +1,6 @@
 import { useMemo } from 'react';
+import './QuarterlyView.css';
+
 import type {
   Income,
   ExpenseCategory,

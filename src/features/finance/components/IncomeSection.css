@@ -1,0 +1,41 @@
+.fin-section__total {
+  font-size: var(--font-base);
+  color: rgba(var(--gold-rgb), 0.55);
+  font-weight: 600;
+}
+.fin-income-card {
+  background: rgba(var(--gold-rgb), 0.06);
+  border: 1px solid rgba(var(--gold-rgb), 0.12);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-md);
+  transition: all 0.2s ease;
+}
+.fin-income-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.25);
+  background: rgba(var(--gold-rgb), 0.09);
+}
+.fin-income-card__icon {
+  font-size: var(--font-xl);
+  flex-shrink: 0;
+}
+.fin-income-card__info {
+  flex: 1;
+  min-width: 0;
+}
+.fin-income-card__title {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-gold);
+}
+.fin-income-card__meta {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.45);
+  margin-top: var(--space-xs);
+}
+.fin-income-card__amount {
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: #9bc87a;
+  white-space: nowrap;
+}

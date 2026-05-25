@@ -1,0 +1,48 @@
+.fin-annual {
+  animation: slideDown 0.3s ease;
+}
+.fin-annual__title {
+  margin: 0 0 var(--space-xl);
+  font-size: var(--font-xl);
+  font-weight: 700;
+  color: var(--text-gold);
+  text-align: center;
+}
+.fin-annual__chart-section,
+.fin-annual__table-section,
+.fin-annual__top-cats {
+  margin-bottom: var(--space-xl);
+}
+.fin-annual__table-wrap {
+  overflow-x: auto;
+  margin-top: var(--space-md);
+}
+.fin-annual__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-sm);
+  font-family: 'Amiri', serif;
+}
+.fin-annual__table th {
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  color: rgba(var(--gold-rgb), 0.5);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.12);
+  font-weight: 600;
+}
+.fin-annual__table td {
+  padding: var(--space-sm) var(--space-md);
+  text-align: center;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.06);
+  font-weight: 600;
+}
+.fin-annual__cat-bar {
+  margin-bottom: var(--space-md);
+}
+.fin-annual__cat-info {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.7);
+  margin-bottom: var(--space-xs);
+}

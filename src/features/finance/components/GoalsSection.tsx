@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Goal, FinanceSettings } from '../types';
 import { GOAL_ICONS } from '../constants';
 import { formatAmount, calcGoalMonthlyTarget } from '../utils';
+import './GoalsSection.css';
 
 interface GoalsSectionProps {
   goals: Goal[];

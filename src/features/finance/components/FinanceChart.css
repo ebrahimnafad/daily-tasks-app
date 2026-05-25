@@ -1,0 +1,35 @@
+.fin-chart {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  justify-content: center;
+}
+.fin-chart__legend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+.fin-chart__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-sm);
+}
+.fin-chart__legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.fin-chart__legend-label {
+  color: rgba(var(--gold-rgb), 0.7);
+}
+.fin-chart__ring-labels {
+  display: flex;
+  gap: var(--space-md);
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.5);
+  margin-bottom: var(--space-sm);
+  padding-bottom: var(--space-sm);
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.08);
+}

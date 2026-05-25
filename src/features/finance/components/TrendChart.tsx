@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import './TrendChart.css';
 
 interface DataPoint {
   month: string;

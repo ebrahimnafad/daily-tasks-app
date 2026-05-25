@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import './FinanceChart.css';
 
 interface ChartSegment {
   id: string;

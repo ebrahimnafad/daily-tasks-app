@@ -9,6 +9,7 @@ import type {
   Goal,
 } from '../types';
 import { formatAmount, calcMonthlySummary, shiftMonth } from '../utils';
+import './FinanceInsights.css';
 
 interface Insight {
   id: string;

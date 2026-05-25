@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Transaction, TransactionDrawerState, FinanceSettings } from '../types';
 import { localDateISO } from '@/lib/date/localDate';
+import './TransactionDrawer.css';
 
 interface TransactionDrawerProps {
   state: TransactionDrawerState;

@@ -1,0 +1,42 @@
+.fin-modal--lg {
+  max-width: 480px;
+}
+.fin-modal__scroll {
+  max-height: 55vh;
+  overflow-y: auto;
+  padding-left: var(--space-xs);
+}
+.fin-textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+.fin-quarter-month-opts {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+.fin-quarter-month-btn {
+  flex: 1;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--gold-rgb), 0.18);
+  background: rgba(var(--gold-rgb), 0.04);
+  color: rgba(var(--gold-rgb), 0.6);
+  font-size: var(--font-base);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.fin-quarter-month-btn:hover {
+  background: rgba(var(--gold-rgb), 0.1);
+  border-color: rgba(var(--gold-rgb), 0.3);
+}
+.fin-quarter-month-btn--active {
+  background: rgba(var(--gold-rgb), 0.18);
+  border-color: var(--gold);
+  color: var(--text-gold);
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(var(--gold-rgb), 0.15);
+}

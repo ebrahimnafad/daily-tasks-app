@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import FinanceChart from './FinanceChart';
 import type { MonthlyFinanceSummary, FinanceSettings } from '../types';
 import { formatAmount } from '../utils';
+import './FinanceDashboard.css';
 
 interface FinanceDashboardProps {
   summary: MonthlyFinanceSummary;

@@ -1,0 +1,22 @@
+.fin-trend {
+  margin-top: var(--space-md);
+}
+.fin-trend__legend {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-xl);
+  margin-top: var(--space-md);
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.6);
+}
+.fin-trend__legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.fin-trend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}

@@ -1,0 +1,46 @@
+.fin-budget-bars {
+  margin-bottom: var(--space-xl);
+}
+.fin-budget-bars__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.fin-budget-bar {
+  background: rgba(var(--gold-rgb), 0.04);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+.fin-budget-bar__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: var(--font-sm);
+  margin-bottom: var(--space-xs);
+}
+.fin-budget-bar__name {
+  color: rgba(var(--gold-rgb), 0.7);
+}
+.fin-budget-bar__values {
+  color: rgba(var(--gold-rgb), 0.5);
+}
+.fin-budget-bar__overflow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  background: repeating-linear-gradient(
+    45deg,
+    rgba(217, 126, 106, 0.4),
+    rgba(217, 126, 106, 0.4) 3px,
+    transparent 3px,
+    transparent 6px
+  );
+  border-radius: var(--radius-pill);
+}
+.fin-budget-bar__pct {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.4);
+  text-align: left;
+  margin-top: var(--space-xs);
+}

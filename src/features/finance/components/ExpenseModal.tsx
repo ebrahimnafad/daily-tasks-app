@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { Expense, ExpenseModalState } from '../types';
 import { EXPENSE_ICONS, FREQUENCY_OPTIONS, TYPE_OPTIONS } from '../constants';
+import './ExpenseModal.css';
 
 interface ExpenseModalProps {
   modal: ExpenseModalState;

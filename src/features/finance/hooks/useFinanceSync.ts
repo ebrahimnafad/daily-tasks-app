@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { LS_KEYS } from '@/lib/storage/keys';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   Income,
@@ -16,12 +17,12 @@ import { enqueuePending, flushPendingType, isNetworkError } from '@/lib/sync/syn
 
 // ── LocalStorage keys ───────────────────────────────────────────────────────
 export const KEYS = {
-  income: 'mhm_fin2_income',
-  categories: 'mhm_fin2_categories',
-  expenses: 'mhm_fin2_expenses',
-  transactions: 'mhm_fin2_transactions',
-  goals: 'mhm_fin2_goals',
-  settings: 'mhm_fin2_settings',
+  income: LS_KEYS.FIN_INCOME,
+  categories: LS_KEYS.FIN_CATEGORIES,
+  expenses: LS_KEYS.FIN_EXPENSES,
+  transactions: LS_KEYS.FIN_TRANSACTIONS,
+  goals: LS_KEYS.FIN_GOALS,
+  settings: LS_KEYS.FIN_SETTINGS,
 };
 
 type SetterFn<T> = T | ((prev: T) => T);
@@ -71,7 +72,7 @@ export const fetchFinance = async (): Promise<{ data: FinanceData; timestamp: nu
     lsSet(KEYS.expenses, merged.expenses);
     lsSet(KEYS.transactions, merged.transactions);
     lsSet(KEYS.goals, merged.goals);
-    lsSet('mhm_fin2_timestamp', timestamp);
+    lsSet(LS_KEYS.FIN_TIMESTAMP, timestamp);
 
     return { data: merged, timestamp };
   } catch (err) {
@@ -85,7 +86,7 @@ export const fetchFinance = async (): Promise<{ data: FinanceData; timestamp: nu
     transactions: lsGet(KEYS.transactions, []),
     goals: lsGet(KEYS.goals, []),
   };
-  return { data: localData, timestamp: lsGet<number>('mhm_fin2_timestamp', 0) };
+  return { data: localData, timestamp: lsGet<number>(LS_KEYS.FIN_TIMESTAMP, 0) };
 };
 
 // ── Hook ────────────────────────────────────────────────────────────────────
@@ -130,7 +131,7 @@ export default function useFinanceSync(
         transactions: lsGet(KEYS.transactions, []),
         goals: lsGet(KEYS.goals, []),
       };
-      return { data: localData, timestamp: lsGet<number>('mhm_fin2_timestamp', 0) };
+      return { data: localData, timestamp: lsGet<number>(LS_KEYS.FIN_TIMESTAMP, 0) };
     },
     initialDataUpdatedAt: 0,
     enabled: isOnline,
@@ -161,7 +162,7 @@ export default function useFinanceSync(
         let errData;
         try {
           errData = await res.json();
-        } catch (e) {
+        } catch {
           /* ignore */
         }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -243,9 +244,10 @@ export default function useFinanceSync(
           transactions: [],
           goals: [],
         };
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const nextValue =
-          typeof updater === 'function' ? (updater as any)(currentData[key]) : updater;
+          typeof updater === 'function'
+            ? (updater as (prev: FinanceData[K]) => FinanceData[K])(currentData[key])
+            : updater;
         const nextData = { ...currentData, [key]: nextValue };
 
         // Optimistic local update synchronously

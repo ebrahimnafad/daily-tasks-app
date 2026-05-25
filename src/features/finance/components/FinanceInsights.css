@@ -1,0 +1,5 @@
+.fin-insight__body {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.55);
+  line-height: 1.5;
+}

@@ -1,0 +1,34 @@
+.fin-btn-danger {
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(217, 126, 106, 0.35);
+  background: rgba(217, 126, 106, 0.08);
+  color: #d97e6a;
+  font-size: var(--font-md);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fin-btn-danger:hover {
+  background: rgba(217, 126, 106, 0.18);
+  border-color: rgba(217, 126, 106, 0.6);
+}
+.fin-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+.fin-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.fin-color-btn--active {
+  border-color: var(--gold);
+  box-shadow: 0 0 8px rgba(var(--gold-rgb), 0.3);
+  transform: scale(1.15);
+}

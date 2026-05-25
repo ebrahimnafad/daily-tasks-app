@@ -9,6 +9,7 @@ import type {
   FinanceSettings,
 } from '../types';
 import { calcMonthlySummary, formatAmount, formatMonthLabel } from '../utils';
+import './AnnualView.css';
 
 interface AnnualViewProps {
   year: number;

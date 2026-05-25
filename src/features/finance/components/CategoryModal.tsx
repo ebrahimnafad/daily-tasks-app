@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import type { ExpenseCategory, CategoryModalState } from '../types';
 import { CATEGORY_ICONS, CATEGORY_COLORS } from '../constants';
+import './CategoryModal.css';
 
 interface CategoryModalProps {
   modal: CategoryModalState;

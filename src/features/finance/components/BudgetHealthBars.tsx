@@ -1,5 +1,6 @@
 import type { CategoryBudgetInfo, FinanceSettings } from '../types';
 import { BUDGET_STATUS_COLORS, formatAmount } from '../utils';
+import './BudgetHealthBars.css';
 
 interface BudgetHealthBarsProps {
   breakdown: CategoryBudgetInfo[];

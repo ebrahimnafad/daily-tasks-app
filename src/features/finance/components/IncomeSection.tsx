@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import type { Income, FinanceSettings } from '../types';
 import { INCOME_ICONS, FREQUENCY_OPTIONS } from '../constants';
 import { formatAmount, calcTotalMonthlyIncome } from '../utils';
+import './IncomeSection.css';
 
 interface IncomeSectionProps {
   income: Income[];

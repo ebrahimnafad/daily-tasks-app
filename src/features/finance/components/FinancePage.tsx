@@ -12,6 +12,8 @@ import CategoryModal from './CategoryModal';
 import TransactionDrawer from './TransactionDrawer';
 import type { SyncStatus } from '@/types';
 import { getSyncBadgeInfo } from '@/lib/sync/syncBadge';
+import './FinancePage.css';
+
 import type {
   Expense,
   ExpenseCategory,
