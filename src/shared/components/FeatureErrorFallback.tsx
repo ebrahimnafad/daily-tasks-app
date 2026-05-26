@@ -65,3 +65,7 @@ export function FinanceErrorFallback() {
 export function CalendarErrorFallback() {
   return <TasksErrorFallback featureName="التقويم" />;
 }
+
+export function OkrErrorFallback() {
+  return <TasksErrorFallback featureName="الأهداف" />;
+}

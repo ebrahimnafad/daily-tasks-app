@@ -1,0 +1,553 @@
+/* =============================================================================
+   OKR — الأهداف والنتائج الرئيسية
+   Arabic RTL · Gold design system · follows finance.css conventions
+   ══ Section headers use ══ dividers, Arabic comments throughout
+============================================================================= */
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PAGE LAYOUT — تخطيط صفحة الأهداف
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-page {
+  padding: var(--space-lg);
+  padding-bottom: calc(80px + var(--space-xl)); /* room for FAB + tab bar */
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.okr-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-xl);
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CYCLE SELECTOR — منتقي الدورة
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-cycle-empty {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.okr-cycle-selector__btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(var(--gold-rgb), 0.06);
+  border: 1px solid rgba(var(--gold-rgb), 0.18);
+  border-radius: var(--radius-md);
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-base);
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 160px;
+}
+
+.okr-cycle-selector__btn:hover {
+  background: rgba(var(--gold-rgb), 0.12);
+  border-color: rgba(var(--gold-rgb), 0.3);
+}
+
+.okr-cycle-selector__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0; /* RTL: aligns to right side of trigger */
+  right: 0;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  animation: popUp 0.18s ease;
+  min-width: 200px;
+  overflow: hidden;
+}
+
+.okr-cycle-selector__option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.08);
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-base);
+  cursor: pointer;
+  text-align: right;
+  transition: background 0.15s;
+}
+
+.okr-cycle-selector__option:hover,
+.okr-cycle-selector__option.selected {
+  background: rgba(var(--gold-rgb), 0.1);
+}
+
+.okr-cycle-selector__option.muted {
+  opacity: 0.55;
+}
+
+.okr-cycle-selector__option-title {
+  flex: 1;
+}
+
+.okr-cycle-selector__create {
+  display: block;
+  width: 100%;
+  padding: var(--space-md) var(--space-lg);
+  background: transparent;
+  border: none;
+  color: rgba(var(--gold-rgb), 0.7);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-base);
+  cursor: pointer;
+  text-align: right;
+  transition: all 0.15s;
+}
+
+.okr-cycle-selector__create:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+  color: var(--gold);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CYCLE SUMMARY — ملخص الدورة النشطة
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-cycle-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xl);
+  padding: var(--space-xl);
+  background: rgba(var(--gold-rgb), 0.04);
+  border: 1px solid rgba(var(--gold-rgb), 0.14);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-xl);
+  animation: slideDown 0.3s ease;
+}
+
+.okr-cycle-summary__meta {
+  flex: 1;
+}
+
+.okr-cycle-summary__title {
+  margin: 0 0 var(--space-xs);
+  font-size: var(--font-lg);
+  font-weight: 700;
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+}
+
+.okr-cycle-summary__days {
+  margin: 0;
+  font-size: var(--font-base);
+  color: rgba(var(--gold-rgb), 0.5);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   EMPTY STATES — حالات الفراغ
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-empty {
+  text-align: center;
+  padding: var(--space-xl) var(--space-lg);
+  color: rgba(var(--gold-rgb), 0.35);
+  font-size: var(--font-base);
+  font-family: 'Amiri', serif;
+  background: rgba(var(--gold-rgb), 0.03);
+  border-radius: var(--radius-lg);
+  border: 1px dashed rgba(var(--gold-rgb), 0.12);
+  margin-bottom: var(--space-md);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   FAB — زر إضافة هدف العائم
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-fab {
+  position: fixed;
+  /* RTL: fixed to left (inline-end in RTL = visual left) */
+  bottom: calc(64px + var(--space-lg));
+  left: var(--space-xl);
+  z-index: 150;
+  padding: var(--space-md) var(--space-xl);
+  border-radius: var(--radius-pill);
+  border: none;
+  background: linear-gradient(135deg, var(--gold), color-mix(in srgb, var(--gold) 70%, #fff));
+  color: #1a1209;
+  font-family: 'Amiri', serif;
+  font-size: var(--font-md);
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(var(--gold-rgb), 0.35);
+  transition: all 0.25s;
+}
+
+.okr-fab:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 28px rgba(var(--gold-rgb), 0.45);
+}
+
+.okr-fab:active {
+  transform: translateY(0);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   OBJECTIVE CARDS — بطاقات الأهداف
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-objectives-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-lg);
+}
+
+.okr-objective-card {
+  background: rgba(var(--gold-rgb), 0.03);
+  border: 1px solid rgba(var(--gold-rgb), 0.14);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
+  animation: slideDown 0.25s ease both;
+}
+
+.okr-objective-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.25);
+  box-shadow: 0 2px 16px rgba(var(--gold-rgb), 0.06);
+}
+
+.okr-objective-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-md) var(--space-lg);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.okr-objective-card__header:hover {
+  background: rgba(var(--gold-rgb), 0.05);
+}
+
+/* زر التوسيع داخل الهيدر — يأخذ المساحة المتبقية بدون الحلقة وقائمة الخيارات */
+.okr-objective-card__expand-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: right;
+  padding: 0;
+  font-family: 'Amiri', serif;
+  color: inherit;
+}
+
+.okr-objective-card__expand-btn:focus-visible {
+  outline: 2px solid rgba(var(--gold-rgb), 0.5);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Left border accent (4px, objective color) — right in RTL becomes border-inline-end */
+.okr-objective-card__accent {
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-inline-end: var(--space-xs);
+}
+
+.okr-objective-card__icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.okr-objective-card__title-block {
+  flex: 1;
+  min-width: 0;
+}
+
+.okr-objective-card__title {
+  display: block;
+  font-size: var(--font-md);
+  font-weight: 700;
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.okr-objective-card__kr-count {
+  display: block;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.45);
+  margin-top: 2px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   KEY RESULT LIST — قائمة النتائج الرئيسية
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-kr-list {
+  padding: var(--space-md) var(--space-lg) var(--space-lg);
+  border-top: 1px solid rgba(var(--gold-rgb), 0.1);
+  animation: slideDown 0.22s ease;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.okr-kr-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background: rgba(var(--gold-rgb), 0.04);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--gold-rgb), 0.1);
+  transition: border-color 0.15s;
+}
+
+.okr-kr-row:hover {
+  border-color: rgba(var(--gold-rgb), 0.2);
+}
+
+.okr-kr-row__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.okr-kr-row__title {
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+  flex: 1;
+}
+
+.okr-kr-row__progress {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.okr-kr-row__binary {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+.okr-kr-row__pct {
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.55);
+}
+
+.okr-kr-row__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  justify-content: flex-start;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   PROGRESS BAR — شريط التقدم
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-progress-bar {
+  height: 6px;
+  background: rgba(var(--gold-rgb), 0.1);
+  border-radius: var(--radius-pill);
+  overflow: hidden;
+}
+
+.okr-progress-bar__fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gold), color-mix(in srgb, var(--gold) 70%, #fff));
+  border-radius: var(--radius-pill);
+  transition: width 0.4s ease;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   BADGES — الشارات
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--font-sm);
+  font-weight: 600;
+  font-family: 'Amiri', serif;
+  white-space: nowrap;
+}
+
+.okr-badge--active {
+  background: rgba(var(--gold-rgb), 0.14);
+  color: var(--gold);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+}
+
+.okr-badge--muted {
+  background: rgba(var(--gold-rgb), 0.06);
+  color: rgba(var(--gold-rgb), 0.45);
+  border: 1px solid rgba(var(--gold-rgb), 0.12);
+}
+
+/* رابط المهمة — أزرق خفيف */
+.okr-badge--linked {
+  background: rgba(110, 159, 207, 0.1);
+  color: #6e9fcf;
+  border: 1px solid rgba(110, 159, 207, 0.2);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   COLOR SWATCHES — خيارات اللون
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+  flex-shrink: 0;
+}
+
+.okr-color-swatch:hover {
+  transform: scale(1.15);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   OVERFLOW MENU — قائمة الخيارات
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-overflow-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 100;
+  background: var(--bg-card);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+  border-radius: var(--radius-md);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  min-width: 140px;
+  overflow: hidden;
+  animation: popUp 0.15s ease;
+}
+
+.okr-overflow-menu__item {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-lg);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.07);
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+  font-size: var(--font-base);
+  cursor: pointer;
+  text-align: right;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.okr-overflow-menu__item:last-child {
+  border-bottom: none;
+}
+
+.okr-overflow-menu__item:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+}
+
+.okr-overflow-menu__item--danger {
+  color: #d97e6a;
+}
+
+.okr-overflow-menu__item--danger:hover {
+  background: rgba(217, 126, 106, 0.08);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   CHECK-IN SUMMARY — ملخص تسجيل التقدم (داخل المودال)
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-checkin-summary {
+  background: rgba(var(--gold-rgb), 0.05);
+  border: 1px solid rgba(var(--gold-rgb), 0.12);
+  border-radius: var(--radius-md);
+  padding: var(--space-md) var(--space-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.okr-checkin-summary__title {
+  margin: 0 0 var(--space-sm);
+  font-size: var(--font-base);
+  font-weight: 700;
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+}
+
+.okr-checkin-summary__meta {
+  margin: var(--space-xs) 0 0;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.5);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — التجاوب مع الشاشات الصغيرة
+══════════════════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 480px) {
+  .okr-page {
+    padding: var(--space-md);
+    padding-bottom: calc(80px + var(--space-xl));
+  }
+
+  .okr-cycle-summary {
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+  }
+}
+
+@media (max-width: 400px) {
+  /* إخفاء sublabel حلقة التقدم على الشاشات الصغيرة جداً */
+  .okr-progress__sublabel {
+    display: none;
+  }
+
+  .okr-objective-card__header {
+    padding: var(--space-sm) var(--space-md);
+    gap: var(--space-sm);
+  }
+
+  .okr-fab {
+    left: var(--space-md);
+    font-size: var(--font-base);
+    padding: var(--space-sm) var(--space-lg);
+  }
+}

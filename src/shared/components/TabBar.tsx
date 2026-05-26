@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState } from 'react';
 
 interface TabBarProps {
   activeTab: string;
@@ -17,14 +17,28 @@ export default function TabBar({ activeTab, onTabChange, financeBadge, onLogout 
   const tabs = useMemo<Tab[]>(
     () => [
       { id: 'tasks', icon: '📋', label: 'المهام' },
+      { id: 'okr', icon: '🎯', label: 'الأهداف' },
       { id: 'calendar', icon: '📅', label: 'التقويم' },
       { id: 'finance', icon: '💰', label: 'المالية' },
     ],
     []
   );
 
+  // Compact mode: hide labels on very small viewports (≤360px)
+  const [compact, setCompact] = useState(() => window.innerWidth <= 360);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 360px)');
+    const handler = (e: MediaQueryListEvent) => setCompact(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   return (
-    <nav className="tab-bar" role="tablist" aria-label="التنقل الرئيسي">
+    <nav
+      className={`tab-bar${compact ? ' tab-bar--compact' : ''}`}
+      role="tablist"
+      aria-label="التنقل الرئيسي"
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
@@ -39,7 +53,7 @@ export default function TabBar({ activeTab, onTabChange, financeBadge, onLogout 
             <span className="tab-bar__icon" aria-hidden="true">
               {tab.icon}
             </span>
-            <span className="tab-bar__label">{tab.label}</span>
+            {!compact && <span className="tab-bar__label">{tab.label}</span>}
             {tab.id === 'finance' && financeBadge > 0 && (
               <span className="tab-bar__badge" aria-label={`${financeBadge} دفعات مستحقة`}>
                 {financeBadge}

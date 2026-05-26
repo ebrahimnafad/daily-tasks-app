@@ -12,6 +12,7 @@ import {
   TasksErrorFallback,
   FinanceErrorFallback,
   CalendarErrorFallback,
+  OkrErrorFallback,
 } from '@/shared/components/FeatureErrorFallback';
 import { useAuth } from '@/features/auth/useAuth';
 import LoginPage from '@/features/auth/LoginPage';
@@ -22,6 +23,7 @@ const CalendarView = lazy(() =>
   import('@/features/calendar/CalendarPage').then((m) => ({ default: m.default }))
 );
 const FinancePage = lazy(() => import('@/features/finance/components/FinancePage'));
+const OkrPage = lazy(() => import('@/features/okr/components/OkrPage'));
 
 // ── AppContent — all hooks live here (no early returns allowed above hooks) ──
 function AppContent({ logout }: { logout: () => void }) {
@@ -175,6 +177,10 @@ function AppContent({ logout }: { logout: () => void }) {
 
           <ErrorBoundary level="feature" fallback={<FinanceErrorFallback />}>
             {activeTab === 'finance' && <FinancePage syncStatus={syncStatus} />}
+          </ErrorBoundary>
+
+          <ErrorBoundary level="feature" fallback={<OkrErrorFallback />}>
+            {activeTab === 'okr' && <OkrPage />}
           </ErrorBoundary>
         </Suspense>
       </AppShell>
