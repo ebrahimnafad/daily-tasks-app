@@ -6,6 +6,7 @@ interface CycleSelectorProps {
   activeCycle: OkrCycle | null;
   onSelect: (id: string) => void;
   onCreateCycle: () => void;
+  onReactivateCycle: (id: string) => void;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -19,10 +20,12 @@ export default function CycleSelector({
   activeCycle,
   onSelect,
   onCreateCycle,
+  onReactivateCycle,
 }: CycleSelectorProps) {
   const [open, setOpen] = useState(false);
 
   const visible = cycles.filter((c) => !c.deletedAt);
+  const hasActive = cycles.some((c) => c.status === 'active' && !c.deletedAt);
 
   const selected = activeCycle ?? visible[0] ?? null;
 
@@ -82,7 +85,32 @@ export default function CycleSelector({
                   setOpen(false);
                 }}
               >
-                <span className="okr-cycle-selector__option-title">{c.title}</span>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+                  <span className="okr-cycle-selector__option-title">{c.title}</span>
+                  {c.status === 'archived' && (
+                    <div style={{ marginTop: '8px' }}>
+                      <button
+                        className="okr-cycle-reactivate-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (hasActive) {
+                            // Can't reactivate if there's already an active cycle
+                            return;
+                          }
+                          onReactivateCycle(c.id);
+                        }}
+                        disabled={hasActive}
+                      >
+                        إلغاء الأرشفة
+                      </button>
+                      {hasActive && (
+                        <div className="okr-reactivate-warning">
+                          أرشف الدورة النشطة أولاً قبل إعادة التفعيل
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
                 <span
                   className={`okr-badge ${c.status === 'active' ? 'okr-badge--active' : 'okr-badge--muted'}`}
                 >

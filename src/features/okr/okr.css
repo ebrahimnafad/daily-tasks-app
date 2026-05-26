@@ -250,6 +250,72 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   DATE INPUT — حقول التاريخ
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-date-input {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-xs);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--gold-rgb), 0.18);
+  background: rgba(var(--gold-rgb), 0.05);
+  color: var(--text-gold);
+  font-size: var(--font-base);
+  font-family: 'Amiri', serif;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  color-scheme: dark;
+}
+
+.okr-date-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.08);
+}
+
+.okr-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.7) sepia(1) saturate(2) hue-rotate(5deg);
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   REACTIVATE BUTTON — زر إلغاء الأرشفة
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-cycle-reactivate-btn {
+  font-size: var(--font-sm);
+  padding: 3px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  background: rgba(var(--gold-rgb), 0.06);
+  color: rgba(var(--gold-rgb), 0.7);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.okr-cycle-reactivate-btn:hover {
+  background: rgba(var(--gold-rgb), 0.14);
+  color: var(--gold);
+}
+
+.okr-cycle-reactivate-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.okr-reactivate-warning {
+  font-size: var(--font-sm);
+  color: rgba(220, 160, 60, 0.8);
+  margin-top: var(--space-xs);
+  padding: 0 var(--space-sm);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    EMPTY STATES — حالات الفراغ
 ══════════════════════════════════════════════════════════════════════════════ */
 

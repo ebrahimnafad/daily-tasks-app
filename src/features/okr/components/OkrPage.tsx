@@ -83,6 +83,7 @@ export default function OkrPage() {
             /* v1: only one active cycle; selection is display-only */
           }}
           onCreateCycle={() => setCycleModal({ open: true, cycle: undefined })}
+          onReactivateCycle={(id) => mgr.reactivateCycle(id)}
         />
       </div>
 

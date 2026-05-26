@@ -100,7 +100,7 @@ export default function CycleModal({
             <input
               id="cycle-start-date"
               type="date"
-              className="fin-input"
+              className="okr-date-input"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
             />
@@ -111,7 +111,7 @@ export default function CycleModal({
             <input
               id="cycle-end-date"
               type="date"
-              className="fin-input"
+              className="okr-date-input"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
             />
