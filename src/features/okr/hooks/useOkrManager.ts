@@ -126,8 +126,39 @@ export default function useOkrManager(
 
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
+  const guardSingleActiveCycle = useCallback(() => {
+    const hasActive = cycles.some((c) => c.status === 'active' && !c.deletedAt);
+    if (hasActive) {
+      notify?.('لا يمكن تفعيل دورتين في نفس الوقت. أرشف الدورة النشطة أولاً', 'warn');
+      return false;
+    }
+    return true;
+  }, [cycles, notify]);
+
+  const guardNoDateOverlap = useCallback(
+    (startDate: string, endDate: string, excludeId?: string) => {
+      const overlaps = cycles.some(
+        (c) =>
+          c.id !== excludeId &&
+          !c.deletedAt &&
+          c.status !== 'archived' &&
+          startDate <= c.endDate &&
+          endDate >= c.startDate
+      );
+      if (overlaps) {
+        notify?.('التواريخ تتداخل مع دورة موجودة. اختر نطاقاً زمنياً مختلفاً', 'warn');
+        return false;
+      }
+      return true;
+    },
+    [cycles, notify]
+  );
+
   const createCycle = useCallback(
     (title: string, startDate: string, endDate: string) => {
+      if (!guardSingleActiveCycle()) return;
+      if (!guardNoDateOverlap(startDate, endDate)) return;
+
       const cycle: OkrCycle = {
         id: uuidv4(),
         title,
@@ -140,7 +171,97 @@ export default function useOkrManager(
       sync.upsertCycle(cycle);
       return cycle;
     },
-    [sync]
+    [sync, guardSingleActiveCycle, guardNoDateOverlap]
+  );
+
+  const updateCycle = useCallback(
+    (id: string, partial: Pick<OkrCycle, 'title' | 'startDate' | 'endDate'>) => {
+      const existing = cycles.find((c) => c.id === id);
+      if (!existing) return;
+      if (!guardNoDateOverlap(partial.startDate, partial.endDate, id)) return;
+      sync.upsertCycle({ ...existing, ...partial, updatedAt: new Date().toISOString() });
+    },
+    [cycles, sync, guardNoDateOverlap]
+  );
+
+  const deleteCycle = useCallback(
+    (id: string) => {
+      const existing = cycles.find((c) => c.id === id);
+      if (!existing) return;
+      // Soft delete cycle
+      sync.upsertCycle({
+        ...existing,
+        deletedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      });
+      // Soft delete all its objectives
+      const cycleObjs = objectives.filter((o) => o.cycleId === id);
+      cycleObjs.forEach((o) => {
+        sync.upsertObjective({
+          ...o,
+          deletedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      });
+    },
+    [cycles, objectives, sync]
+  );
+
+  const reactivateCycle = useCallback(
+    (id: string) => {
+      if (!guardSingleActiveCycle()) return;
+      const existing = cycles.find((c) => c.id === id);
+      if (!existing) return;
+      sync.upsertCycle({ ...existing, status: 'active', updatedAt: new Date().toISOString() });
+    },
+    [cycles, sync, guardSingleActiveCycle]
+  );
+
+  const duplicateCycle = useCallback(
+    (sourceCycleId: string, newTitle: string, newStartDate: string, newEndDate: string) => {
+      if (!guardSingleActiveCycle()) return null;
+      if (!guardNoDateOverlap(newStartDate, newEndDate)) return null;
+
+      const newCycleId = uuidv4();
+      const cycle: OkrCycle = {
+        id: newCycleId,
+        title: newTitle,
+        startDate: newStartDate,
+        endDate: newEndDate,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      sync.upsertCycle(cycle);
+
+      // Duplicate objectives and their KRs
+      const sourceObjs = objectives.filter((o) => o.cycleId === sourceCycleId && !o.deletedAt);
+      sourceObjs.forEach((o) => {
+        const newObjId = uuidv4();
+        sync.upsertObjective({
+          ...o,
+          id: newObjId,
+          cycleId: newCycleId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        const sourceKrs = keyResults.filter((kr) => kr.objectiveId === o.id && !kr.deletedAt);
+        sourceKrs.forEach((kr) => {
+          sync.upsertKeyResult({
+            ...kr,
+            id: uuidv4(),
+            objectiveId: newObjId,
+            currentValue: '0', // Reset check-ins progress
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        });
+      });
+
+      return newCycleId;
+    },
+    [objectives, keyResults, sync, guardSingleActiveCycle, guardNoDateOverlap]
   );
 
   const archiveCycle = useCallback(
@@ -281,6 +402,10 @@ export default function useOkrManager(
 
     // CRUD
     createCycle,
+    updateCycle,
+    deleteCycle,
+    reactivateCycle,
+    duplicateCycle,
     archiveCycle,
     createObjective,
     updateObjective,

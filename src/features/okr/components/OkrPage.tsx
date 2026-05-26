@@ -1,13 +1,14 @@
 import { useState } from 'react';
 import '../okr.css';
-import useOkrManager, { currentQuarterDates } from '../hooks/useOkrManager';
-import type { OkrObjective, OkrKeyResult } from '../hooks/useOkrManager';
+import useOkrManager from '../hooks/useOkrManager';
+import type { OkrObjective, OkrKeyResult, OkrCycle } from '../hooks/useOkrManager';
 import CycleSelector from './CycleSelector';
 import OkrProgress from './OkrProgress';
 import ObjectiveCard from './ObjectiveCard';
 import CheckInModal from './CheckInModal';
 import ObjectiveModal from './ObjectiveModal';
 import KeyResultModal from './KeyResultModal';
+import CycleModal from './CycleModal';
 import { useTaskOkrBridge } from '../hooks/useTaskOkrBridge';
 import useToasts from '@/shared/hooks/useToasts';
 
@@ -17,7 +18,6 @@ interface ModalState {
   editKR: OkrKeyResult | null;
   addKRObjectiveId: string | null;
   showObjectiveModal: boolean;
-  showCreateCycle: boolean;
 }
 
 const INITIAL_MODAL: ModalState = {
@@ -26,7 +26,6 @@ const INITIAL_MODAL: ModalState = {
   editKR: null,
   addKRObjectiveId: null,
   showObjectiveModal: false,
-  showCreateCycle: false,
 };
 
 export default function OkrPage() {
@@ -36,11 +35,11 @@ export default function OkrPage() {
 
   useTaskOkrBridge(mgr.recordCheckIn, (msg) => addSyncToast(msg, 'warn'));
 
-  // Create cycle form state
-  const [newCycleTitle, setNewCycleTitle] = useState('');
-  const { startDate: defaultStart, endDate: defaultEnd } = currentQuarterDates();
-  const [newCycleStart, setNewCycleStart] = useState(defaultStart);
-  const [newCycleEnd, setNewCycleEnd] = useState(defaultEnd);
+  const [cycleModal, setCycleModal] = useState<{
+    open: boolean;
+    cycle?: OkrCycle;
+    sourceCycleId?: string;
+  }>({ open: false });
 
   const closeModal = () => setModal(INITIAL_MODAL);
 
@@ -58,13 +57,6 @@ export default function OkrPage() {
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
-  const handleCreateCycle = () => {
-    if (!newCycleTitle.trim()) return;
-    mgr.createCycle(newCycleTitle.trim(), newCycleStart, newCycleEnd);
-    setNewCycleTitle('');
-    closeModal();
-  };
-
   return (
     <div className="okr-page">
       {/* ── Header ────────────────────────────────────────────────────────── */}
@@ -76,68 +68,20 @@ export default function OkrPage() {
           onSelect={() => {
             /* v1: only one active cycle; selection is display-only */
           }}
-          onCreateCycle={() => setModal((m) => ({ ...m, showCreateCycle: true }))}
+          onCreateCycle={() => setCycleModal({ open: true, cycle: undefined })}
+          onEditCycle={(cycle) => setCycleModal({ open: true, cycle })}
+          onDuplicateCycle={(cycle) =>
+            setCycleModal({
+              open: true,
+              cycle: { ...cycle, id: '', title: 'نسخة من: ' + cycle.title },
+              sourceCycleId: cycle.id,
+            })
+          }
+          onDeleteCycle={(id) => mgr.deleteCycle(id)}
+          onReactivateCycle={(id) => mgr.reactivateCycle(id)}
+          onArchiveCycle={(id) => mgr.archiveCycle(id)}
         />
       </div>
-
-      {/* ── Create cycle inline form ──────────────────────────────────────── */}
-      {modal.showCreateCycle && (
-        <div className="modal-overlay" onClick={closeModal}>
-          <div className="modal-box fin-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="fin-modal__title">دورة جديدة</h2>
-            <div className="form-group">
-              <label className="form-label" htmlFor="new-cycle-title">
-                اسم الدورة
-              </label>
-              <input
-                id="new-cycle-title"
-                type="text"
-                className="fin-input"
-                placeholder={mgr.quarterLabel(newCycleStart)}
-                value={newCycleTitle}
-                onChange={(e) => setNewCycleTitle(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="fin-row">
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label" htmlFor="new-cycle-start">
-                  تاريخ البداية
-                </label>
-                <input
-                  id="new-cycle-start"
-                  type="date"
-                  className="fin-input"
-                  value={newCycleStart}
-                  onChange={(e) => setNewCycleStart(e.target.value)}
-                />
-              </div>
-              <div className="form-group" style={{ flex: 1 }}>
-                <label className="form-label" htmlFor="new-cycle-end">
-                  تاريخ النهاية
-                </label>
-                <input
-                  id="new-cycle-end"
-                  type="date"
-                  className="fin-input"
-                  value={newCycleEnd}
-                  onChange={(e) => setNewCycleEnd(e.target.value)}
-                />
-              </div>
-            </div>
-            <button
-              className="btn-save"
-              onClick={handleCreateCycle}
-              disabled={!newCycleTitle.trim()}
-            >
-              إنشاء الدورة
-            </button>
-            <button className="btn-cancel" onClick={closeModal}>
-              إلغاء
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ── Active cycle summary OR empty state ──────────────────────────── */}
       {activeCycle ? (
@@ -153,13 +97,6 @@ export default function OkrPage() {
             <p className="okr-cycle-summary__days">
               {days > 0 ? `${days} يوم متبقي` : 'انتهت الدورة'}
             </p>
-            <button
-              className="fin-btn-sm"
-              style={{ marginTop: 'var(--space-sm)' }}
-              onClick={() => mgr.archiveCycle(activeCycle.id)}
-            >
-              🗂️ أرشفة الدورة
-            </button>
           </div>
         </div>
       ) : (
@@ -174,7 +111,7 @@ export default function OkrPage() {
           <button
             className="fin-btn-primary"
             style={{ marginTop: 'var(--space-lg)' }}
-            onClick={() => setModal((m) => ({ ...m, showCreateCycle: true }))}
+            onClick={() => setCycleModal({ open: true, cycle: undefined })}
           >
             إنشاء دورة جديدة
           </button>
@@ -279,6 +216,32 @@ export default function OkrPage() {
                 linkedTaskId: data.linkedTaskId,
               });
             }
+          }}
+        />
+      )}
+
+      {/* Cycle modal (create, edit, duplicate) */}
+      {cycleModal.open && (
+        <CycleModal
+          cycle={cycleModal.cycle}
+          sourceCycleId={cycleModal.sourceCycleId}
+          cycles={mgr.cycles}
+          currentQuarterDates={mgr.currentQuarterDates}
+          onClose={() => setCycleModal({ open: false })}
+          onSubmit={(data) => {
+            if (cycleModal.cycle && !cycleModal.sourceCycleId) {
+              mgr.updateCycle(cycleModal.cycle.id, data);
+            } else if (cycleModal.sourceCycleId) {
+              mgr.duplicateCycle(
+                cycleModal.sourceCycleId,
+                data.title,
+                data.startDate,
+                data.endDate
+              );
+            } else {
+              mgr.createCycle(data.title, data.startDate, data.endDate);
+            }
+            setCycleModal({ open: false });
           }}
         />
       )}
