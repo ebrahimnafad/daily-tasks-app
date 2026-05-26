@@ -24,6 +24,7 @@ export const EMPTY_FORM: TaskForm = {
   alertTime: '',
   blockers: [''],
   helpers: [''],
+  linkedKeyResultId: null,
 };
 
 export interface TaskCrudReturn {
@@ -98,6 +99,7 @@ export function useTaskCrud(
       alertTime: task.alertTime || '',
       blockers: task.brief?.blockers?.length ? [...task.brief.blockers] : [''],
       helpers: task.brief?.helpers?.length ? [...task.brief.helpers] : [''],
+      linkedKeyResultId: task.linkedKeyResultId || null,
     });
     setModal({ mode: 'edit', taskId: task.id });
   }, []);
@@ -159,6 +161,7 @@ export function useTaskCrud(
         blockers: form.blockers.filter((b) => b.trim()),
         helpers: form.helpers.filter((h) => h.trim()),
       },
+      linkedKeyResultId: form.linkedKeyResultId || null,
     };
     if (modal.mode === 'add') {
       const newId = crypto.randomUUID();

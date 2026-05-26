@@ -123,6 +123,7 @@ export const TaskFormSchema = TaskSchema.pick({
   alertTime: z.string().regex(TIME_REGEX).or(z.literal('')).optional(),
   blockers: z.array(z.string().max(200)),
   helpers: z.array(z.string().max(200)),
+  linkedKeyResultId: z.string().uuid().nullable().optional(),
 });
 
 export type TaskFormInput = z.infer<typeof TaskFormSchema>;

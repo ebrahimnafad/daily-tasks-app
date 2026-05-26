@@ -107,6 +107,23 @@ export default function useOkrManager(
     return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
   }, []);
 
+  const getActiveKRsForLinking = useCallback(() => {
+    if (!activeCycle) return [];
+    const activeObjs = objectivesForCycle(activeCycle.id);
+    const result: Array<{ id: string; title: string; objectiveTitle: string }> = [];
+    activeObjs.forEach((o) => {
+      const krs = keyResultsForObjective(o.id);
+      krs.forEach((kr) => {
+        result.push({
+          id: kr.id,
+          title: kr.title,
+          objectiveTitle: o.title,
+        });
+      });
+    });
+    return result;
+  }, [activeCycle, objectivesForCycle, keyResultsForObjective]);
+
   // ── CRUD actions ───────────────────────────────────────────────────────────
 
   const createCycle = useCallback(
@@ -260,6 +277,7 @@ export default function useOkrManager(
     daysRemaining,
     quarterLabel,
     currentQuarterDates,
+    getActiveKRsForLinking,
 
     // CRUD
     createCycle,

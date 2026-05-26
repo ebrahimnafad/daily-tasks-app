@@ -8,6 +8,8 @@ import ObjectiveCard from './ObjectiveCard';
 import CheckInModal from './CheckInModal';
 import ObjectiveModal from './ObjectiveModal';
 import KeyResultModal from './KeyResultModal';
+import { useTaskOkrBridge } from '../hooks/useTaskOkrBridge';
+import useToasts from '@/shared/hooks/useToasts';
 
 interface ModalState {
   checkInKR: OkrKeyResult | null;
@@ -30,6 +32,9 @@ const INITIAL_MODAL: ModalState = {
 export default function OkrPage() {
   const mgr = useOkrManager();
   const [modal, setModal] = useState<ModalState>(INITIAL_MODAL);
+  const { addSyncToast } = useToasts();
+
+  useTaskOkrBridge(mgr.recordCheckIn, (msg) => addSyncToast(msg, 'warn'));
 
   // Create cycle form state
   const [newCycleTitle, setNewCycleTitle] = useState('');

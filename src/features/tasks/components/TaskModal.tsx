@@ -48,9 +48,18 @@ interface TaskModalProps {
   onSave: () => void;
   onClose: () => void;
   schedule?: ShiftConfig[];
+  availableKeyResults?: Array<{ id: string; title: string; objectiveTitle: string }>;
 }
 
-function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: TaskModalProps) {
+function TaskModal({
+  modal,
+  form,
+  onFormField,
+  onSave,
+  onClose,
+  schedule,
+  availableKeyResults,
+}: TaskModalProps) {
   const titleId = 'modal-title';
   const modalRef = useRef<HTMLDivElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
@@ -351,6 +360,35 @@ function TaskModal({ modal, form, onFormField, onSave, onClose, schedule }: Task
             />
           </button>
         </div>
+
+        {availableKeyResults && availableKeyResults.length > 0 && (
+          <div className="form-group">
+            <label className="form-label" htmlFor="task-linked-kr">
+              ربط بنتيجة رئيسية (اختياري)
+            </label>
+            <select
+              id="task-linked-kr"
+              className="form-select"
+              value={form.linkedKeyResultId || ''}
+              onChange={(e) => onFormField('linkedKeyResultId', e.target.value || null)}
+            >
+              <option value="">بدون ربط</option>
+              {Array.from(new Set(availableKeyResults.map((kr) => kr.objectiveTitle))).map(
+                (objTitle) => (
+                  <optgroup key={objTitle} label={objTitle}>
+                    {availableKeyResults
+                      .filter((kr) => kr.objectiveTitle === objTitle)
+                      .map((kr) => (
+                        <option key={kr.id} value={kr.id}>
+                          {kr.title}
+                        </option>
+                      ))}
+                  </optgroup>
+                )
+              )}
+            </select>
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">⚠️ العوائق المحتملة</label>

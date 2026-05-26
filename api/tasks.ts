@@ -68,6 +68,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
         isPinned: r.isPinned,
         subtasks: r.subtasks || [],
         brief: r.brief || {},
+        linkedKeyResultId: r.linkedKeyResultId || null,
         createdAt: r.createdAt
           ? new Date(r.createdAt as string | number | Date).toISOString()
           : new Date().toISOString(),
@@ -172,6 +173,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
               isPinned: taskData.isPinned || false,
               subtasks: taskData.subtasks || [],
               brief: taskData.brief || {},
+              linkedKeyResultId: taskData.linkedKeyResultId || null,
               createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
               updatedAt: new Date(),
             };
@@ -245,6 +247,7 @@ const handler = async function handler(req: ApiRequest, res: ApiResponse) {
             isPinned: taskData.isPinned || false,
             subtasks: taskData.subtasks || [],
             brief: taskData.brief || {},
+            linkedKeyResultId: taskData.linkedKeyResultId || null,
             createdAt: taskData.createdAt ? new Date(taskData.createdAt) : new Date(),
             updatedAt: taskData.updatedAt ? new Date(taskData.updatedAt) : new Date(),
           };

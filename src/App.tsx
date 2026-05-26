@@ -16,6 +16,7 @@ import {
 } from '@/shared/components/FeatureErrorFallback';
 import { useAuth } from '@/features/auth/useAuth';
 import LoginPage from '@/features/auth/LoginPage';
+import useOkrManager from '@/features/okr/hooks/useOkrManager';
 
 // Lazy load feature pages
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
@@ -85,6 +86,9 @@ function AppContent({ logout }: { logout: () => void }) {
     saveSnapshot,
   });
 
+  const okrMgr = useOkrManager();
+  const availableKeyResults = okrMgr.getActiveKRsForLinking();
+
   // ── Dynamic Theme ─────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => {
@@ -153,6 +157,7 @@ function AppContent({ logout }: { logout: () => void }) {
             dayStartHour={dayStartHour}
             setDayStartHour={setDayStartHour}
             saveSnapshot={saveSnapshot}
+            availableKeyResults={availableKeyResults}
           >
             <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
               {activeTab === 'tasks' && (

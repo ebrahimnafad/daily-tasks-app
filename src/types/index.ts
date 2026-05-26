@@ -37,6 +37,8 @@ export interface Task {
   isPinned?: boolean;
   subtasks: Subtask[];
   brief: Brief;
+  /** Linked OKR Key Result ID for automatic check-ins */
+  linkedKeyResultId?: string | null;
   /** Legacy field — kept for migration only, do not use */
   time?: string;
   createdAt?: string;
@@ -89,6 +91,7 @@ export interface TaskForm {
   alertTime: string;
   blockers: string[];
   helpers: string[];
+  linkedKeyResultId?: string | null;
 }
 
 // ── Checked maps ──────────────────────────────────────────────────────────
@@ -208,6 +211,9 @@ export interface TaskContextValue {
   setDayStartHour: (hour: number) => void;
   /** Save a snapshot to the DB */
   saveSnapshot: (data: import('@/types').DailySnapshot) => Promise<void>;
+
+  // OKR integration
+  availableKeyResults?: Array<{ id: string; title: string; objectiveTitle: string }>;
 }
 
 // ── useSync return ────────────────────────────────────────────────────────

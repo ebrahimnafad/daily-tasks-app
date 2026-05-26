@@ -39,6 +39,9 @@ export interface TaskProviderProps {
   // From useSync — snapshot persistence
   saveSnapshot: (data: DailySnapshot) => Promise<void>;
 
+  // OKR integration
+  availableKeyResults?: Array<{ id: string; title: string; objectiveTitle: string }>;
+
   children: ReactNode;
 }
 
@@ -66,6 +69,7 @@ export function TaskProvider({
   dayStartHour,
   setDayStartHour,
   saveSnapshot,
+  availableKeyResults,
   children,
 }: TaskProviderProps) {
   const value = useMemo(
@@ -86,6 +90,7 @@ export function TaskProvider({
       dayStartHour,
       setDayStartHour,
       saveSnapshot,
+      availableKeyResults,
     }),
     [
       tm,
@@ -101,6 +106,7 @@ export function TaskProvider({
       dayStartHour,
       setDayStartHour,
       saveSnapshot,
+      availableKeyResults,
     ]
   );
 

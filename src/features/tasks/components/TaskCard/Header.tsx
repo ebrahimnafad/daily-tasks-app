@@ -26,6 +26,28 @@ export default function Header() {
     prayerTotal,
   } = useTaskCardContext();
 
+  const handleToggle = () => {
+    const nextState = !isChecked;
+    setChecked((p) => ({ ...p, [task.id]: nextState }));
+
+    if (task.linkedKeyResultId) {
+      if (nextState) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        window.dispatchEvent(
+          new CustomEvent('mhm_task_checked', {
+            detail: { taskId: task.id, keyResultId: task.linkedKeyResultId, date: todayStr },
+          })
+        );
+      } else {
+        window.dispatchEvent(
+          new CustomEvent('mhm_task_unchecked', {
+            detail: { taskId: task.id, keyResultId: task.linkedKeyResultId },
+          })
+        );
+      }
+    }
+  };
+
   return (
     <div
       style={{
@@ -53,7 +75,7 @@ export default function Header() {
           <AccessibleCheckbox
             checked={isChecked}
             color={task.color}
-            onToggle={() => setChecked((p) => ({ ...p, [task.id]: !p[task.id] }))}
+            onToggle={handleToggle}
             label={`تأشير مهمة: ${task.title}`}
           />
         )}
@@ -99,6 +121,15 @@ export default function Header() {
           >
             {task.isPinned && '📌 '}
             {task.title}
+            {task.linkedKeyResultId && (
+              <span
+                className="task-linked-kr-badge"
+                aria-hidden="true"
+                title="مرتبطة بنتيجة رئيسية"
+              >
+                🎯
+              </span>
+            )}
           </span>
 
           <span

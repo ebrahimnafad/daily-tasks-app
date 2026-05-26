@@ -13,6 +13,7 @@ export function TaskDialogs() {
         onSave={tm.saveTask}
         onClose={() => tm.setModal(null)}
         schedule={scheduleConfig}
+        availableKeyResults={useTaskContext().availableKeyResults}
       />
 
       {tm.deleteConfirm !== null && (
