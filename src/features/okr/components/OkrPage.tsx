@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import '../okr.css';
 import useOkrManager from '../hooks/useOkrManager';
 import type { OkrObjective, OkrKeyResult, OkrCycle } from '../hooks/useOkrManager';
@@ -41,9 +41,23 @@ export default function OkrPage() {
     sourceCycleId?: string;
   }>({ open: false });
 
+  const [cardState, setCardState] = useState<'menu' | 'confirm-delete' | null>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
+        setCardState(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
   const closeModal = () => setModal(INITIAL_MODAL);
 
   const activeCycle = mgr.activeCycle;
+  const hasActive = mgr.cycles.some((c) => c.status === 'active' && !c.deletedAt);
   const objectives = activeCycle ? mgr.objectivesForCycle(activeCycle.id) : [];
   const cycleProgress = activeCycle ? mgr.computeCycleProgress(activeCycle.id) : 0;
   const days = activeCycle ? mgr.daysRemaining(activeCycle) : 0;
@@ -69,35 +83,128 @@ export default function OkrPage() {
             /* v1: only one active cycle; selection is display-only */
           }}
           onCreateCycle={() => setCycleModal({ open: true, cycle: undefined })}
-          onEditCycle={(cycle) => setCycleModal({ open: true, cycle })}
-          onDuplicateCycle={(cycle) =>
-            setCycleModal({
-              open: true,
-              cycle: { ...cycle, id: '', title: 'نسخة من: ' + cycle.title },
-              sourceCycleId: cycle.id,
-            })
-          }
-          onDeleteCycle={(id) => mgr.deleteCycle(id)}
-          onReactivateCycle={(id) => mgr.reactivateCycle(id)}
-          onArchiveCycle={(id) => mgr.archiveCycle(id)}
         />
       </div>
 
       {/* ── Active cycle summary OR empty state ──────────────────────────── */}
       {activeCycle ? (
-        <div className="okr-cycle-summary">
-          <OkrProgress
-            progress={cycleProgress}
-            size={100}
-            strokeWidth={8}
-            sublabel={mgr.quarterLabel(activeCycle.startDate)}
-          />
-          <div className="okr-cycle-summary__meta">
-            <p className="okr-cycle-summary__title">{activeCycle.title}</p>
-            <p className="okr-cycle-summary__days">
-              {days > 0 ? `${days} يوم متبقي` : 'انتهت الدورة'}
-            </p>
-          </div>
+        <div className="okr-cycle-card" ref={cardRef}>
+          {cardState === 'confirm-delete' ? (
+            <div className="okr-cycle-card__confirm">
+              <p>
+                ⚠️ سيتم حذف الدورة وجميع أهدافها نهائياً.
+                <br />
+                هل أنت متأكد؟
+              </p>
+              <div className="okr-cycle-card__confirm-actions">
+                <button
+                  className="fin-btn-sm"
+                  style={{ background: 'var(--expense)', color: 'white', border: 'none' }}
+                  onClick={() => {
+                    mgr.deleteCycle(activeCycle.id);
+                    setCardState(null);
+                  }}
+                >
+                  تأكيد الحذف
+                </button>
+                <button className="fin-btn-sm" onClick={() => setCardState(null)}>
+                  إلغاء
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="okr-cycle-card__header">
+                <div>
+                  <h2 className="okr-cycle-card__title">{activeCycle.title}</h2>
+                  <p className="okr-cycle-card__dates">
+                    {activeCycle.startDate} — {activeCycle.endDate}
+                  </p>
+                </div>
+                <div style={{ position: 'relative' }}>
+                  <button
+                    className="okr-cycle-card__menu-btn"
+                    onClick={() => setCardState(cardState === 'menu' ? null : 'menu')}
+                  >
+                    ⋮
+                  </button>
+                  {cardState === 'menu' && (
+                    <div className="okr-cycle-card__dropdown">
+                      <button
+                        className="okr-cycle-card__dropdown-item"
+                        onClick={() => {
+                          setCardState(null);
+                          setCycleModal({ open: true, cycle: activeCycle });
+                        }}
+                      >
+                        ✏️ تعديل الدورة
+                      </button>
+                      <button
+                        className="okr-cycle-card__dropdown-item"
+                        onClick={() => {
+                          setCardState(null);
+                          setCycleModal({
+                            open: true,
+                            cycle: {
+                              ...activeCycle,
+                              id: '',
+                              title: 'نسخة من: ' + activeCycle.title,
+                            },
+                            sourceCycleId: activeCycle.id,
+                          });
+                        }}
+                      >
+                        📋 تكرار الدورة
+                      </button>
+
+                      {activeCycle.status === 'active' ? (
+                        <button
+                          className="okr-cycle-card__dropdown-item"
+                          onClick={() => {
+                            setCardState(null);
+                            mgr.archiveCycle(activeCycle.id);
+                          }}
+                        >
+                          🗂 أرشفة الدورة
+                        </button>
+                      ) : (
+                        <button
+                          className={`okr-cycle-card__dropdown-item ${hasActive ? 'okr-cycle-card__dropdown-item--disabled' : ''}`}
+                          title={hasActive ? 'أرشف الدورة النشطة أولاً' : undefined}
+                          onClick={() => {
+                            if (hasActive) return;
+                            setCardState(null);
+                            mgr.reactivateCycle(activeCycle.id);
+                          }}
+                        >
+                          ✅ إعادة التفعيل
+                        </button>
+                      )}
+
+                      <button
+                        className="okr-cycle-card__dropdown-item okr-cycle-card__dropdown-item--danger"
+                        onClick={() => setCardState('confirm-delete')}
+                      >
+                        🗑 حذف الدورة
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="okr-cycle-card__body">
+                <OkrProgress
+                  progress={cycleProgress}
+                  size={80}
+                  strokeWidth={6}
+                  sublabel={mgr.quarterLabel(activeCycle.startDate)}
+                />
+                <div className="okr-cycle-card__days">
+                  {days > 0 ? `${days} يوم متبقي` : 'انتهت الدورة'}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       ) : (
         <div className="okr-empty" style={{ marginTop: 'var(--space-lg)' }}>
