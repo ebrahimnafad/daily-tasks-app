@@ -387,7 +387,6 @@
   background: rgba(var(--gold-rgb), 0.03);
   border: 1px solid rgba(var(--gold-rgb), 0.14);
   border-radius: var(--radius-lg);
-  overflow: hidden;
   transition:
     border-color 0.2s,
     box-shadow 0.2s;
@@ -404,6 +403,8 @@
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
+  border-top-left-radius: calc(var(--radius-lg) - 1px);
+  border-top-right-radius: calc(var(--radius-lg) - 1px);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
