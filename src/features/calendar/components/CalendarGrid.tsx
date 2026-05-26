@@ -26,6 +26,9 @@ interface CalendarGridProps {
 
   // Shift classifier for a given date string
   getDayShiftType: (dateStr: string) => DayShiftType;
+  // OKR cycle boundary detectors
+  isCycleStart?: (dateStr: string) => boolean;
+  isCycleEnd?: (dateStr: string) => boolean;
 
   onSelectDate: (dateStr: string) => void;
 }
@@ -44,6 +47,8 @@ export default function CalendarGrid({
   vacationDays,
   maxExpenseAmount,
   getDayShiftType,
+  isCycleStart,
+  isCycleEnd,
   onSelectDate,
 }: CalendarGridProps) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -88,6 +93,8 @@ export default function CalendarGrid({
               hasNotes={(notesByDate[dateStr]?.length ?? 0) > 0}
               isVacationDay={vacationDays.includes(dateStr)}
               maxExpenseAmount={maxExpenseAmount}
+              isCycleStart={isCycleStart?.(dateStr) ?? false}
+              isCycleEnd={isCycleEnd?.(dateStr) ?? false}
               onSelect={onSelectDate}
             />
           );

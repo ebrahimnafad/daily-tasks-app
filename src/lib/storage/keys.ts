@@ -47,6 +47,8 @@ export const LS_KEYS = {
   OKR_CHECK_INS: 'mhm_okr_check_ins',
   /** ISO datetime of last successful OKR sync — used as `since` for incremental check-in fetch */
   OKR_TIMESTAMP: 'mhm_okr_timestamp',
+  /** YYYY-MM-DD of the Friday when the weekly OKR review prompt was last shown/dismissed */
+  OKR_WEEKLY_REVIEW_SHOWN: 'mhm_okr_weekly_review_shown',
 } as const;
 
 export const QUERY_KEYS = {

@@ -58,6 +58,12 @@ export interface DailySnapshot {
   prayersDone?: number;
   prayerTotal?: number;
   prayerOptionalDone?: number;
+  /** OKR progress summary at snapshot time — stored for future historical display */
+  okrSummary?: {
+    cycleTitle: string;
+    cycleProgress: number;
+    objectives: Array<{ title: string; progress: number }>;
+  } | null;
 }
 
 export interface SnapshotSummary {

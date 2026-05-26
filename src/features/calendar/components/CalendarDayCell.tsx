@@ -41,6 +41,8 @@ interface CalendarDayCellProps {
   hasNotes: boolean;
   isVacationDay: boolean;
   maxExpenseAmount: number;
+  isCycleStart?: boolean;
+  isCycleEnd?: boolean;
   onSelect: (dateStr: string) => void;
 }
 
@@ -59,6 +61,8 @@ export default function CalendarDayCell({
   hasNotes,
   isVacationDay,
   maxExpenseAmount,
+  isCycleStart = false,
+  isCycleEnd = false,
   onSelect,
 }: CalendarDayCellProps) {
   const isToday = dateStr === today;
@@ -127,6 +131,8 @@ export default function CalendarDayCell({
         shiftType === 'off' ? 'cal-cell--off' : '',
         dayTasks.length > 0 || hasExpenses ? 'cal-cell--has-tasks' : '',
         snapSummary ? 'cal-cell--has-snapshot' : '',
+        isCycleStart ? 'okr-cycle-start' : '',
+        isCycleEnd ? 'okr-cycle-end' : '',
       ]
         .filter(Boolean)
         .join(' ')}

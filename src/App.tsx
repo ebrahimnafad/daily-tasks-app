@@ -74,6 +74,22 @@ function AppContent({ logout }: { logout: () => void }) {
     addSyncToast
   );
 
+  const okrMgr = useOkrManager();
+  const availableKeyResults = okrMgr.getActiveKRsForLinking();
+
+  const { activeCycle, cycles, objectives, computeCycleProgress, isSyncing } = okrMgr;
+  const okrSummary = activeCycle
+    ? {
+        cycleTitle: activeCycle.title,
+        cycleProgress: computeCycleProgress(activeCycle.id),
+        objectives: okrMgr.objectivesForCycle(activeCycle.id).map((o) => ({
+          title: o.title,
+          progress: okrMgr.computeObjectiveProgress(o.id),
+        })),
+      }
+    : null;
+  const activeCycleProgress = activeCycle ? computeCycleProgress(activeCycle.id) : null;
+
   const { snapshotImpl } = useDailySnapshot({
     dayStartHour,
     checked,
@@ -84,10 +100,8 @@ function AppContent({ logout }: { logout: () => void }) {
     tasks,
     tm,
     saveSnapshot,
+    okrSummary,
   });
-
-  const okrMgr = useOkrManager();
-  const availableKeyResults = okrMgr.getActiveKRsForLinking();
 
   // ── Dynamic Theme ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -128,7 +142,7 @@ function AppContent({ logout }: { logout: () => void }) {
         toasts={toasts}
         onLogout={logout}
       >
-        <SyncManager snapshotImpl={snapshotImpl} />
+        <SyncManager snapshotImpl={snapshotImpl} okrSummary={okrSummary} />
         <Suspense
           fallback={
             <div
@@ -173,6 +187,10 @@ function AppContent({ logout }: { logout: () => void }) {
                   setCurrentDate={setCalCurrentDate}
                   selectedDate={calSelectedDate}
                   setSelectedDate={setCalSelectedDate}
+                  okrCycles={isSyncing ? [] : cycles}
+                  okrObjectives={isSyncing ? [] : objectives}
+                  activeCycleProgress={activeCycleProgress}
+                  setActiveTab={setActiveTab}
                 />
               )}
             </ErrorBoundary>

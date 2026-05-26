@@ -25,6 +25,7 @@ export interface DailySnapshotDeps {
   tasks: Task[];
   tm: TaskManagerReturn;
   saveSnapshot: (data: DailySnapshot) => Promise<void>;
+  okrSummary?: DailySnapshot['okrSummary'];
 }
 
 /**
@@ -57,7 +58,8 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
   snapshotImpl: (
     date?: string,
     fallbackChecked?: CheckedMap,
-    fallbackSubChecked?: SubCheckedMap
+    fallbackSubChecked?: SubCheckedMap,
+    okrSummaryOverride?: DailySnapshot['okrSummary']
   ) => void;
 } {
   // ── Always-fresh ref — updated every render before paint ────────────────────
@@ -73,7 +75,12 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
   });
 
   const snapshotImpl = useCallback(
-    (date?: string, fallbackChecked?: CheckedMap, fallbackSubChecked?: SubCheckedMap): void => {
+    (
+      date?: string,
+      fallbackChecked?: CheckedMap,
+      fallbackSubChecked?: SubCheckedMap,
+      okrSummaryOverride?: DailySnapshot['okrSummary']
+    ): void => {
       const {
         dayStartHour,
         checked,
@@ -84,6 +91,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
         tasks,
         tm,
         saveSnapshot,
+        okrSummary,
       } = depsRef.current;
 
       const targetDate = date || getLogicalDateISO(dayStartHour);
@@ -199,6 +207,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
         prayersDone: snapshotPrayersDone,
         prayerTotal: snapshotPrayerTotal,
         prayerOptionalDone: snapshotPrayerOptionalDone,
+        okrSummary: okrSummaryOverride !== undefined ? okrSummaryOverride : okrSummary,
       });
     },
     [] // ⚠️  STABILITY CONTRACT: empty dep array keeps snapshotImpl permanently stable.

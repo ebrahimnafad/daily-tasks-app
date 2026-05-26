@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { Task } from '@/types';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
 import { TaskCard } from '@/features/tasks/components/TaskCard/index.js';
@@ -8,6 +9,21 @@ import { HOLIDAY_COLOR, HOLIDAY_GROUPS, addDays } from './holidays';
 import CalendarHeader from './components/CalendarHeader';
 import CalendarGrid from './components/CalendarGrid';
 import { useCalendarState } from './hooks/useCalendarState';
+import { LS_KEYS } from '@/lib/storage/keys';
+
+interface OkrCycleShape {
+  id: string;
+  title: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+}
+interface OkrObjectiveShape {
+  id: string;
+  cycleId: string;
+  title: string;
+  icon?: string | null;
+}
 
 interface CalendarPageProps {
   tasks: Task[];
@@ -15,11 +31,55 @@ interface CalendarPageProps {
   setCurrentDate: (d: Date) => void;
   selectedDate: string;
   setSelectedDate: (d: string) => void;
+  // OKR integration — passed from App.tsx, no direct okr feature import
+  okrCycles?: OkrCycleShape[];
+  okrObjectives?: OkrObjectiveShape[];
+  activeCycleProgress?: number | null;
+  setActiveTab?: (tab: string) => void;
 }
 
 export default function CalendarPage(props: CalendarPageProps) {
   const { tm } = useTaskContext();
-  const { setCurrentDate, selectedDate, setSelectedDate } = props;
+  const {
+    setCurrentDate,
+    selectedDate,
+    setSelectedDate,
+    okrCycles = [],
+    okrObjectives = [],
+    activeCycleProgress,
+    setActiveTab,
+  } = props;
+
+  // ── Weekly review banner (Fridays only) ─────────────────────────────────
+  const [isBannerDismissed, setIsBannerDismissed] = useState(false);
+
+  const now = new Date();
+  const isFriday = now.getDay() === 5;
+  const todayStr = now.toISOString().slice(0, 10);
+  const lastShown = localStorage.getItem(LS_KEYS.OKR_WEEKLY_REVIEW_SHOWN);
+  const hasActiveCycle = activeCycleProgress != null;
+  const showReviewBanner =
+    isFriday && hasActiveCycle && lastShown !== todayStr && !isBannerDismissed;
+
+  const dismissBanner = () => {
+    localStorage.setItem(LS_KEYS.OKR_WEEKLY_REVIEW_SHOWN, todayStr);
+    setIsBannerDismissed(true);
+  };
+
+  // ── OKR cycle boundary helpers ────────────────────────────────────────────
+  const activeCycles = okrCycles.filter((c) => c.status === 'active');
+
+  const isCycleStart = (dateStr: string) => activeCycles.some((c) => c.startDate === dateStr);
+
+  const isCycleEnd = (dateStr: string) => activeCycles.some((c) => c.endDate === dateStr);
+
+  // ── OKR objectives for the selected date ──────────────────────────────────
+  const cycleForDate = activeCycles.find(
+    (c) => selectedDate >= c.startDate && selectedDate <= c.endDate
+  );
+  const objectivesForSelectedDate = cycleForDate
+    ? okrObjectives.filter((o) => o.cycleId === cycleForDate.id)
+    : [];
 
   const state = useCalendarState(props);
 
@@ -150,7 +210,29 @@ export default function CalendarPage(props: CalendarPageProps) {
             maxExpenseAmount={maxExpenseAmount}
             getDayShiftType={getDayShiftType}
             onSelectDate={handleSelectDate}
+            isCycleStart={isCycleStart}
+            isCycleEnd={isCycleEnd}
           />
+
+          {/* ── OKR Weekly review banner (Fridays) ── */}
+          {showReviewBanner && (
+            <div className="okr-review-banner" role="alert">
+              <span>📊 كيف تقدمك في أهدافك هذا الأسبوع؟</span>
+              {setActiveTab && (
+                <button
+                  onClick={() => {
+                    setActiveTab('okr');
+                    dismissBanner();
+                  }}
+                >
+                  عرض الأهداف
+                </button>
+              )}
+              <button onClick={dismissBanner} aria-label="إغلاق التنبيه">
+                ✕
+              </button>
+            </div>
+          )}
 
           {/* ── Shift legend ── */}
           <div className="cal-shift-legend">
@@ -588,6 +670,39 @@ export default function CalendarPage(props: CalendarPageProps) {
               onDelete={deleteNote}
               onTogglePin={togglePin}
             />
+
+            {/* OKR objectives for this cycle period */}
+            {objectivesForSelectedDate.length > 0 && (
+              <div className="cal-okr-objectives" style={{ opacity: 0.8 }}>
+                <div className="cal-okr-objectives__header">
+                  <span>🎯</span>
+                  <span className="cal-okr-objectives__title">الأهداف في هذه الفترة</span>
+                  <span className="cal-okr-objectives__note">التقدم الحالي</span>
+                </div>
+                {objectivesForSelectedDate.map((o) => {
+                  // We don't have computeObjectiveProgress here — we read from
+                  // activeCycleProgress as a rough proxy; detailed per-objective
+                  // progress is v2. Show icon + title + cycle-level bar for now.
+                  return (
+                    <div key={o.id} className="cal-okr-obj-row">
+                      <span className="cal-okr-obj-row__icon">{o.icon ?? '🎯'}</span>
+                      <span className="cal-okr-obj-row__title">{o.title}</span>
+                    </div>
+                  );
+                })}
+                {activeCycleProgress != null && (
+                  <div className="cal-okr-cycle-progress">
+                    <div className="cal-okr-cycle-progress__track">
+                      <div
+                        className="cal-okr-cycle-progress__fill"
+                        style={{ width: `${activeCycleProgress}%` }}
+                      />
+                    </div>
+                    <span className="cal-okr-cycle-progress__pct">{activeCycleProgress}%</span>
+                  </div>
+                )}
+              </div>
+            )}
 
             <HistoryPanel
               selectedDate={selectedDate}
