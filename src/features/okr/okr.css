@@ -281,6 +281,15 @@
   opacity: 0.6;
 }
 
+/* إصلاح لون العناوين داخل مودال الدورة */
+.fin-modal .fin-form-group label {
+  display: block;
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-base);
+  font-family: 'Amiri', serif;
+  color: rgba(var(--gold-rgb), 0.8);
+}
+
 /* ══════════════════════════════════════════════════════════════════════════════
    REACTIVATE BUTTON — زر إلغاء الأرشفة
 ══════════════════════════════════════════════════════════════════════════════ */
