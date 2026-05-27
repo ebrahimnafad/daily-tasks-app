@@ -614,6 +614,205 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════════════
+   TASK PICKER — منتقي المهام
+══════════════════════════════════════════════════════════════════════════════ */
+
+.okr-task-picker {
+  position: relative;
+}
+
+.okr-task-picker__trigger {
+  display: block;
+  width: 100%;
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--gold-rgb), 0.18);
+  background: rgba(var(--gold-rgb), 0.05);
+  color: rgba(var(--gold-rgb), 0.5);
+  font-size: var(--font-base);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  text-align: right;
+  transition: border-color 0.2s;
+}
+
+.okr-task-picker__trigger:hover {
+  border-color: rgba(var(--gold-rgb), 0.35);
+}
+
+.okr-task-picker__selected {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(var(--gold-rgb), 0.25);
+  background: rgba(var(--gold-rgb), 0.08);
+}
+
+.okr-task-picker__selected-icon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.okr-task-picker__selected-title {
+  flex: 1;
+  font-size: var(--font-base);
+  color: var(--text-gold);
+  font-family: 'Amiri', serif;
+}
+
+.okr-task-picker__clear {
+  background: none;
+  border: none;
+  color: rgba(var(--gold-rgb), 0.5);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.okr-task-picker__clear:hover {
+  background: rgba(var(--gold-rgb), 0.12);
+  color: var(--gold);
+}
+
+.okr-task-picker__dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--bg-card, #1e1726);
+  border: 1px solid rgba(var(--gold-rgb), 0.18);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  animation: slideDown 0.18s ease;
+}
+
+.okr-task-picker__search {
+  display: block;
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  border: none;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.1);
+  background: transparent;
+  color: var(--text-gold);
+  font-size: var(--font-sm);
+  font-family: 'Amiri', serif;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.okr-task-picker__search::placeholder {
+  color: rgba(var(--gold-rgb), 0.35);
+}
+
+.okr-task-picker__filter-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.1);
+}
+
+.okr-task-picker__filter-tab {
+  flex: 1;
+  padding: var(--space-xs) var(--space-sm);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(var(--gold-rgb), 0.5);
+  font-size: var(--font-sm);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
+}
+
+.okr-task-picker__filter-tab:hover {
+  color: rgba(var(--gold-rgb), 0.8);
+}
+
+.okr-task-picker__filter-tab--active {
+  color: var(--gold);
+  border-bottom-color: var(--gold);
+}
+
+.okr-task-picker__list {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.okr-task-picker__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(var(--gold-rgb), 0.06);
+  color: rgba(var(--gold-rgb), 0.85);
+  font-size: var(--font-sm);
+  font-family: 'Amiri', serif;
+  cursor: pointer;
+  text-align: right;
+  transition: background 0.12s;
+}
+
+.okr-task-picker__item:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+}
+
+.okr-task-picker__item:last-child {
+  border-bottom: none;
+}
+
+.okr-task-picker__item--linked {
+  opacity: 0.45;
+}
+
+.okr-task-picker__item-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.okr-task-picker__item-title {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.okr-task-picker__item-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(var(--gold-rgb), 0.1);
+  color: rgba(var(--gold-rgb), 0.6);
+  white-space: nowrap;
+}
+
+.okr-task-picker__item-linked-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: rgba(220, 160, 60, 0.15);
+  color: rgba(220, 160, 60, 0.8);
+  white-space: nowrap;
+}
+
+.okr-task-picker__empty {
+  padding: var(--space-md);
+  text-align: center;
+  font-size: var(--font-sm);
+  color: rgba(var(--gold-rgb), 0.35);
+  font-family: 'Amiri', serif;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════════
    OVERFLOW MENU — قائمة الخيارات
 ══════════════════════════════════════════════════════════════════════════════ */
 

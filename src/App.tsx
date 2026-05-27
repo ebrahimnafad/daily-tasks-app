@@ -203,7 +203,7 @@ function AppContent({ logout }: { logout: () => void }) {
           </ErrorBoundary>
 
           <ErrorBoundary level="feature" fallback={<OkrErrorFallback />}>
-            {activeTab === 'okr' && <OkrPage />}
+            {activeTab === 'okr' && <OkrPage availableTasks={tasks} />}
           </ErrorBoundary>
         </Suspense>
       </AppShell>

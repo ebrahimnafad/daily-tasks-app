@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import type { OkrKeyResult } from '../hooks/useOkrManager';
+import type { Task } from '@/types';
+import TaskPickerField from './TaskPickerField';
 
 type KRType = 'numeric' | 'binary';
 type KRUnit = 'count' | 'percent' | 'currency' | 'custom';
@@ -14,6 +16,9 @@ const UNIT_LABELS: Record<KRUnit, string> = {
 interface KeyResultModalProps {
   keyResult?: OkrKeyResult;
   objectiveId: string;
+  availableTasks?: Task[];
+  /** Task IDs already linked to other KRs (for visual muting) */
+  linkedTaskIds?: Set<string>;
   onClose: () => void;
   onSubmit: (data: {
     title: string;
@@ -25,7 +30,13 @@ interface KeyResultModalProps {
   }) => void;
 }
 
-export default function KeyResultModal({ keyResult, onClose, onSubmit }: KeyResultModalProps) {
+export default function KeyResultModal({
+  keyResult,
+  onClose,
+  onSubmit,
+  availableTasks = [],
+  linkedTaskIds,
+}: KeyResultModalProps) {
   const isEdit = Boolean(keyResult);
   const [title, setTitle] = useState(keyResult?.title ?? '');
   const [type, setType] = useState<KRType>((keyResult?.type as KRType) ?? 'numeric');
@@ -168,18 +179,13 @@ export default function KeyResultModal({ keyResult, onClose, onSubmit }: KeyResu
           </>
         )}
 
-        {/* Linked task ID (v1: manual entry) */}
+        {/* Linked task picker */}
         <div className="form-group">
-          <label className="form-label" htmlFor="kr-linked-task">
-            معرّف المهمة المرتبطة (اختياري)
-          </label>
-          <input
-            id="kr-linked-task"
-            type="text"
-            className="fin-input"
-            placeholder="UUID المهمة — منتقي المهام يأتي في الإصدار القادم"
-            value={linkedTaskId ?? ''}
-            onChange={(e) => setLinkedTaskId(e.target.value)}
+          <TaskPickerField
+            tasks={availableTasks}
+            value={linkedTaskId || null}
+            onChange={(id) => setLinkedTaskId(id ?? '')}
+            linkedTaskIds={linkedTaskIds}
           />
         </div>
 

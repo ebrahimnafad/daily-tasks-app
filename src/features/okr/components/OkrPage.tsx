@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import '../okr.css';
 import useOkrManager from '../hooks/useOkrManager';
 import type { OkrObjective, OkrKeyResult, OkrCycle } from '../hooks/useOkrManager';
+import type { Task } from '@/types';
 import CycleSelector from './CycleSelector';
 import OkrProgress from './OkrProgress';
 import ObjectiveCard from './ObjectiveCard';
@@ -28,7 +29,11 @@ const INITIAL_MODAL: ModalState = {
   showObjectiveModal: false,
 };
 
-export default function OkrPage() {
+interface OkrPageProps {
+  availableTasks?: Task[];
+}
+
+export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
   const mgr = useOkrManager();
   const [modal, setModal] = useState<ModalState>(INITIAL_MODAL);
   const { addSyncToast } = useToasts();
@@ -68,6 +73,15 @@ export default function OkrPage() {
     if (!checkInsMap[ci.keyResultId]) checkInsMap[ci.keyResultId] = [];
     checkInsMap[ci.keyResultId].push(ci);
   });
+
+  // Collect task IDs already linked to any KR (for visual muting in picker)
+  const linkedTaskIds = useMemo(() => {
+    const ids = new Set<string>();
+    mgr.keyResults.forEach((kr) => {
+      if (kr.linkedTaskId) ids.add(kr.linkedTaskId);
+    });
+    return ids;
+  }, [mgr.keyResults]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
 
@@ -307,6 +321,8 @@ export default function OkrPage() {
         <KeyResultModal
           keyResult={modal.editKR ?? undefined}
           objectiveId={modal.addKRObjectiveId ?? modal.editKR?.objectiveId ?? ''}
+          availableTasks={availableTasks}
+          linkedTaskIds={linkedTaskIds}
           onClose={closeModal}
           onSubmit={(data) => {
             if (modal.editKR) {
