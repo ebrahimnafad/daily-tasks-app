@@ -51,6 +51,8 @@ export const LS_KEYS = {
   OKR_WEEKLY_REVIEW_SHOWN: 'mhm_okr_weekly_review_shown',
   /** YYYY-MM-DD of the last time the weekly report modal was viewed */
   WEEKLY_REPORT_LAST_SEEN: 'mhm_weekly_report_last_seen',
+  /** Streak threshold percentage (50-90), default 60 */
+  STREAK_THRESHOLD: 'mhm_streak_threshold',
 } as const;
 
 export const QUERY_KEYS = {

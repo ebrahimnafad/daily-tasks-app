@@ -1,0 +1,118 @@
+/* ══════════════════════════════════════════════════════════════════════════════
+   STREAK — سلسلة الأيام المتتالية
+══════════════════════════════════════════════════════════════════════════════ */
+
+.streak-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  transition: background 0.2s;
+  font-family: 'Amiri', serif;
+  font-size: var(--font-sm);
+  border: none;
+  background: none;
+}
+
+.streak-badge:hover {
+  background: rgba(var(--gold-rgb), 0.1);
+}
+
+.streak-badge--gold {
+  color: var(--gold);
+}
+
+.streak-badge--orange {
+  color: #f0922b;
+}
+
+.streak-badge--muted {
+  color: rgba(var(--gold-rgb), 0.4);
+}
+
+.streak-badge--at-risk {
+  animation: streakPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes streakPulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+/* ── Dots row ── */
+
+.streak-dots-row {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin: var(--space-md) 0;
+}
+
+.streak-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.streak-dot--active {
+  background: var(--gold);
+}
+
+.streak-dot--inactive {
+  background: rgba(var(--gold-rgb), 0.12);
+  border: 1px solid rgba(var(--gold-rgb), 0.2);
+}
+
+.streak-dot--rest {
+  background: rgba(150, 150, 150, 0.2);
+  border: 1px solid rgba(150, 150, 150, 0.3);
+}
+
+/* ── Detail sheet ── */
+
+.streak-sheet {
+  max-width: 380px;
+  width: 90%;
+}
+
+.streak-sheet__number {
+  font-size: 64px;
+  font-weight: 700;
+  color: var(--gold);
+  text-align: center;
+  line-height: 1;
+  margin-top: var(--space-md);
+  font-family: 'Amiri', serif;
+}
+
+.streak-sheet__label {
+  font-size: var(--font-base);
+  color: rgba(var(--gold-rgb), 0.6);
+  text-align: center;
+  margin-top: var(--space-xs);
+  font-family: 'Amiri', serif;
+}
+
+.streak-sheet__stats {
+  margin-top: var(--space-lg);
+}
+
+.streak-sheet__threshold {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid rgba(var(--gold-rgb), 0.1);
+}
+
+.streak-threshold-slider {
+  width: 100%;
+  accent-color: var(--gold);
+  margin: var(--space-sm) 0;
+}

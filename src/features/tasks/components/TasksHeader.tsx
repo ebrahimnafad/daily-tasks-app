@@ -4,6 +4,8 @@ import type { ShiftType, ShiftConfig } from '@/features/tasks/data/scheduleConfi
 import type { NotifPerm } from '@/types';
 import ScheduleSettingsModal from './ScheduleSettingsModal';
 import { useTaskContext } from '@/features/tasks/context/TaskContext';
+import StreakBadge from '@/lib/streak/StreakBadge';
+import StreakDetailSheet from '@/lib/streak/StreakDetailSheet';
 
 interface TasksHeaderProps {
   today: string;
@@ -32,8 +34,9 @@ export default function TasksHeader({
   tasks,
   setTasks,
 }: TasksHeaderProps) {
-  const { dayStartHour, setDayStartHour } = useTaskContext();
+  const { dayStartHour, setDayStartHour, streak, setStreakThreshold } = useTaskContext();
   const [showScheduleModal, setShowScheduleModal] = useState(false);
+  const [showStreakSheet, setShowStreakSheet] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -57,7 +60,12 @@ export default function TasksHeader({
           <div className="th-shift-icon" style={{ fontSize: '18px' }}>
             {shift === 'morning' ? '☀️' : '🌙'}
           </div>
-          <div className="th-date">{today}</div>
+          <div className="th-date">
+            {today}
+            {streak && (
+              <StreakBadge streak={streak} size="sm" onClick={() => setShowStreakSheet(true)} />
+            )}
+          </div>
           <div className="th-menu-container" ref={menuRef}>
             <button
               className="icon-btn th-gear-btn"
@@ -150,6 +158,14 @@ export default function TasksHeader({
         tasks={tasks}
         setTasks={setTasks}
       />
+
+      {showStreakSheet && streak && setStreakThreshold && (
+        <StreakDetailSheet
+          streak={streak}
+          onClose={() => setShowStreakSheet(false)}
+          onThresholdChange={setStreakThreshold}
+        />
+      )}
     </>
   );
 }

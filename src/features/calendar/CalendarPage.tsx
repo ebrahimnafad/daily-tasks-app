@@ -40,7 +40,7 @@ interface CalendarPageProps {
 }
 
 export default function CalendarPage(props: CalendarPageProps) {
-  const { tm } = useTaskContext();
+  const { tm, streak } = useTaskContext();
   const {
     setCurrentDate,
     selectedDate,
@@ -737,14 +737,20 @@ export default function CalendarPage(props: CalendarPageProps) {
 
       {/* Weekly Report modal */}
       {showWeeklyReport && (
-        <CalendarWeeklyReportWrapper onClose={() => setShowWeeklyReport(false)} />
+        <CalendarWeeklyReportWrapper streak={streak} onClose={() => setShowWeeklyReport(false)} />
       )}
     </>
   );
 }
 
 /** Wrapper so useWeeklyReport hook is called inside a component scope */
-function CalendarWeeklyReportWrapper({ onClose }: { onClose: () => void }) {
+function CalendarWeeklyReportWrapper({
+  onClose,
+  streak,
+}: {
+  onClose: () => void;
+  streak?: import('@/lib/streak/useStreak').StreakResult;
+}) {
   const reportData = useWeeklyReport();
-  return <WeeklyReportModal data={reportData} onClose={onClose} />;
+  return <WeeklyReportModal data={reportData} streak={streak} onClose={onClose} />;
 }

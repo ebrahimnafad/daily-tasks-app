@@ -32,9 +32,10 @@ const INITIAL_MODAL: ModalState = {
 
 interface OkrPageProps {
   availableTasks?: Task[];
+  streak?: import('@/lib/streak/useStreak').StreakResult;
 }
 
-export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
+export default function OkrPage({ availableTasks = [], streak }: OkrPageProps) {
   const mgr = useOkrManager();
   const [modal, setModal] = useState<ModalState>(INITIAL_MODAL);
   const { addSyncToast } = useToasts();
@@ -383,6 +384,7 @@ export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
         <WeeklyReportModalWrapper
           mgr={mgr}
           cycleProgress={cycleProgress}
+          streak={streak}
           onClose={() => setShowWeeklyReport(false)}
         />
       )}
@@ -394,10 +396,12 @@ export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
 function WeeklyReportModalWrapper({
   mgr,
   cycleProgress,
+  streak,
   onClose,
 }: {
   mgr: ReturnType<typeof useOkrManager>;
   cycleProgress: number;
+  streak?: import('@/lib/streak/useStreak').StreakResult;
   onClose: () => void;
 }) {
   const reportData = useWeeklyReport({
@@ -405,5 +409,5 @@ function WeeklyReportModalWrapper({
     checkIns: mgr.checkIns,
     keyResults: mgr.keyResults,
   });
-  return <WeeklyReportModal data={reportData} onClose={onClose} />;
+  return <WeeklyReportModal data={reportData} streak={streak} onClose={onClose} />;
 }

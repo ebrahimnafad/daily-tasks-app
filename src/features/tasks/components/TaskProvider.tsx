@@ -10,6 +10,7 @@ import type {
   TaskManagerReturn,
 } from '@/types';
 import type { ShiftConfig } from '@/features/tasks/data/scheduleConfig';
+import type { StreakResult } from '@/lib/streak/useStreak';
 
 export interface TaskProviderProps {
   // From useTaskManager — owns derived task state and actions
@@ -42,6 +43,10 @@ export interface TaskProviderProps {
   // OKR integration
   availableKeyResults?: Array<{ id: string; title: string; objectiveTitle: string }>;
 
+  // Streak
+  streak?: StreakResult;
+  setStreakThreshold?: (val: number) => void;
+
   children: ReactNode;
 }
 
@@ -70,6 +75,8 @@ export function TaskProvider({
   setDayStartHour,
   saveSnapshot,
   availableKeyResults,
+  streak,
+  setStreakThreshold,
   children,
 }: TaskProviderProps) {
   const value = useMemo(
@@ -91,6 +98,8 @@ export function TaskProvider({
       setDayStartHour,
       saveSnapshot,
       availableKeyResults,
+      streak,
+      setStreakThreshold,
     }),
     [
       tm,
@@ -107,6 +116,8 @@ export function TaskProvider({
       setDayStartHour,
       saveSnapshot,
       availableKeyResults,
+      streak,
+      setStreakThreshold,
     ]
   );
 

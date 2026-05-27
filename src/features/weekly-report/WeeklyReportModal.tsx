@@ -3,8 +3,11 @@ import type { WeeklyReportData } from './useWeeklyReport';
 import OkrProgress from '@/features/okr/components/OkrProgress';
 import './weekly-report.css';
 
+import type { StreakResult } from '@/lib/streak/useStreak';
+
 interface WeeklyReportModalProps {
   data: WeeklyReportData;
+  streak?: StreakResult;
   onClose: () => void;
 }
 
@@ -22,7 +25,7 @@ function getScoreInfo(score: number) {
   return { color: '#e8a838', label: 'يمكن تحسينه 💪' };
 }
 
-export default function WeeklyReportModal({ data, onClose }: WeeklyReportModalProps) {
+export default function WeeklyReportModal({ data, streak, onClose }: WeeklyReportModalProps) {
   const [tab, setTab] = useState<Tab>('tasks');
   const [copied, setCopied] = useState(false);
 
@@ -55,11 +58,14 @@ export default function WeeklyReportModal({ data, onClose }: WeeklyReportModalPr
     const text = [
       `📊 تقرير أسبوعي | ${data.weekStart} → ${data.weekEnd}`,
       '━━━━━━━━━━━━━━━━',
+      streak ? `🔥 السلسلة الحالية: ${streak.current} يوم` : '',
       `✅ المهام: ${tasks.avgCompletion}٪ إنجاز (${tasks.fullDays}/${tasks.totalDays} أيام كاملة)`,
       `🎯 الأهداف: تقدم +${okr.weeklyDelta}٪ هذا الأسبوع (${okr.checkInsThisWeek} تسجيل)`,
       `💰 المالية: ${finance.weekTotal.toLocaleString('ar-SA')} ${finance.currencySymbol} (${finance.diff <= 0 ? '↓ أقل' : '↑ أكثر'} من الأسبوع الماضي)`,
       `⭐ الأداء العام: ${data.score}/100`,
-    ].join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
 
     try {
       await navigator.clipboard.writeText(text);
@@ -127,6 +133,12 @@ export default function WeeklyReportModal({ data, onClose }: WeeklyReportModalPr
                 {data.tasks.fullDays} / {data.tasks.totalDays}
               </span>
             </div>
+            {streak && (
+              <div className="wr-stat-row">
+                <span className="wr-stat-label">السلسلة الحالية</span>
+                <span className="wr-stat-value">🔥 {streak.current} يوم</span>
+              </div>
+            )}
             <div className="wr-stat-row">
               <span className="wr-stat-label">متوسط الإنجاز</span>
               <span className="wr-stat-value">{data.tasks.avgCompletion}٪</span>

@@ -8,6 +8,7 @@ import { useTaskManager, INITIAL_TASKS, TaskProvider, TaskDialogs } from '@/feat
 import { useDailySnapshot } from '@/features/tasks/hooks/useDailySnapshot';
 import { SyncManager } from '@/features/tasks/components/SyncManager';
 import { getLogicalDateISO } from '@/features/tasks/data/scheduleConfig';
+import { useStreak } from '@/lib/streak/useStreak';
 import {
   TasksErrorFallback,
   FinanceErrorFallback,
@@ -103,6 +104,8 @@ function AppContent({ logout }: { logout: () => void }) {
     okrSummary,
   });
 
+  const { streak, setThreshold: setStreakThreshold } = useStreak(dayStartHour, schedule);
+
   // ── Dynamic Theme ─────────────────────────────────────────────────────────
   useEffect(() => {
     const update = () => {
@@ -172,6 +175,8 @@ function AppContent({ logout }: { logout: () => void }) {
             setDayStartHour={setDayStartHour}
             saveSnapshot={saveSnapshot}
             availableKeyResults={availableKeyResults}
+            streak={streak}
+            setStreakThreshold={setStreakThreshold}
           >
             <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
               {activeTab === 'tasks' && (
@@ -203,7 +208,7 @@ function AppContent({ logout }: { logout: () => void }) {
           </ErrorBoundary>
 
           <ErrorBoundary level="feature" fallback={<OkrErrorFallback />}>
-            {activeTab === 'okr' && <OkrPage availableTasks={tasks} />}
+            {activeTab === 'okr' && <OkrPage availableTasks={tasks} streak={streak} />}
           </ErrorBoundary>
         </Suspense>
       </AppShell>
