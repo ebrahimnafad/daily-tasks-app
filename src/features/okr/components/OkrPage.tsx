@@ -12,6 +12,7 @@ import KeyResultModal from './KeyResultModal';
 import CycleModal from './CycleModal';
 import { useTaskOkrBridge } from '../hooks/useTaskOkrBridge';
 import useToasts from '@/shared/hooks/useToasts';
+import { WeeklyReportModal, useWeeklyReport } from '@/features/weekly-report';
 
 interface ModalState {
   checkInKR: OkrKeyResult | null;
@@ -39,6 +40,8 @@ export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
   const { addSyncToast } = useToasts();
 
   useTaskOkrBridge(mgr.recordCheckIn, (msg) => addSyncToast(msg, 'warn'));
+
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false);
 
   const [cycleModal, setCycleModal] = useState<{
     open: boolean;
@@ -89,7 +92,12 @@ export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
     <div className="okr-page">
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="okr-header">
-        <h1 className="fin-section__title">أهدافي</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+          <h1 className="fin-section__title">أهدافي</h1>
+          <button className="wr-trigger-btn" onClick={() => setShowWeeklyReport(true)}>
+            📊 التقرير الأسبوعي
+          </button>
+        </div>
         <CycleSelector
           cycles={mgr.cycles}
           activeCycle={activeCycle}
@@ -369,6 +377,33 @@ export default function OkrPage({ availableTasks = [] }: OkrPageProps) {
           }}
         />
       )}
+
+      {/* Weekly Report modal */}
+      {showWeeklyReport && (
+        <WeeklyReportModalWrapper
+          mgr={mgr}
+          cycleProgress={cycleProgress}
+          onClose={() => setShowWeeklyReport(false)}
+        />
+      )}
     </div>
   );
+}
+
+/** Thin wrapper to call useWeeklyReport inside render scope */
+function WeeklyReportModalWrapper({
+  mgr,
+  cycleProgress,
+  onClose,
+}: {
+  mgr: ReturnType<typeof useOkrManager>;
+  cycleProgress: number;
+  onClose: () => void;
+}) {
+  const reportData = useWeeklyReport({
+    cycleProgress,
+    checkIns: mgr.checkIns,
+    keyResults: mgr.keyResults,
+  });
+  return <WeeklyReportModal data={reportData} onClose={onClose} />;
 }

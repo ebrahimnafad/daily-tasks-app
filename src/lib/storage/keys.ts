@@ -49,6 +49,8 @@ export const LS_KEYS = {
   OKR_TIMESTAMP: 'mhm_okr_timestamp',
   /** YYYY-MM-DD of the Friday when the weekly OKR review prompt was last shown/dismissed */
   OKR_WEEKLY_REVIEW_SHOWN: 'mhm_okr_weekly_review_shown',
+  /** YYYY-MM-DD of the last time the weekly report modal was viewed */
+  WEEKLY_REPORT_LAST_SEEN: 'mhm_weekly_report_last_seen',
 } as const;
 
 export const QUERY_KEYS = {
