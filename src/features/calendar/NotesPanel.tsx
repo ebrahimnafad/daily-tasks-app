@@ -314,6 +314,23 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin, allTags = [] }: NoteC
     const table = '\n| العمود 1 | العمود 2 |\n|----------|----------|\n| قيمة 1   | قيمة 2   |\n';
     setDraft((prev) => prev + table);
   };
+  const applyLink = () => {
+    if (!taRef.current) return;
+    const { selectionStart: s, selectionEnd: e, value } = taRef.current;
+    const selectedText = value.slice(s, e);
+
+    let title = selectedText;
+    if (!title) {
+      title = window.prompt('أدخل عنوان الرابط:') || '';
+      if (!title) return;
+    }
+
+    const url = window.prompt('أدخل الرابط (URL):');
+    if (!url) return;
+
+    const linkStr = `[${title}](${url})`;
+    setDraft(value.slice(0, s) + linkStr + value.slice(e));
+  };
 
   const formattedDate = new Date(note.updatedAt).toLocaleTimeString('ar-SA', {
     hour: '2-digit',
@@ -378,6 +395,9 @@ function NoteCard({ note, onUpdate, onDelete, onTogglePin, allTags = [] }: NoteC
             </button>
             <button onClick={applyTable} title="جدول">
               ⊞
+            </button>
+            <button onClick={applyLink} title="رابط">
+              🔗
             </button>
           </div>
 
@@ -495,6 +515,23 @@ function AddNoteForm({ date, onAdd, onClose, allTags = [] }: AddNoteFormProps) {
     const table = '\n| العمود 1 | العمود 2 |\n|----------|----------|\n| قيمة 1   | قيمة 2   |\n';
     setText((prev) => prev + table);
   };
+  const applyLink = () => {
+    if (!taRef.current) return;
+    const { selectionStart: s, selectionEnd: e, value } = taRef.current;
+    const selectedText = value.slice(s, e);
+
+    let title = selectedText;
+    if (!title) {
+      title = window.prompt('أدخل عنوان الرابط:') || '';
+      if (!title) return;
+    }
+
+    const url = window.prompt('أدخل الرابط (URL):');
+    if (!url) return;
+
+    const linkStr = `[${title}](${url})`;
+    setText(value.slice(0, s) + linkStr + value.slice(e));
+  };
 
   return (
     <div className="cal-note-card" style={{ borderColor: 'rgba(var(--gold-rgb), 0.4)' }}>
@@ -513,6 +550,9 @@ function AddNoteForm({ date, onAdd, onClose, allTags = [] }: AddNoteFormProps) {
         </button>
         <button onClick={applyTable} title="جدول">
           ⊞
+        </button>
+        <button onClick={applyLink} title="رابط">
+          🔗
         </button>
       </div>
 

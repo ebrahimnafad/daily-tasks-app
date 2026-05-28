@@ -220,6 +220,10 @@ export interface TaskContextValue {
 
   // OKR integration
   availableKeyResults?: Array<{ id: string; title: string; objectiveTitle: string }>;
+
+  // Streak
+  streak?: import('@/lib/streak/useStreak').StreakResult;
+  setStreakThreshold?: (val: number) => void;
 }
 
 // ── useSync return ────────────────────────────────────────────────────────

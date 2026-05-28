@@ -59,6 +59,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
     date?: string,
     fallbackChecked?: CheckedMap,
     fallbackSubChecked?: SubCheckedMap,
+    fallbackSkipped?: CheckedMap,
     okrSummaryOverride?: DailySnapshot['okrSummary']
   ) => void;
 } {
@@ -79,6 +80,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
       date?: string,
       fallbackChecked?: CheckedMap,
       fallbackSubChecked?: SubCheckedMap,
+      fallbackSkipped?: CheckedMap,
       okrSummaryOverride?: DailySnapshot['okrSummary']
     ): void => {
       const {
@@ -99,6 +101,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
 
       const resolvedChecked = fallbackChecked ?? checked;
       const resolvedSubChecked = fallbackSubChecked ?? subChecked;
+      const resolvedSkipped = fallbackSkipped ?? skipped;
 
       // Default: use the derived values already computed by useTaskManager
       // (same data the user sees on screen — no redundant recomputation needed).
@@ -163,7 +166,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
 
         snapshotTasks = allTasksForDate.filter((t) => !t.isPrayerTask);
 
-        const skippedOther = snapshotTasks.filter((t) => skipped[t.id]);
+        const skippedOther = snapshotTasks.filter((t) => resolvedSkipped[t.id]);
         snapshotTotalOther = snapshotTasks.length - skippedOther.length;
 
         snapshotCountDone = snapshotTasks.filter((t) => {
@@ -200,7 +203,7 @@ export function useDailySnapshot(deps: DailySnapshotDeps): {
         date: targetDate,
         tasks: snapshotTasks,
         checked: { ...resolvedChecked, ...resolvedSubChecked },
-        skipped,
+        skipped: resolvedSkipped,
         progress: snapshotProgress,
         countDone: snapshotCountDone,
         totalOther: snapshotTotalOther,

@@ -62,6 +62,16 @@ interface MarkdownNoteProps {
  * URI schemes before the HTML is inserted into the DOM.
  */
 export default function MarkdownNote({ text }: MarkdownNoteProps) {
+  // Ensure all links open in a new tab securely
+  useMemo(() => {
+    DOMPurify.addHook('afterSanitizeAttributes', function (node) {
+      if (node.tagName && node.tagName.toUpperCase() === 'A') {
+        node.setAttribute('target', '_blank');
+        node.setAttribute('rel', 'noopener noreferrer');
+      }
+    });
+  }, []);
+
   const html = useMemo(() => {
     if (!text.trim()) return '';
     const raw = marked.parse(text) as string;

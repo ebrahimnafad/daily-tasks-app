@@ -4,6 +4,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { lsGet, lsSet } from '@/lib/storage/localStorage';
 import { authFetch } from '@/features/auth/authFetch';
+import { localDateISO } from '@/lib/date/localDate';
 import {
   type ShiftConfig,
   type ShiftType,
@@ -247,7 +248,8 @@ export function useScheduleSync({ isOnline, onQuota, notify, setHasError }: UseS
       const N = shiftIndex >= 0 ? shiftIndex : 0;
       const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
       const fridayDate = new Date(thisFriday + 'T00:00:00');
-      const newEpoch = new Date(fridayDate.getTime() - N * oneWeekMs).toISOString().split('T')[0];
+      const shiftDate = new Date(fridayDate.getTime() - N * oneWeekMs);
+      const newEpoch = localDateISO(shiftDate);
 
       setShiftEpoch(newEpoch);
       setShiftState(v);

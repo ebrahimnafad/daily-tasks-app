@@ -11,6 +11,7 @@ import CalendarGrid from './components/CalendarGrid';
 import { useCalendarState } from './hooks/useCalendarState';
 import { LS_KEYS } from '@/lib/storage/keys';
 import { WeeklyReportModal, useWeeklyReport } from '@/features/weekly-report';
+import { localDateISO } from '@/lib/date/localDate';
 
 interface OkrCycleShape {
   id: string;
@@ -57,7 +58,8 @@ export default function CalendarPage(props: CalendarPageProps) {
 
   const now = new Date();
   const isFriday = now.getDay() === 5;
-  const todayStr = now.toISOString().slice(0, 10);
+  // Use localDateISO to prevent UTC timezone bugs
+  const todayStr = localDateISO(now);
   const lastShown = localStorage.getItem(LS_KEYS.OKR_WEEKLY_REVIEW_SHOWN);
   const hasActiveCycle = activeCycleProgress != null;
   const showReviewBanner =

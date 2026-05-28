@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import useOkrSync from './useOkrSync';
+import { localDateISO } from '@/lib/date/localDate';
 
 const uuidv4 = () => crypto.randomUUID();
 
@@ -25,8 +26,8 @@ export function currentQuarterDates(): { startDate: string; endDate: string } {
   const start = new Date(now.getFullYear(), startMonth, 1);
   const end = new Date(now.getFullYear(), startMonth + 3, 0); // last day of quarter
   return {
-    startDate: start.toISOString().slice(0, 10),
-    endDate: end.toISOString().slice(0, 10),
+    startDate: localDateISO(start),
+    endDate: localDateISO(end),
   };
 }
 
@@ -364,7 +365,7 @@ export default function useOkrManager(
 
   const recordCheckIn = useCallback(
     (keyResultId: string, value: number, note?: string, source: 'manual' | 'task' = 'manual') => {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = localDateISO();
       const checkIn: OkrCheckIn = {
         id: uuidv4(),
         keyResultId,

@@ -6,6 +6,7 @@ export interface SyncManagerProps {
     date?: string,
     fallbackChecked?: CheckedMap,
     fallbackSubChecked?: SubCheckedMap,
+    fallbackSkipped?: CheckedMap,
     okrSummary?: DailySnapshot['okrSummary']
   ) => void;
   okrSummary?: DailySnapshot['okrSummary'];
@@ -18,9 +19,10 @@ export function SyncManager({ snapshotImpl, okrSummary }: SyncManagerProps) {
         date: string;
         checked: CheckedMap;
         subChecked: SubCheckedMap;
+        skipped: CheckedMap;
       }>;
-      const { date, checked, subChecked } = customEvent.detail;
-      snapshotImpl(date, checked, subChecked, okrSummary);
+      const { date, checked, subChecked, skipped } = customEvent.detail;
+      snapshotImpl(date, checked, subChecked, skipped, okrSummary);
     };
 
     window.addEventListener('mhm_midnight', handleMidnight);

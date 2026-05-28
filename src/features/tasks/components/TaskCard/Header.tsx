@@ -1,4 +1,5 @@
 import { useTaskCardContext } from './TaskCardContext';
+import { localDateISO } from '@/lib/date/localDate';
 import { PrayerRing, SubRing, AccessibleCheckbox } from '@/shared/components';
 
 const formatDate = (dateStr: string): string => {
@@ -32,7 +33,7 @@ export default function Header() {
 
     if (task.linkedKeyResultId) {
       if (nextState) {
-        const todayStr = new Date().toISOString().slice(0, 10);
+        const todayStr = localDateISO();
         window.dispatchEvent(
           new CustomEvent('mhm_task_checked', {
             detail: { taskId: task.id, keyResultId: task.linkedKeyResultId, date: todayStr },

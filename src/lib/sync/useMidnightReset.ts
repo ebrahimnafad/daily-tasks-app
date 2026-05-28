@@ -54,12 +54,14 @@ export function useMidnightReset({
           // Get state BEFORE clearing it, so we can pass it to the snapshot backup
           const currentChecked = lsGet<Record<string, boolean>>(LS_KEYS.CHECKED, {});
           const currentSubChecked = lsGet<Record<string, boolean>>(LS_KEYS.SUB_CHECKED, {});
+          const currentSkipped = lsGet<Record<string, boolean>>(LS_KEYS.SKIPPED, {});
 
           const event = new CustomEvent('mhm_midnight', {
             detail: {
               date: checkDate,
               checked: currentChecked,
               subChecked: currentSubChecked,
+              skipped: currentSkipped,
             },
           });
           window.dispatchEvent(event);
