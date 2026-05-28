@@ -5,7 +5,7 @@ import type { Income, Transaction } from '@/features/finance/types';
 import type { DailySnapshot } from '@/types';
 import ProductivityChart from './ProductivityChart';
 import { localMonthISO } from '@/lib/date/localDate';
-import './dashboard.css';
+import '../dashboard.css';
 
 interface DashboardPageProps {
   streak: { current: number; longest: number };
