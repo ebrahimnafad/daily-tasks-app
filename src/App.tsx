@@ -20,6 +20,7 @@ import LoginPage from '@/features/auth/LoginPage';
 import useOkrManager from '@/features/okr/hooks/useOkrManager';
 
 // Lazy load feature pages
+const DashboardPage = lazy(() => import('@/features/dashboard/components/DashboardPage'));
 const TasksPage = lazy(() => import('@/features/tasks/components/TasksPage'));
 const CalendarView = lazy(() =>
   import('@/features/calendar/CalendarPage').then((m) => ({ default: m.default }))
@@ -29,7 +30,7 @@ const OkrPage = lazy(() => import('@/features/okr/components/OkrPage'));
 
 // ── AppContent — all hooks live here (no early returns allowed above hooks) ──
 function AppContent({ logout }: { logout: () => void }) {
-  const [activeTab, setActiveTab] = useState('tasks');
+  const [activeTab, setActiveTab] = useState('dashboard');
   // M-5: Lifted here so the selected month/day survive tab switches
   const [calCurrentDate, setCalCurrentDate] = useState(() => new Date());
   const [calSelectedDate, setCalSelectedDate] = useState(() => {
@@ -181,6 +182,17 @@ function AppContent({ logout }: { logout: () => void }) {
             <ErrorBoundary level="feature" fallback={<TasksErrorFallback />}>
               {activeTab === 'tasks' && (
                 <TasksPage today={today} shift={shift} setShift={setShift} />
+              )}
+            </ErrorBoundary>
+
+            <ErrorBoundary
+              level="feature"
+              fallback={
+                <div style={{ padding: '20px', color: 'red' }}>حدث خطأ في تحميل الإحصائيات</div>
+              }
+            >
+              {activeTab === 'dashboard' && (
+                <DashboardPage streak={streak} okrSummary={okrSummary} />
               )}
             </ErrorBoundary>
 

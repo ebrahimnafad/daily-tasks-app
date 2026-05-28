@@ -16,6 +16,7 @@ interface Tab {
 export default function TabBar({ activeTab, onTabChange, financeBadge, onLogout }: TabBarProps) {
   const tabs = useMemo<Tab[]>(
     () => [
+      { id: 'dashboard', icon: '📊', label: 'إحصائيات' },
       { id: 'tasks', icon: '📋', label: 'المهام' },
       { id: 'okr', icon: '🎯', label: 'الأهداف' },
       { id: 'calendar', icon: '📅', label: 'التقويم' },
